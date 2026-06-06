@@ -86,10 +86,10 @@ mod tests {
             "versionChanged(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_! = deny)"
         ));
         assert!(sdl.contains("versionChangeds(first: Int, skip: Int, where: VersionChanged_filter, orderBy: VersionChanged_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_! = deny)"));
-        assert!(sdl.contains("domainId: String"));
-        assert!(sdl.contains("registrationId: String"));
-        assert!(sdl.contains("resolverId: String"));
-        assert!(sdl.contains("ownerId: String"));
+        assert!(sdl.contains("domain: String"));
+        assert!(sdl.contains("registration: String"));
+        assert!(sdl.contains("resolver: String"));
+        assert!(sdl.contains("owner: String"));
         assert!(sdl.contains("enum _SubgraphErrorPolicy_"));
     }
 }
