@@ -1,0 +1,212 @@
+use async_graphql::InputObject;
+
+use crate::filters::AccountFilter;
+use crate::filters::event::common::{ApplyEventFilter, EventFilter};
+
+#[derive(Debug, Clone, InputObject, Default)]
+pub(crate) struct OwnerRelationFilter {
+    #[graphql(name = "owner")]
+    pub owner: Option<String>,
+    #[graphql(name = "owner_not")]
+    pub owner_not: Option<String>,
+    #[graphql(name = "owner_gt")]
+    pub owner_gt: Option<String>,
+    #[graphql(name = "owner_lt")]
+    pub owner_lt: Option<String>,
+    #[graphql(name = "owner_gte")]
+    pub owner_gte: Option<String>,
+    #[graphql(name = "owner_lte")]
+    pub owner_lte: Option<String>,
+    #[graphql(name = "owner_in")]
+    pub owner_in: Option<Vec<String>>,
+    #[graphql(name = "owner_not_in")]
+    pub owner_not_in: Option<Vec<String>>,
+    #[graphql(name = "owner_contains")]
+    pub owner_contains: Option<String>,
+    #[graphql(name = "owner_contains_nocase")]
+    pub owner_contains_nocase: Option<String>,
+    #[graphql(name = "owner_not_contains")]
+    pub owner_not_contains: Option<String>,
+    #[graphql(name = "owner_not_contains_nocase")]
+    pub owner_not_contains_nocase: Option<String>,
+    #[graphql(name = "owner_starts_with")]
+    pub owner_starts_with: Option<String>,
+    #[graphql(name = "owner_starts_with_nocase")]
+    pub owner_starts_with_nocase: Option<String>,
+    #[graphql(name = "owner_not_starts_with")]
+    pub owner_not_starts_with: Option<String>,
+    #[graphql(name = "owner_not_starts_with_nocase")]
+    pub owner_not_starts_with_nocase: Option<String>,
+    #[graphql(name = "owner_ends_with")]
+    pub owner_ends_with: Option<String>,
+    #[graphql(name = "owner_ends_with_nocase")]
+    pub owner_ends_with_nocase: Option<String>,
+    #[graphql(name = "owner_not_ends_with")]
+    pub owner_not_ends_with: Option<String>,
+    #[graphql(name = "owner_not_ends_with_nocase")]
+    pub owner_not_ends_with_nocase: Option<String>,
+    #[graphql(name = "owner_")]
+    pub owner_filter: Option<Box<AccountFilter>>,
+}
+
+impl ApplyEventFilter for OwnerRelationFilter {
+    fn apply(self, filter: &mut EventFilter) {
+        filter.owner_id = self.owner;
+    }
+}
+
+#[derive(Debug, Clone, InputObject, Default)]
+pub(crate) struct RegistrantRelationFilter {
+    #[graphql(name = "registrant")]
+    pub registrant: Option<String>,
+    #[graphql(name = "registrant_not")]
+    pub registrant_not: Option<String>,
+    #[graphql(name = "registrant_gt")]
+    pub registrant_gt: Option<String>,
+    #[graphql(name = "registrant_lt")]
+    pub registrant_lt: Option<String>,
+    #[graphql(name = "registrant_gte")]
+    pub registrant_gte: Option<String>,
+    #[graphql(name = "registrant_lte")]
+    pub registrant_lte: Option<String>,
+    #[graphql(name = "registrant_in")]
+    pub registrant_in: Option<Vec<String>>,
+    #[graphql(name = "registrant_not_in")]
+    pub registrant_not_in: Option<Vec<String>>,
+    #[graphql(name = "registrant_contains")]
+    pub registrant_contains: Option<String>,
+    #[graphql(name = "registrant_contains_nocase")]
+    pub registrant_contains_nocase: Option<String>,
+    #[graphql(name = "registrant_not_contains")]
+    pub registrant_not_contains: Option<String>,
+    #[graphql(name = "registrant_not_contains_nocase")]
+    pub registrant_not_contains_nocase: Option<String>,
+    #[graphql(name = "registrant_starts_with")]
+    pub registrant_starts_with: Option<String>,
+    #[graphql(name = "registrant_starts_with_nocase")]
+    pub registrant_starts_with_nocase: Option<String>,
+    #[graphql(name = "registrant_not_starts_with")]
+    pub registrant_not_starts_with: Option<String>,
+    #[graphql(name = "registrant_not_starts_with_nocase")]
+    pub registrant_not_starts_with_nocase: Option<String>,
+    #[graphql(name = "registrant_ends_with")]
+    pub registrant_ends_with: Option<String>,
+    #[graphql(name = "registrant_ends_with_nocase")]
+    pub registrant_ends_with_nocase: Option<String>,
+    #[graphql(name = "registrant_not_ends_with")]
+    pub registrant_not_ends_with: Option<String>,
+    #[graphql(name = "registrant_not_ends_with_nocase")]
+    pub registrant_not_ends_with_nocase: Option<String>,
+    #[graphql(name = "registrant_")]
+    pub registrant_filter: Option<Box<AccountFilter>>,
+}
+
+impl ApplyEventFilter for RegistrantRelationFilter {
+    fn apply(self, filter: &mut EventFilter) {
+        filter.registrant_id = self.registrant;
+    }
+}
+
+#[derive(Debug, Clone, InputObject, Default)]
+pub(crate) struct NewOwnerRelationFilter {
+    #[graphql(name = "newOwner")]
+    pub new_owner: Option<String>,
+    #[graphql(name = "newOwner_not")]
+    pub new_owner_not: Option<String>,
+    #[graphql(name = "newOwner_gt")]
+    pub new_owner_gt: Option<String>,
+    #[graphql(name = "newOwner_lt")]
+    pub new_owner_lt: Option<String>,
+    #[graphql(name = "newOwner_gte")]
+    pub new_owner_gte: Option<String>,
+    #[graphql(name = "newOwner_lte")]
+    pub new_owner_lte: Option<String>,
+    #[graphql(name = "newOwner_in")]
+    pub new_owner_in: Option<Vec<String>>,
+    #[graphql(name = "newOwner_not_in")]
+    pub new_owner_not_in: Option<Vec<String>>,
+    #[graphql(name = "newOwner_contains")]
+    pub new_owner_contains: Option<String>,
+    #[graphql(name = "newOwner_contains_nocase")]
+    pub new_owner_contains_nocase: Option<String>,
+    #[graphql(name = "newOwner_not_contains")]
+    pub new_owner_not_contains: Option<String>,
+    #[graphql(name = "newOwner_not_contains_nocase")]
+    pub new_owner_not_contains_nocase: Option<String>,
+    #[graphql(name = "newOwner_starts_with")]
+    pub new_owner_starts_with: Option<String>,
+    #[graphql(name = "newOwner_starts_with_nocase")]
+    pub new_owner_starts_with_nocase: Option<String>,
+    #[graphql(name = "newOwner_not_starts_with")]
+    pub new_owner_not_starts_with: Option<String>,
+    #[graphql(name = "newOwner_not_starts_with_nocase")]
+    pub new_owner_not_starts_with_nocase: Option<String>,
+    #[graphql(name = "newOwner_ends_with")]
+    pub new_owner_ends_with: Option<String>,
+    #[graphql(name = "newOwner_ends_with_nocase")]
+    pub new_owner_ends_with_nocase: Option<String>,
+    #[graphql(name = "newOwner_not_ends_with")]
+    pub new_owner_not_ends_with: Option<String>,
+    #[graphql(name = "newOwner_not_ends_with_nocase")]
+    pub new_owner_not_ends_with_nocase: Option<String>,
+    #[graphql(name = "newOwner_")]
+    pub new_owner_filter: Option<Box<AccountFilter>>,
+}
+
+impl ApplyEventFilter for NewOwnerRelationFilter {
+    fn apply(self, filter: &mut EventFilter) {
+        filter.new_owner_id = self.new_owner;
+    }
+}
+
+#[derive(Debug, Clone, InputObject, Default)]
+pub(crate) struct AddrAccountRelationFilter {
+    #[graphql(name = "addr")]
+    pub addr: Option<String>,
+    #[graphql(name = "addr_not")]
+    pub addr_not: Option<String>,
+    #[graphql(name = "addr_gt")]
+    pub addr_gt: Option<String>,
+    #[graphql(name = "addr_lt")]
+    pub addr_lt: Option<String>,
+    #[graphql(name = "addr_gte")]
+    pub addr_gte: Option<String>,
+    #[graphql(name = "addr_lte")]
+    pub addr_lte: Option<String>,
+    #[graphql(name = "addr_in")]
+    pub addr_in: Option<Vec<String>>,
+    #[graphql(name = "addr_not_in")]
+    pub addr_not_in: Option<Vec<String>>,
+    #[graphql(name = "addr_contains")]
+    pub addr_contains: Option<String>,
+    #[graphql(name = "addr_contains_nocase")]
+    pub addr_contains_nocase: Option<String>,
+    #[graphql(name = "addr_not_contains")]
+    pub addr_not_contains: Option<String>,
+    #[graphql(name = "addr_not_contains_nocase")]
+    pub addr_not_contains_nocase: Option<String>,
+    #[graphql(name = "addr_starts_with")]
+    pub addr_starts_with: Option<String>,
+    #[graphql(name = "addr_starts_with_nocase")]
+    pub addr_starts_with_nocase: Option<String>,
+    #[graphql(name = "addr_not_starts_with")]
+    pub addr_not_starts_with: Option<String>,
+    #[graphql(name = "addr_not_starts_with_nocase")]
+    pub addr_not_starts_with_nocase: Option<String>,
+    #[graphql(name = "addr_ends_with")]
+    pub addr_ends_with: Option<String>,
+    #[graphql(name = "addr_ends_with_nocase")]
+    pub addr_ends_with_nocase: Option<String>,
+    #[graphql(name = "addr_not_ends_with")]
+    pub addr_not_ends_with: Option<String>,
+    #[graphql(name = "addr_not_ends_with_nocase")]
+    pub addr_not_ends_with_nocase: Option<String>,
+    #[graphql(name = "addr_")]
+    pub addr_filter: Option<Box<AccountFilter>>,
+}
+
+impl ApplyEventFilter for AddrAccountRelationFilter {
+    fn apply(self, filter: &mut EventFilter) {
+        filter.addr_id = self.addr;
+    }
+}
