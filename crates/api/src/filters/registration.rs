@@ -162,6 +162,12 @@ impl From<RegistrationFilter> for StorageRegistrationFilter {
             cost_lte: value.cost_lte,
             cost_in: extras.cost_in,
             cost_not_in: extras.cost_not_in,
+            and: extras
+                .and
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
+            or: extras
+                .or
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
         }
     }
 }

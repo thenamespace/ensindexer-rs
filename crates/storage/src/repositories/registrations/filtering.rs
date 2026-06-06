@@ -1,5 +1,6 @@
 use sqlx::{Postgres, query_builder::Separated};
 
+use super::composition::push_registration_filter_group;
 use crate::{filters::RegistrationFilter, query::*};
 
 pub(super) fn push_registration_filters<'qb>(
@@ -8,6 +9,7 @@ pub(super) fn push_registration_filters<'qb>(
     filter: RegistrationFilter,
 ) {
     let remaining_filter = filter.clone();
+    let group_filter = filter.clone();
     push_text_filter(separated, has_where, "id", filter.id);
     push_text_not_filter(separated, has_where, "id", filter.id_not);
     push_text_comparison_filters(
@@ -22,6 +24,8 @@ pub(super) fn push_registration_filters<'qb>(
     push_text_array_filter(separated, has_where, "id", filter.id_in);
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in);
     push_registration_text_fields(separated, has_where, remaining_filter);
+    push_registration_filter_group(separated, has_where, " and ", group_filter.and);
+    push_registration_filter_group(separated, has_where, " or ", group_filter.or);
 }
 
 fn push_registration_text_fields<'qb>(
@@ -198,4 +202,45 @@ fn push_numeric_field<'qb>(
     push_numeric_text_filter(separated, has_where, column, "<=", filter.lte);
     push_numeric_text_array_filter(separated, has_where, column, filter.in_values, false);
     push_numeric_text_array_filter(separated, has_where, column, filter.not_in, true);
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Execute, Postgres, QueryBuilder};
+
+    use super::*;
+
+    #[test]
+    fn registration_filters_support_boolean_composition() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_registration_filters(
+                &mut separated,
+                &mut has_where,
+                RegistrationFilter {
+                    cost_gte: Some("1".into()),
+                    or: Some(vec![
+                        RegistrationFilter {
+                            label_name_contains: Some("foo".into()),
+                            ..RegistrationFilter::default()
+                        },
+                        RegistrationFilter {
+                            expiry_date_gt: Some("100".into()),
+                            ..RegistrationFilter::default()
+                        },
+                    ]),
+                    ..RegistrationFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from registrations where cost >= $1::numeric and (id in (select id from registrations where label_name like $2) or id in (select id from registrations where expiry_date > $3::numeric)) "
+        );
+    }
 }

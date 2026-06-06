@@ -96,4 +96,6 @@ pub struct RegistrationFilter {
     pub cost_lte: Option<String>,
     pub cost_in: Option<Vec<String>>,
     pub cost_not_in: Option<Vec<String>>,
+    pub and: Option<Vec<RegistrationFilter>>,
+    pub or: Option<Vec<RegistrationFilter>>,
 }

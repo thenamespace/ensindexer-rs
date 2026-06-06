@@ -4,6 +4,7 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use self::filtering::push_registration_filters;
 use crate::{error::*, filters::*, models::*, query::registration_order_column};
 
+mod composition;
 mod filtering;
 
 pub struct RegistrationsRepo<'a> {
