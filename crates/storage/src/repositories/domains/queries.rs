@@ -1,6 +1,7 @@
 use sqlx::{Postgres, QueryBuilder};
 
 use super::DomainsRepo;
+use super::filter_fields::{push_primary_text_fields, push_relation_id_text_fields};
 use crate::{error::*, filters::*, models::*, query::*};
 
 impl DomainsRepo<'_> {
@@ -19,7 +20,7 @@ impl DomainsRepo<'_> {
         &self,
         first: i64,
         skip: i64,
-        filter: DomainFilter,
+        mut filter: DomainFilter,
         order_by: DomainOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<DomainRow>> {
@@ -27,102 +28,31 @@ impl DomainsRepo<'_> {
         let mut separated = query.separated(" and ");
         let mut has_where = false;
 
-        push_text_filter(&mut separated, &mut has_where, "id", filter.id);
-        push_text_not_filter(&mut separated, &mut has_where, "id", filter.id_not);
+        push_text_filter(&mut separated, &mut has_where, "id", filter.id.take());
+        push_text_not_filter(&mut separated, &mut has_where, "id", filter.id_not.take());
         push_text_comparison_filters(
             &mut separated,
             &mut has_where,
             "id",
-            filter.id_gt,
-            filter.id_lt,
-            filter.id_gte,
-            filter.id_lte,
+            filter.id_gt.take(),
+            filter.id_lt.take(),
+            filter.id_gte.take(),
+            filter.id_lte.take(),
         );
-        push_text_array_filter(&mut separated, &mut has_where, "id", filter.id_in);
-        push_text_not_array_filter(&mut separated, &mut has_where, "id", filter.id_not_in);
-        push_text_field_filters(
+        push_text_array_filter(&mut separated, &mut has_where, "id", filter.id_in.take());
+        push_text_not_array_filter(
             &mut separated,
             &mut has_where,
-            "name",
-            TextFieldFilter {
-                exact: filter.name,
-                not: filter.name_not,
-                gt: filter.name_gt,
-                lt: filter.name_lt,
-                gte: filter.name_gte,
-                lte: filter.name_lte,
-                in_values: filter.name_in,
-                not_in: filter.name_not_in,
-                contains: filter.name_contains,
-                contains_nocase: filter.name_contains_nocase,
-                not_contains: filter.name_not_contains,
-                not_contains_nocase: filter.name_not_contains_nocase,
-                starts_with: filter.name_starts_with,
-                starts_with_nocase: filter.name_starts_with_nocase,
-                not_starts_with: filter.name_not_starts_with,
-                not_starts_with_nocase: filter.name_not_starts_with_nocase,
-                ends_with: filter.name_ends_with,
-                ends_with_nocase: filter.name_ends_with_nocase,
-                not_ends_with: filter.name_not_ends_with,
-                not_ends_with_nocase: filter.name_not_ends_with_nocase,
-            },
+            "id",
+            filter.id_not_in.take(),
         );
-        push_text_field_filters(
-            &mut separated,
-            &mut has_where,
-            "label_name",
-            TextFieldFilter {
-                exact: filter.label_name,
-                not: filter.label_name_not,
-                gt: filter.label_name_gt,
-                lt: filter.label_name_lt,
-                gte: filter.label_name_gte,
-                lte: filter.label_name_lte,
-                in_values: filter.label_name_in,
-                not_in: filter.label_name_not_in,
-                contains: filter.label_name_contains,
-                contains_nocase: filter.label_name_contains_nocase,
-                not_contains: filter.label_name_not_contains,
-                not_contains_nocase: filter.label_name_not_contains_nocase,
-                starts_with: filter.label_name_starts_with,
-                starts_with_nocase: filter.label_name_starts_with_nocase,
-                not_starts_with: filter.label_name_not_starts_with,
-                not_starts_with_nocase: filter.label_name_not_starts_with_nocase,
-                ends_with: filter.label_name_ends_with,
-                ends_with_nocase: filter.label_name_ends_with_nocase,
-                not_ends_with: filter.label_name_not_ends_with,
-                not_ends_with_nocase: filter.label_name_not_ends_with_nocase,
-            },
-        );
-        push_text_field_filters(
-            &mut separated,
-            &mut has_where,
-            "labelhash",
-            TextFieldFilter {
-                exact: filter.labelhash,
-                not: filter.labelhash_not,
-                gt: filter.labelhash_gt,
-                lt: filter.labelhash_lt,
-                gte: filter.labelhash_gte,
-                lte: filter.labelhash_lte,
-                in_values: filter.labelhash_in,
-                not_in: filter.labelhash_not_in,
-                contains: filter.labelhash_contains,
-                not_contains: filter.labelhash_not_contains,
-                ..TextFieldFilter::default()
-            },
-        );
-        push_text_filter(
-            &mut separated,
-            &mut has_where,
-            "parent_id",
-            filter.parent_id,
-        );
+        push_primary_text_fields(&mut separated, &mut has_where, &mut filter);
+        push_relation_id_text_fields(&mut separated, &mut has_where, &mut filter);
         push_domain_relation_filter(
             &mut separated,
             &mut has_where,
             "parent_id",
-            filter.parent_filter,
+            filter.parent_filter.take(),
         );
         push_i32_filter(
             &mut separated,
@@ -180,60 +110,35 @@ impl DomainsRepo<'_> {
             filter.subdomain_count_not_in,
             true,
         );
-        push_text_filter(
-            &mut separated,
-            &mut has_where,
-            "resolved_address_id",
-            filter.resolved_address_id,
-        );
         push_account_relation_filter(
             &mut separated,
             &mut has_where,
             "resolved_address_id",
-            filter.resolved_address_filter,
+            filter.resolved_address_filter.take(),
         );
-        push_text_filter(&mut separated, &mut has_where, "owner_id", filter.owner_id);
         push_account_relation_filter(
             &mut separated,
             &mut has_where,
             "owner_id",
-            filter.owner_filter,
-        );
-        push_text_filter(
-            &mut separated,
-            &mut has_where,
-            "resolver_id",
-            filter.resolver_id,
+            filter.owner_filter.take(),
         );
         push_resolver_relation_filter(
             &mut separated,
             &mut has_where,
             "resolver_id",
-            filter.resolver_filter,
-        );
-        push_text_filter(
-            &mut separated,
-            &mut has_where,
-            "registrant_id",
-            filter.registrant_id,
+            filter.resolver_filter.take(),
         );
         push_account_relation_filter(
             &mut separated,
             &mut has_where,
             "registrant_id",
-            filter.registrant_filter,
-        );
-        push_text_filter(
-            &mut separated,
-            &mut has_where,
-            "wrapped_owner_id",
-            filter.wrapped_owner_id,
+            filter.registrant_filter.take(),
         );
         push_account_relation_filter(
             &mut separated,
             &mut has_where,
             "wrapped_owner_id",
-            filter.wrapped_owner_filter,
+            filter.wrapped_owner_filter.take(),
         );
         push_bool_filter(
             &mut separated,
