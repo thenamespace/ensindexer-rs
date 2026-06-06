@@ -1,7 +1,8 @@
-.PHONY: db-up db-down db-logs migrate serve sandbox status reset backfill test lint check
+.PHONY: db-up db-down db-logs docker-build docker-run migrate serve sandbox status reset backfill test lint check
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
+IMAGE ?= ensindexer:local
 ORBSTACK_BIN ?= /Applications/OrbStack.app/Contents/MacOS/xbin
 DOCKER_DESKTOP_BIN ?= /Applications/Docker.app/Contents/Resources/bin
 DOCKER_BIN ?= $(shell if [ -x "$(ORBSTACK_BIN)/docker" ]; then printf "$(ORBSTACK_BIN)"; elif command -v docker >/dev/null 2>&1; then dirname "$$(command -v docker)"; else printf "$(DOCKER_DESKTOP_BIN)"; fi)
@@ -16,6 +17,12 @@ db-down:
 
 db-logs:
 	$(DOCKER_ENV) $(DOCKER) compose logs -f postgres
+
+docker-build:
+	$(DOCKER_ENV) $(DOCKER) build -t $(IMAGE) .
+
+docker-run:
+	$(DOCKER_ENV) $(DOCKER) run --rm --env-file .env -p 8080:8080 $(IMAGE)
 
 migrate:
 	cargo run -p cli -- migrate

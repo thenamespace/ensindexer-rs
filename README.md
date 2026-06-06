@@ -45,6 +45,22 @@ make check
 
 Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 
+## Docker
+
+Build the unified service image:
+
+```bash
+make docker-build
+```
+
+Run the API from the image:
+
+```bash
+make docker-run
+```
+
+The container entrypoint runs `ensindexer serve`. Set `SERVE_INDEXER=true` in `.env` to run startup backfill/live indexing inside the same process as the GraphQL API.
+
 ## Code Layout
 
 Crates use small entrypoint files and implementation modules instead of keeping all logic in one `lib.rs`:
