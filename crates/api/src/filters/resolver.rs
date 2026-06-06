@@ -4,6 +4,7 @@ use storage::ResolverFilter as StorageResolverFilter;
 use super::{AccountFilter, DomainFilter};
 
 #[derive(Debug, Clone, InputObject, Default)]
+#[graphql(name = "Resolver_filter")]
 pub struct ResolverFilter {
     pub id: Option<String>,
     #[graphql(name = "id_not")]

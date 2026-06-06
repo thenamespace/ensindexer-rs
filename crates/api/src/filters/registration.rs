@@ -4,6 +4,7 @@ use storage::RegistrationFilter as StorageRegistrationFilter;
 use super::{AccountFilter, DomainFilter};
 
 #[derive(Debug, Clone, InputObject, Default)]
+#[graphql(name = "Registration_filter")]
 pub struct RegistrationFilter {
     pub id: Option<String>,
     #[graphql(name = "id_not")]

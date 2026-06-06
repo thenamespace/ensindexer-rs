@@ -4,6 +4,7 @@ use storage::DomainFilter as StorageDomainFilter;
 use super::{AccountFilter, ResolverFilter};
 
 #[derive(Debug, Clone, InputObject, Default)]
+#[graphql(name = "Domain_filter")]
 pub struct DomainFilter {
     pub id: Option<String>,
     #[graphql(name = "id_not")]

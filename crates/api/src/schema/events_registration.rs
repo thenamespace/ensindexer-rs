@@ -4,8 +4,8 @@ use storage::Storage;
 use super::ensure_current_block;
 use crate::{
     filters::{
-        EventFilter, EventOrderBy, NameRegisteredFilter, NameRenewedFilter, NameTransferredFilter,
-        OrderDirection,
+        EventFilter, NameRegisteredFilter, NameRegisteredOrderBy, NameRenewedFilter,
+        NameRenewedOrderBy, NameTransferredFilter, NameTransferredOrderBy, OrderDirection,
     },
     meta::{BlockHeight, SubgraphErrorPolicy},
     objects::{NameRegisteredEvent, NameRenewedEvent, NameTransferredEvent},
@@ -42,7 +42,7 @@ impl RegistrationEventQueries {
         first: Option<i32>,
         skip: Option<i32>,
         #[graphql(name = "where")] filter: Option<NameRegisteredFilter>,
-        #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
+        #[graphql(name = "orderBy")] order_by: Option<NameRegisteredOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
@@ -88,7 +88,7 @@ impl RegistrationEventQueries {
         first: Option<i32>,
         skip: Option<i32>,
         #[graphql(name = "where")] filter: Option<NameRenewedFilter>,
-        #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
+        #[graphql(name = "orderBy")] order_by: Option<NameRenewedOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
@@ -134,7 +134,7 @@ impl RegistrationEventQueries {
         first: Option<i32>,
         skip: Option<i32>,
         #[graphql(name = "where")] filter: Option<NameTransferredFilter>,
-        #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
+        #[graphql(name = "orderBy")] order_by: Option<NameTransferredOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,

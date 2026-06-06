@@ -55,6 +55,7 @@ pub enum ResolverOrderField {
 pub enum EventOrderField {
     Id,
     BlockNumber,
+    TransactionId,
 }
 
 #[derive(Debug, Clone, Default)]

@@ -59,5 +59,6 @@ pub(crate) fn event_order_column(order_by: EventOrderField) -> &'static str {
     match order_by {
         EventOrderField::Id => "id",
         EventOrderField::BlockNumber => "block_number",
+        EventOrderField::TransactionId => "transaction_id",
     }
 }

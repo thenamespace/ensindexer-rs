@@ -5,6 +5,7 @@ use storage::{
 };
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "OrderDirection")]
 pub enum OrderDirection {
     #[default]
     #[graphql(name = "asc")]
@@ -23,6 +24,7 @@ impl From<OrderDirection> for StorageOrderDirection {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "Account_orderBy")]
 pub enum AccountOrderBy {
     #[default]
     Id,
@@ -37,6 +39,7 @@ impl From<AccountOrderBy> for AccountOrderField {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "Domain_orderBy")]
 pub enum DomainOrderBy {
     #[default]
     Id,
@@ -65,6 +68,7 @@ impl From<DomainOrderBy> for DomainOrderField {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "Registration_orderBy")]
 pub enum RegistrationOrderBy {
     #[default]
     Id,
@@ -90,6 +94,7 @@ impl From<RegistrationOrderBy> for RegistrationOrderField {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "WrappedDomain_orderBy")]
 pub enum WrappedDomainOrderBy {
     #[default]
     Id,
@@ -111,6 +116,7 @@ impl From<WrappedDomainOrderBy> for WrappedDomainOrderField {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "Resolver_orderBy")]
 pub enum ResolverOrderBy {
     #[default]
     Id,
@@ -127,11 +133,14 @@ impl From<ResolverOrderBy> for ResolverOrderField {
 }
 
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+#[graphql(name = "DomainEvent_orderBy")]
 pub enum EventOrderBy {
     #[default]
     Id,
     #[graphql(name = "blockNumber")]
     BlockNumber,
+    #[graphql(name = "transactionID")]
+    TransactionId,
 }
 
 impl From<EventOrderBy> for EventOrderField {
@@ -139,6 +148,57 @@ impl From<EventOrderBy> for EventOrderField {
         match value {
             EventOrderBy::Id => Self::Id,
             EventOrderBy::BlockNumber => Self::BlockNumber,
+            EventOrderBy::TransactionId => Self::TransactionId,
         }
     }
 }
+
+macro_rules! event_order_wrapper {
+    ($name:ident, $graphql_name:literal) => {
+        #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
+        #[graphql(name = $graphql_name)]
+        pub enum $name {
+            #[default]
+            Id,
+            #[graphql(name = "blockNumber")]
+            BlockNumber,
+            #[graphql(name = "transactionID")]
+            TransactionId,
+        }
+
+        impl From<$name> for EventOrderField {
+            fn from(value: $name) -> Self {
+                match value {
+                    $name::Id => Self::Id,
+                    $name::BlockNumber => Self::BlockNumber,
+                    $name::TransactionId => Self::TransactionId,
+                }
+            }
+        }
+    };
+}
+
+event_order_wrapper!(TransferOrderBy, "Transfer_orderBy");
+event_order_wrapper!(NewOwnerOrderBy, "NewOwner_orderBy");
+event_order_wrapper!(NewResolverOrderBy, "NewResolver_orderBy");
+event_order_wrapper!(NewTtlOrderBy, "NewTTL_orderBy");
+event_order_wrapper!(WrappedTransferOrderBy, "WrappedTransfer_orderBy");
+event_order_wrapper!(NameWrappedOrderBy, "NameWrapped_orderBy");
+event_order_wrapper!(NameUnwrappedOrderBy, "NameUnwrapped_orderBy");
+event_order_wrapper!(FusesSetOrderBy, "FusesSet_orderBy");
+event_order_wrapper!(ExpiryExtendedOrderBy, "ExpiryExtended_orderBy");
+event_order_wrapper!(NameRegisteredOrderBy, "NameRegistered_orderBy");
+event_order_wrapper!(NameRenewedOrderBy, "NameRenewed_orderBy");
+event_order_wrapper!(NameTransferredOrderBy, "NameTransferred_orderBy");
+event_order_wrapper!(AddrChangedOrderBy, "AddrChanged_orderBy");
+event_order_wrapper!(MulticoinAddrChangedOrderBy, "MulticoinAddrChanged_orderBy");
+event_order_wrapper!(NameChangedOrderBy, "NameChanged_orderBy");
+event_order_wrapper!(AbiChangedOrderBy, "AbiChanged_orderBy");
+event_order_wrapper!(PubkeyChangedOrderBy, "PubkeyChanged_orderBy");
+event_order_wrapper!(TextChangedOrderBy, "TextChanged_orderBy");
+event_order_wrapper!(ContenthashChangedOrderBy, "ContenthashChanged_orderBy");
+event_order_wrapper!(InterfaceChangedOrderBy, "InterfaceChanged_orderBy");
+event_order_wrapper!(AuthorisationChangedOrderBy, "AuthorisationChanged_orderBy");
+event_order_wrapper!(VersionChangedOrderBy, "VersionChanged_orderBy");
+event_order_wrapper!(RegistrationEventOrderBy, "RegistrationEvent_orderBy");
+event_order_wrapper!(ResolverEventOrderBy, "ResolverEvent_orderBy");

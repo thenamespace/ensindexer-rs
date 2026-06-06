@@ -2,6 +2,7 @@ use async_graphql::InputObject;
 use storage::AccountFilter as StorageAccountFilter;
 
 #[derive(Debug, Clone, InputObject, Default)]
+#[graphql(name = "Account_filter")]
 pub struct AccountFilter {
     pub id: Option<String>,
     #[graphql(name = "id_not")]

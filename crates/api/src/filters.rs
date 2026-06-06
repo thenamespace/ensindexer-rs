@@ -17,8 +17,14 @@ pub use event::{
     VersionChangedFilter, WrappedTransferFilter,
 };
 pub use order::{
-    AccountOrderBy, DomainOrderBy, EventOrderBy, OrderDirection, RegistrationOrderBy,
-    ResolverOrderBy, WrappedDomainOrderBy,
+    AbiChangedOrderBy, AccountOrderBy, AddrChangedOrderBy, AuthorisationChangedOrderBy,
+    ContenthashChangedOrderBy, DomainOrderBy, EventOrderBy, ExpiryExtendedOrderBy, FusesSetOrderBy,
+    InterfaceChangedOrderBy, MulticoinAddrChangedOrderBy, NameChangedOrderBy,
+    NameRegisteredOrderBy, NameRenewedOrderBy, NameTransferredOrderBy, NameUnwrappedOrderBy,
+    NameWrappedOrderBy, NewOwnerOrderBy, NewResolverOrderBy, NewTtlOrderBy, OrderDirection,
+    PubkeyChangedOrderBy, RegistrationEventOrderBy, RegistrationOrderBy, ResolverEventOrderBy,
+    ResolverOrderBy, TextChangedOrderBy, TransferOrderBy, VersionChangedOrderBy,
+    WrappedDomainOrderBy, WrappedTransferOrderBy,
 };
 pub use registration::RegistrationFilter;
 pub use resolver::ResolverFilter;
