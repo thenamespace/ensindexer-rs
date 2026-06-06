@@ -73,7 +73,7 @@ impl EventsRepo<'_> {
 
         query
             .push(" order by ")
-            .push(event_ref_order_column(order_by))
+            .push(event_order_column(order_by))
             .push(" ")
             .push(direction.sql())
             .push(" limit ")
@@ -182,5 +182,42 @@ fn event_ref_order_column(order_by: EventOrderField) -> &'static str {
             "(select r.content_hash from resolvers r where r.id = parent_id)"
         }
         _ => event_order_column(order_by),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Execute, Postgres, QueryBuilder};
+
+    use super::*;
+
+    #[test]
+    fn concrete_events_use_table_specific_parent_order_columns() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from name_registered_events");
+        query
+            .push(" order by ")
+            .push(event_order_column(EventOrderField::RegistrationExpiryDate))
+            .push(" asc");
+
+        assert_eq!(
+            query.build().sql(),
+            "select id from name_registered_events order by (select r.expiry_date from registrations r where r.id = registration_id) asc"
+        );
+    }
+
+    #[test]
+    fn event_refs_use_union_parent_order_columns() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from event_refs");
+        query
+            .push(" order by ")
+            .push(event_ref_order_column(
+                EventOrderField::RegistrationExpiryDate,
+            ))
+            .push(" asc");
+
+        assert_eq!(
+            query.build().sql(),
+            "select id from event_refs order by (select r.expiry_date from registrations r where r.id = parent_id) asc"
+        );
     }
 }
