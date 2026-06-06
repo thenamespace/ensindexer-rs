@@ -2,15 +2,16 @@
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
+DOCKER ?= $(shell command -v docker 2>/dev/null || printf /Applications/Docker.app/Contents/Resources/bin/docker)
 
 db-up:
-	docker compose up -d postgres
+	$(DOCKER) compose up -d postgres
 
 db-down:
-	docker compose down
+	$(DOCKER) compose down
 
 db-logs:
-	docker compose logs -f postgres
+	$(DOCKER) compose logs -f postgres
 
 migrate:
 	cargo run -p cli -- migrate
