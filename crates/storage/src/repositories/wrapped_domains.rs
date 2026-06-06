@@ -241,6 +241,13 @@ impl WrappedDomainsRepo<'_> {
             &mut separated,
             &mut has_where,
             "expiry_date",
+            "!=",
+            filter.expiry_date_not,
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
             ">",
             filter.expiry_date_gt,
         );
@@ -265,7 +272,28 @@ impl WrappedDomainsRepo<'_> {
             "<=",
             filter.expiry_date_lte,
         );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_in,
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_not_in,
+            true,
+        );
         push_i32_filter(&mut separated, &mut has_where, "fuses", "=", filter.fuses);
+        push_i32_filter(
+            &mut separated,
+            &mut has_where,
+            "fuses",
+            "!=",
+            filter.fuses_not,
+        );
         push_i32_filter(
             &mut separated,
             &mut has_where,
@@ -293,6 +321,20 @@ impl WrappedDomainsRepo<'_> {
             "fuses",
             "<=",
             filter.fuses_lte,
+        );
+        push_i32_array_filter(
+            &mut separated,
+            &mut has_where,
+            "fuses",
+            filter.fuses_in,
+            false,
+        );
+        push_i32_array_filter(
+            &mut separated,
+            &mut has_where,
+            "fuses",
+            filter.fuses_not_in,
+            true,
         );
 
         if has_where {

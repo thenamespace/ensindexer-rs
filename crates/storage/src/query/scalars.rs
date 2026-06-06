@@ -275,6 +275,36 @@ pub(crate) fn push_numeric_text_filter<'qb>(
     }
 }
 
+pub(crate) fn push_numeric_text_array_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    values: Option<Vec<String>>,
+    negate: bool,
+) {
+    if let Some(values) = values.filter(|values| !values.is_empty()) {
+        push_where_prefix(separated, has_where);
+        if negate {
+            separated.push("not (").push_unseparated(column);
+        } else {
+            separated.push(column);
+        }
+        separated.push_unseparated(" = any(array[");
+        for (index, value) in values.into_iter().enumerate() {
+            if index > 0 {
+                separated.push_unseparated(", ");
+            }
+            separated
+                .push_bind_unseparated(value)
+                .push_unseparated("::numeric");
+        }
+        separated.push_unseparated("])");
+        if negate {
+            separated.push_unseparated(")");
+        }
+    }
+}
+
 pub(crate) fn push_i32_filter<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
@@ -290,6 +320,32 @@ pub(crate) fn push_i32_filter<'qb>(
             .push_unseparated(op)
             .push_unseparated(" ")
             .push_bind_unseparated(value);
+    }
+}
+
+pub(crate) fn push_i32_array_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    values: Option<Vec<i32>>,
+    negate: bool,
+) {
+    if let Some(values) = values.filter(|values| !values.is_empty()) {
+        push_where_prefix(separated, has_where);
+        if negate {
+            separated
+                .push("not (")
+                .push_unseparated(column)
+                .push_unseparated(" = any(")
+                .push_bind_unseparated(values)
+                .push_unseparated("))");
+        } else {
+            separated
+                .push(column)
+                .push_unseparated(" = any(")
+                .push_bind_unseparated(values)
+                .push_unseparated(")");
+        }
     }
 }
 

@@ -88,15 +88,21 @@ impl From<WrappedDomainFilter> for StorageWrappedDomainFilter {
             name_not_ends_with: extras.name_not_ends_with,
             name_not_ends_with_nocase: extras.name_not_ends_with_nocase,
             expiry_date: value.expiry_date,
+            expiry_date_not: extras.expiry_date_not,
             expiry_date_gt: value.expiry_date_gt,
             expiry_date_lt: value.expiry_date_lt,
             expiry_date_gte: value.expiry_date_gte,
             expiry_date_lte: value.expiry_date_lte,
+            expiry_date_in: extras.expiry_date_in,
+            expiry_date_not_in: extras.expiry_date_not_in,
             fuses: value.fuses,
+            fuses_not: extras.fuses_not.and_then(|value| value.parse().ok()),
             fuses_gt: value.fuses_gt,
             fuses_lt: value.fuses_lt,
             fuses_gte: value.fuses_gte,
             fuses_lte: value.fuses_lte,
+            fuses_in: extras.fuses_in,
+            fuses_not_in: extras.fuses_not_in,
         }
     }
 }

@@ -238,6 +238,13 @@ impl RegistrationsRepo<'_> {
             &mut separated,
             &mut has_where,
             "registration_date",
+            "!=",
+            filter.registration_date_not,
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "registration_date",
             ">",
             filter.registration_date_gt,
         );
@@ -262,12 +269,33 @@ impl RegistrationsRepo<'_> {
             "<=",
             filter.registration_date_lte,
         );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "registration_date",
+            filter.registration_date_in,
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "registration_date",
+            filter.registration_date_not_in,
+            true,
+        );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             "=",
             filter.expiry_date,
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            "!=",
+            filter.expiry_date_not,
         );
         push_numeric_text_filter(
             &mut separated,
@@ -297,7 +325,28 @@ impl RegistrationsRepo<'_> {
             "<=",
             filter.expiry_date_lte,
         );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_in,
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_not_in,
+            true,
+        );
         push_numeric_text_filter(&mut separated, &mut has_where, "cost", "=", filter.cost);
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "cost",
+            "!=",
+            filter.cost_not,
+        );
         push_numeric_text_filter(&mut separated, &mut has_where, "cost", ">", filter.cost_gt);
         push_numeric_text_filter(&mut separated, &mut has_where, "cost", "<", filter.cost_lt);
         push_numeric_text_filter(
@@ -313,6 +362,20 @@ impl RegistrationsRepo<'_> {
             "cost",
             "<=",
             filter.cost_lte,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "cost",
+            filter.cost_in,
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "cost",
+            filter.cost_not_in,
+            true,
         );
 
         if has_where {
