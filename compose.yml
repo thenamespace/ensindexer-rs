@@ -1,14 +1,14 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: postgres:17
     container_name: ensindexer-database
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: ensindexer
-      POSTGRES_USER: ensindexer
-      POSTGRES_PASSWORD: ensindexer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

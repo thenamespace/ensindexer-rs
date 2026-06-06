@@ -20,8 +20,9 @@ The implementation plan and official-subgraph research live in [docs/README.md](
 
 ```bash
 cp .env.example .env
-cargo test --workspace
-cargo run -p cli -- serve
+make db-up
+make migrate
+make serve
 ```
 
 Configuration is loaded from `.env` via `config`.
@@ -29,12 +30,14 @@ Configuration is loaded from `.env` via `config`.
 Indexer commands:
 
 ```bash
-cargo run -p cli -- migrate
-cargo run -p cli -- status
-cargo run -p cli -- backfill --from 9380380 --to 9381000
+make status
+make backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
 cargo run -p cli -- index
-cargo run -p cli -- reset --yes
+make reset
+make check
 ```
+
+Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 
 ## Code Layout
 
