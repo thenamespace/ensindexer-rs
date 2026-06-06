@@ -3,7 +3,12 @@ use storage::Storage;
 
 use super::ensure_current_block;
 use crate::{
-    filters::{EventFilter, EventOrderBy, OrderDirection},
+    filters::{
+        AbiChangedFilter, AddrChangedFilter, AuthorisationChangedFilter, ContenthashChangedFilter,
+        EventFilter, EventOrderBy, InterfaceChangedFilter, MulticoinAddrChangedFilter,
+        NameChangedFilter, OrderDirection, PubkeyChangedFilter, TextChangedFilter,
+        VersionChangedFilter,
+    },
     meta::{BlockHeight, SubgraphErrorPolicy},
     objects::{
         AbiChangedEvent, AddrChangedEvent, AuthorisationChangedEvent, ContenthashChangedEvent,
@@ -42,7 +47,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<AddrChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -55,7 +60,7 @@ impl ResolverEventQueries {
             .list_addr_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -88,7 +93,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<MulticoinAddrChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -101,7 +106,7 @@ impl ResolverEventQueries {
             .list_multicoin_addr_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -134,7 +139,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -147,7 +152,7 @@ impl ResolverEventQueries {
             .list_name_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -180,7 +185,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<AbiChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -193,7 +198,7 @@ impl ResolverEventQueries {
             .list_abi_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -226,7 +231,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<PubkeyChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -239,7 +244,7 @@ impl ResolverEventQueries {
             .list_pubkey_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -272,7 +277,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<TextChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -285,7 +290,7 @@ impl ResolverEventQueries {
             .list_text_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -318,7 +323,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<ContenthashChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -331,7 +336,7 @@ impl ResolverEventQueries {
             .list_contenthash_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -364,7 +369,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<InterfaceChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -377,7 +382,7 @@ impl ResolverEventQueries {
             .list_interface_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -410,7 +415,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<AuthorisationChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -423,7 +428,7 @@ impl ResolverEventQueries {
             .list_authorisation_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -456,7 +461,7 @@ impl ResolverEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<VersionChangedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -469,7 +474,7 @@ impl ResolverEventQueries {
             .list_version_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

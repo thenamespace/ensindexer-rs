@@ -3,7 +3,11 @@ use storage::Storage;
 
 use super::ensure_current_block;
 use crate::{
-    filters::{EventFilter, EventOrderBy, OrderDirection},
+    filters::{
+        EventFilter, EventOrderBy, ExpiryExtendedFilter, FusesSetFilter, NameUnwrappedFilter,
+        NameWrappedFilter, NewOwnerFilter, NewResolverFilter, NewTtlFilter, OrderDirection,
+        TransferFilter, WrappedTransferFilter,
+    },
     meta::{BlockHeight, SubgraphErrorPolicy},
     objects::{
         ExpiryExtendedEvent, FusesSetEvent, NameUnwrappedEvent, NameWrappedEvent, NewOwnerEvent,
@@ -41,7 +45,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<TransferFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -54,7 +58,7 @@ impl DomainEventQueries {
             .list_transfers(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -87,7 +91,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NewOwnerFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -100,7 +104,7 @@ impl DomainEventQueries {
             .list_new_owners(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -133,7 +137,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NewResolverFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -146,7 +150,7 @@ impl DomainEventQueries {
             .list_new_resolvers(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -179,7 +183,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NewTtlFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -192,7 +196,7 @@ impl DomainEventQueries {
             .list_new_ttls(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -225,7 +229,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<WrappedTransferFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -238,7 +242,7 @@ impl DomainEventQueries {
             .list_wrapped_transfers(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -271,7 +275,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameWrappedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -284,7 +288,7 @@ impl DomainEventQueries {
             .list_name_wrapped(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -317,7 +321,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameUnwrappedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -330,7 +334,7 @@ impl DomainEventQueries {
             .list_name_unwrapped(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -363,7 +367,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<FusesSetFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -376,7 +380,7 @@ impl DomainEventQueries {
             .list_fuses_set(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -409,7 +413,7 @@ impl DomainEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<ExpiryExtendedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -422,7 +426,7 @@ impl DomainEventQueries {
             .list_expiry_extended(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

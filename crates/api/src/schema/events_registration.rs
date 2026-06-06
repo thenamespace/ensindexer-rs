@@ -3,7 +3,10 @@ use storage::Storage;
 
 use super::ensure_current_block;
 use crate::{
-    filters::{EventFilter, EventOrderBy, OrderDirection},
+    filters::{
+        EventFilter, EventOrderBy, NameRegisteredFilter, NameRenewedFilter, NameTransferredFilter,
+        OrderDirection,
+    },
     meta::{BlockHeight, SubgraphErrorPolicy},
     objects::{NameRegisteredEvent, NameRenewedEvent, NameTransferredEvent},
     pagination::{normalize_first, normalize_skip},
@@ -38,7 +41,7 @@ impl RegistrationEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameRegisteredFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -51,7 +54,7 @@ impl RegistrationEventQueries {
             .list_name_registered(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_registration_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -84,7 +87,7 @@ impl RegistrationEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameRenewedFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -97,7 +100,7 @@ impl RegistrationEventQueries {
             .list_name_renewed(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_registration_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -130,7 +133,7 @@ impl RegistrationEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<NameTransferredFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -143,7 +146,7 @@ impl RegistrationEventQueries {
             .list_name_transferred(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_registration_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

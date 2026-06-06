@@ -8,7 +8,14 @@ mod wrapped_domain;
 
 pub use account::AccountFilter;
 pub use domain::DomainFilter;
-pub use event::EventFilter;
+pub use event::{
+    AbiChangedFilter, AddrChangedFilter, AuthorisationChangedFilter, ContenthashChangedFilter,
+    EventFilter, ExpiryExtendedFilter, FusesSetFilter, InterfaceChangedFilter,
+    MulticoinAddrChangedFilter, NameChangedFilter, NameRegisteredFilter, NameRenewedFilter,
+    NameTransferredFilter, NameUnwrappedFilter, NameWrappedFilter, NewOwnerFilter,
+    NewResolverFilter, NewTtlFilter, PubkeyChangedFilter, TextChangedFilter, TransferFilter,
+    VersionChangedFilter, WrappedTransferFilter,
+};
 pub use order::{
     AccountOrderBy, DomainOrderBy, EventOrderBy, OrderDirection, RegistrationOrderBy,
     ResolverOrderBy, WrappedDomainOrderBy,

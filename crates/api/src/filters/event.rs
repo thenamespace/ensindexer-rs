@@ -203,3 +203,43 @@ impl EventFilter {
         }
     }
 }
+
+macro_rules! event_filter_wrapper {
+    ($name:ident, $graphql_name:literal) => {
+        #[derive(Debug, Clone, InputObject, Default)]
+        #[graphql(name = $graphql_name)]
+        pub struct $name {
+            #[graphql(flatten)]
+            pub event: EventFilter,
+        }
+
+        impl From<$name> for EventFilter {
+            fn from(value: $name) -> Self {
+                value.event
+            }
+        }
+    };
+}
+
+event_filter_wrapper!(TransferFilter, "Transfer_filter");
+event_filter_wrapper!(NewOwnerFilter, "NewOwner_filter");
+event_filter_wrapper!(NewResolverFilter, "NewResolver_filter");
+event_filter_wrapper!(NewTtlFilter, "NewTTL_filter");
+event_filter_wrapper!(WrappedTransferFilter, "WrappedTransfer_filter");
+event_filter_wrapper!(NameWrappedFilter, "NameWrapped_filter");
+event_filter_wrapper!(NameUnwrappedFilter, "NameUnwrapped_filter");
+event_filter_wrapper!(FusesSetFilter, "FusesSet_filter");
+event_filter_wrapper!(ExpiryExtendedFilter, "ExpiryExtended_filter");
+event_filter_wrapper!(NameRegisteredFilter, "NameRegistered_filter");
+event_filter_wrapper!(NameRenewedFilter, "NameRenewed_filter");
+event_filter_wrapper!(NameTransferredFilter, "NameTransferred_filter");
+event_filter_wrapper!(AddrChangedFilter, "AddrChanged_filter");
+event_filter_wrapper!(MulticoinAddrChangedFilter, "MulticoinAddrChanged_filter");
+event_filter_wrapper!(NameChangedFilter, "NameChanged_filter");
+event_filter_wrapper!(AbiChangedFilter, "AbiChanged_filter");
+event_filter_wrapper!(PubkeyChangedFilter, "PubkeyChanged_filter");
+event_filter_wrapper!(TextChangedFilter, "TextChanged_filter");
+event_filter_wrapper!(ContenthashChangedFilter, "ContenthashChanged_filter");
+event_filter_wrapper!(InterfaceChangedFilter, "InterfaceChanged_filter");
+event_filter_wrapper!(AuthorisationChangedFilter, "AuthorisationChanged_filter");
+event_filter_wrapper!(VersionChangedFilter, "VersionChanged_filter");

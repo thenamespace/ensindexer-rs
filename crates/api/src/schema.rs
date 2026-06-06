@@ -62,19 +62,19 @@ mod tests {
         assert!(sdl.contains(
             "transfer(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("transfers(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("transfers(first: Int, skip: Int, where: Transfer_filter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
             "newTTL(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("newTTLs(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("newTTLs(first: Int, skip: Int, where: NewTTL_filter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
             "nameRegistered(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("nameRegistereds(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("nameRegistereds(first: Int, skip: Int, where: NameRegistered_filter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
             "versionChanged(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("versionChangeds(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("versionChangeds(first: Int, skip: Int, where: VersionChanged_filter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains("domainId: String"));
         assert!(sdl.contains("registrationId: String"));
         assert!(sdl.contains("resolverId: String"));
