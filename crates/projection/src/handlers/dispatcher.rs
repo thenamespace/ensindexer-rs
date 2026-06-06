@@ -47,7 +47,7 @@ pub async fn apply_event(storage: &Storage, indexed: IndexedEvent) -> Projection
             label,
             labelhash,
             cost,
-        } => controller_name_preimage(storage, label, labelhash, cost).await,
+        } => controller_name_preimage(storage, &indexed.ctx, label, labelhash, cost).await,
         EnsEvent::NameWrapped {
             node,
             dns_name,

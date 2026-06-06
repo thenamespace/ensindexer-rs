@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use alloy_primitives::{Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, keccak256};
 use bigdecimal::BigDecimal;
 use storage::{DomainUpsert, Storage, decimal_from_str};
 use types::{
@@ -72,7 +72,7 @@ pub(crate) async fn ensure_eth_parent(storage: &Storage, timestamp: i64) -> Proj
     ensure_domain(storage, ETH_NODE, timestamp, true).await?;
     storage
         .domains()
-        .set_name_if_unknown(ETH_NODE, Some("eth"), Some("eth"))
+        .set_name(ETH_NODE, Some("eth"), Some("eth"))
         .await?;
     storage
         .domains()
@@ -98,6 +98,18 @@ pub(crate) fn bracketed_labelhash(labelhash: B256) -> String {
             .as_subgraph_id()
             .trim_start_matches("0x")
     )
+}
+
+pub(crate) fn known_label(labelhash: B256) -> Option<&'static str> {
+    ["eth", "reverse", "addr", "resolver", "migrated"]
+        .into_iter()
+        .find(|label| keccak256(label.as_bytes()) == labelhash)
+}
+
+pub(crate) fn label_from_hash(labelhash: B256) -> String {
+    known_label(labelhash)
+        .map(str::to_owned)
+        .unwrap_or_else(|| bracketed_labelhash(labelhash))
 }
 
 pub(crate) fn decode_wrapped_name(bytes: &[u8]) -> Option<(String, String)> {
@@ -170,6 +182,21 @@ mod tests {
                     .trim_start_matches("0x")
             )
         );
+    }
+
+    #[test]
+    fn resolves_known_labelhashes() {
+        assert_eq!(known_label(keccak256("eth".as_bytes())), Some("eth"));
+        assert_eq!(
+            known_label(keccak256("reverse".as_bytes())),
+            Some("reverse")
+        );
+        assert_eq!(known_label(keccak256("addr".as_bytes())), Some("addr"));
+        assert_eq!(
+            known_label(keccak256("migrated".as_bytes())),
+            Some("migrated")
+        );
+        assert_eq!(known_label(keccak256("unknown".as_bytes())), None);
     }
 
     #[test]

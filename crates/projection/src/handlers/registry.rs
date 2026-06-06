@@ -11,7 +11,8 @@ use types::{
 use crate::{
     ProjectionResult,
     support::{
-        block_number, bracketed_labelhash, decimal_from_u256, ensure_account, ensure_domain,
+        block_number, decimal_from_u256, ensure_account, ensure_domain, known_label,
+        label_from_hash,
     },
 };
 
@@ -78,24 +79,33 @@ pub(crate) async fn registry_new_owner(
             .await?;
     }
 
+    let known_label = known_label(labelhash);
     if existing
         .as_ref()
         .and_then(|domain| domain.name.as_ref())
         .is_none()
+        || known_label.is_some()
     {
-        let bracketed_label = bracketed_labelhash(labelhash);
+        let label = label_from_hash(labelhash);
         let parent = storage.domains().find_by_id(&parent_id).await?;
         let name = if parent_id == ROOT_NODE {
-            Some(bracketed_label.clone())
+            Some(label.clone())
         } else {
             parent
                 .and_then(|parent| parent.name)
-                .map(|parent_name| format!("{bracketed_label}.{parent_name}"))
+                .map(|parent_name| format!("{label}.{parent_name}"))
         };
-        storage
-            .domains()
-            .set_name_if_unknown(&domain_id, None, name.as_deref())
-            .await?;
+        if let Some(known_label) = known_label {
+            storage
+                .domains()
+                .set_name(&domain_id, Some(known_label), name.as_deref())
+                .await?;
+        } else {
+            storage
+                .domains()
+                .set_name_if_unknown(&domain_id, None, name.as_deref())
+                .await?;
+        }
     }
 
     storage

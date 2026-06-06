@@ -8,7 +8,7 @@ use crate::{
     ProjectionResult,
     support::{
         block_number, decimal_from_i64, decimal_from_u256, ensure_account, ensure_domain,
-        ensure_eth_parent, eth_2ld_domain_id, expiry_with_grace,
+        ensure_eth_parent, eth_2ld_domain_id, expiry_with_grace, known_label,
     },
 };
 
@@ -38,6 +38,17 @@ pub(crate) async fn base_name_registered(
             &owner_id,
         )
         .await?;
+    if let Some(label) = known_label(labelhash) {
+        let name = format!("{label}.eth");
+        storage
+            .domains()
+            .set_name(&domain_id, Some(label), Some(&name))
+            .await?;
+        storage
+            .registrations()
+            .set_label_name(&registration_id, label)
+            .await?;
+    }
     storage
         .domains()
         .set_registrant_and_expiry(&domain_id, &owner_id, expiry_with_grace(expires)?)
@@ -131,6 +142,7 @@ pub(crate) async fn base_name_transferred(
 
 pub(crate) async fn controller_name_preimage(
     storage: &Storage,
+    ctx: &types::LogContext,
     label: String,
     labelhash: B256,
     cost: U256,
@@ -143,6 +155,8 @@ pub(crate) async fn controller_name_preimage(
     let domain_id = eth_2ld_domain_id(labelhash)?;
     let name = format!("{label}.eth");
 
+    ensure_eth_parent(storage, ctx.block_timestamp).await?;
+    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
     storage
         .domains()
         .set_name(&domain_id, Some(&label), Some(&name))

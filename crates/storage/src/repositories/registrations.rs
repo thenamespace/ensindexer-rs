@@ -290,4 +290,13 @@ impl RegistrationsRepo<'_> {
             .await?;
         Ok(())
     }
+
+    pub async fn set_label_name(&self, id: &str, label_name: &str) -> StorageResult<()> {
+        sqlx::query("update registrations set label_name = $2 where id = $1")
+            .bind(id)
+            .bind(label_name)
+            .execute(self.pool)
+            .await?;
+        Ok(())
+    }
 }
