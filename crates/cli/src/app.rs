@@ -6,7 +6,7 @@ use ingest::IngestService;
 use storage::Storage;
 use tracing_subscriber::{EnvFilter, fmt};
 
-use crate::compare;
+use crate::{compare, schema};
 
 #[derive(Debug, Parser)]
 #[command(name = "cli", about = "Custom Rust ENS indexer")]
@@ -55,10 +55,23 @@ enum Command {
         #[arg(long)]
         show_json: bool,
     },
+    SchemaLocal {
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
+    SchemaDiff {
+        #[arg(long, env = "SUBGRAPH_URL")]
+        subgraph_url: String,
+        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
+        auth_token: Option<String>,
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
 }
 
 pub async fn run() -> anyhow::Result<()> {
     init_tracing();
+    dotenvy::dotenv().ok();
 
     let cli = Cli::parse();
     match cli.command {
@@ -135,6 +148,16 @@ pub async fn run() -> anyhow::Result<()> {
                 show_json,
             )
             .await?;
+        }
+        Command::SchemaLocal { output } => {
+            schema::print_local_sdl(output).await?;
+        }
+        Command::SchemaDiff {
+            subgraph_url,
+            auth_token,
+            output,
+        } => {
+            schema::diff_official(subgraph_url, auth_token, output).await?;
         }
     }
 

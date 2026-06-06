@@ -243,3 +243,6 @@ event_filter_wrapper!(ContenthashChangedFilter, "ContenthashChanged_filter");
 event_filter_wrapper!(InterfaceChangedFilter, "InterfaceChanged_filter");
 event_filter_wrapper!(AuthorisationChangedFilter, "AuthorisationChanged_filter");
 event_filter_wrapper!(VersionChangedFilter, "VersionChanged_filter");
+event_filter_wrapper!(DomainEventFilter, "DomainEvent_filter");
+event_filter_wrapper!(RegistrationEventFilter, "RegistrationEvent_filter");
+event_filter_wrapper!(ResolverEventFilter, "ResolverEvent_filter");

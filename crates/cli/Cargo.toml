@@ -11,8 +11,11 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
+api.workspace = true
+async-graphql.workspace = true
 clap.workspace = true
 config.workspace = true
+dotenvy.workspace = true
 ingest.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true

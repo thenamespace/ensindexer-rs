@@ -9,6 +9,7 @@ pub(crate) struct MetaQueries;
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl MetaQueries {
+    #[graphql(name = "_meta")]
     async fn meta(&self, ctx: &Context<'_>, block: Option<BlockHeight>) -> Result<Meta> {
         let storage = ctx.data::<Storage>()?;
         let block_row = match block.unwrap_or_default() {

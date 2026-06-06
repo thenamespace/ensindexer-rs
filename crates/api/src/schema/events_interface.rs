@@ -3,7 +3,10 @@ use storage::Storage;
 
 use super::ensure_current_block;
 use crate::{
-    filters::{EventFilter, EventOrderBy, OrderDirection},
+    filters::{
+        DomainEventFilter, EventFilter, EventOrderBy, OrderDirection, RegistrationEventFilter,
+        RegistrationEventOrderBy, ResolverEventFilter, ResolverEventOrderBy,
+    },
     meta::{BlockHeight, SubgraphErrorPolicy},
     objects::{
         DomainEvent, RegistrationEvent, ResolverEvent, hydrate_domain_event,
@@ -51,7 +54,7 @@ impl InterfaceEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
+        #[graphql(name = "where")] filter: Option<DomainEventFilter>,
         #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
@@ -64,7 +67,7 @@ impl InterfaceEventQueries {
             .list_domain_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_domain_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -111,8 +114,8 @@ impl InterfaceEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
-        #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
+        #[graphql(name = "where")] filter: Option<RegistrationEventFilter>,
+        #[graphql(name = "orderBy")] order_by: Option<RegistrationEventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
@@ -124,7 +127,7 @@ impl InterfaceEventQueries {
             .list_registration_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_registration_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -171,8 +174,8 @@ impl InterfaceEventQueries {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
-        #[graphql(name = "where")] filter: Option<EventFilter>,
-        #[graphql(name = "orderBy")] order_by: Option<EventOrderBy>,
+        #[graphql(name = "where")] filter: Option<ResolverEventFilter>,
+        #[graphql(name = "orderBy")] order_by: Option<ResolverEventOrderBy>,
         #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
@@ -184,7 +187,7 @@ impl InterfaceEventQueries {
             .list_resolver_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                filter.unwrap_or_default().into_resolver_filter(),
+                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

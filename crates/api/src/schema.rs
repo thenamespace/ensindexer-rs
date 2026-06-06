@@ -13,14 +13,25 @@ use self::{
     events_interface::InterfaceEventQueries, events_registration::RegistrationEventQueries,
     events_resolver::ResolverEventQueries, meta::MetaQueries,
 };
+use crate::filters::{AggregationInterval, BlockChangedFilter};
 use crate::meta::BlockHeight;
 
 pub type EnsSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
 
 pub fn build_schema(storage: Storage) -> EnsSchema {
     Schema::build(QueryRoot::default(), EmptyMutation, EmptySubscription)
+        .register_input_type::<BlockChangedFilter>()
+        .register_output_type::<AggregationInterval>()
         .data(storage)
         .finish()
+}
+
+pub fn build_schema_sdl() -> String {
+    Schema::build(QueryRoot::default(), EmptyMutation, EmptySubscription)
+        .register_input_type::<BlockChangedFilter>()
+        .register_output_type::<AggregationInterval>()
+        .finish()
+        .sdl()
 }
 
 #[derive(Default, MergedObject)]

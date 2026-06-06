@@ -593,11 +593,15 @@ cli status
 cli reset --yes
 cli validate --sample-file fixtures/queries.json
 cli compare --subgraph-url <url> --query-file fixtures/domain.graphql
+cli schema-local --output target/local-schema.graphql
+cli schema-diff --output target/official-subgraph-schema.json
 ```
 
-The current implementation includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, guarded `reset --yes`, and `compare`. `status` prints the latest locally stored block and per-source checkpoints. `reset --yes` truncates indexed projection/event/checkpoint state so a local database can be rebuilt from canonical source start blocks after manual maintenance or coarse reorg recovery.
+The current implementation includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, guarded `reset --yes`, `compare`, `schema-local`, and `schema-diff`. `status` prints the latest locally stored block and per-source checkpoints. `reset --yes` truncates indexed projection/event/checkpoint state so a local database can be rebuilt from canonical source start blocks after manual maintenance or coarse reorg recovery.
 
 `compare` executes one GraphQL query file against the local Rust API and a reference subgraph endpoint, then compares the parsed JSON responses exactly. It does not require Postgres or indexer config, so it can run in CI against an already-started local server. Keep credentials outside committed files by passing `--subgraph-url`, `--auth-token`, or setting `SUBGRAPH_URL` and `SUBGRAPH_AUTH_TOKEN` in `.env`.
+
+`schema-local` exports the current generated SDL from `async-graphql`. `schema-diff` fetches the official subgraph introspection schema from `SUBGRAPH_URL`, using `SUBGRAPH_AUTH_TOKEN` when set, and compares query root names plus generated input and enum type names. This should run before each compatibility milestone. A non-zero exit means the local API still lacks official schema surface, even if some queries happen to work.
 
 Example:
 

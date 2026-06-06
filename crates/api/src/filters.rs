@@ -1,4 +1,5 @@
 mod account;
+mod compat;
 mod domain;
 mod event;
 mod order;
@@ -7,14 +8,16 @@ mod resolver;
 mod wrapped_domain;
 
 pub use account::AccountFilter;
+pub use compat::{AggregationInterval, BlockChangedFilter};
 pub use domain::DomainFilter;
 pub use event::{
     AbiChangedFilter, AddrChangedFilter, AuthorisationChangedFilter, ContenthashChangedFilter,
-    EventFilter, ExpiryExtendedFilter, FusesSetFilter, InterfaceChangedFilter,
+    DomainEventFilter, EventFilter, ExpiryExtendedFilter, FusesSetFilter, InterfaceChangedFilter,
     MulticoinAddrChangedFilter, NameChangedFilter, NameRegisteredFilter, NameRenewedFilter,
     NameTransferredFilter, NameUnwrappedFilter, NameWrappedFilter, NewOwnerFilter,
-    NewResolverFilter, NewTtlFilter, PubkeyChangedFilter, TextChangedFilter, TransferFilter,
-    VersionChangedFilter, WrappedTransferFilter,
+    NewResolverFilter, NewTtlFilter, PubkeyChangedFilter, RegistrationEventFilter,
+    ResolverEventFilter, TextChangedFilter, TransferFilter, VersionChangedFilter,
+    WrappedTransferFilter,
 };
 pub use order::{
     AbiChangedOrderBy, AccountOrderBy, AddrChangedOrderBy, AuthorisationChangedOrderBy,
