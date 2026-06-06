@@ -94,29 +94,23 @@ impl DomainsRepo<'_> {
                 not_ends_with_nocase: filter.label_name_not_ends_with_nocase,
             },
         );
-        push_text_filter(
+        push_text_field_filters(
             &mut separated,
             &mut has_where,
             "labelhash",
-            filter.labelhash,
-        );
-        push_text_not_filter(
-            &mut separated,
-            &mut has_where,
-            "labelhash",
-            filter.labelhash_not,
-        );
-        push_text_array_filter(
-            &mut separated,
-            &mut has_where,
-            "labelhash",
-            filter.labelhash_in,
-        );
-        push_text_not_array_filter(
-            &mut separated,
-            &mut has_where,
-            "labelhash",
-            filter.labelhash_not_in,
+            TextFieldFilter {
+                exact: filter.labelhash,
+                not: filter.labelhash_not,
+                gt: filter.labelhash_gt,
+                lt: filter.labelhash_lt,
+                gte: filter.labelhash_gte,
+                lte: filter.labelhash_lte,
+                in_values: filter.labelhash_in,
+                not_in: filter.labelhash_not_in,
+                contains: filter.labelhash_contains,
+                not_contains: filter.labelhash_not_contains,
+                ..TextFieldFilter::default()
+            },
         );
         push_text_filter(
             &mut separated,
@@ -136,6 +130,13 @@ impl DomainsRepo<'_> {
             "subdomain_count",
             "=",
             filter.subdomain_count,
+        );
+        push_i32_filter(
+            &mut separated,
+            &mut has_where,
+            "subdomain_count",
+            "!=",
+            filter.subdomain_count_not,
         );
         push_i32_filter(
             &mut separated,
@@ -164,6 +165,20 @@ impl DomainsRepo<'_> {
             "subdomain_count",
             "<=",
             filter.subdomain_count_lte,
+        );
+        push_i32_array_filter(
+            &mut separated,
+            &mut has_where,
+            "subdomain_count",
+            filter.subdomain_count_in,
+            false,
+        );
+        push_i32_array_filter(
+            &mut separated,
+            &mut has_where,
+            "subdomain_count",
+            filter.subdomain_count_not_in,
+            true,
         );
         push_text_filter(
             &mut separated,

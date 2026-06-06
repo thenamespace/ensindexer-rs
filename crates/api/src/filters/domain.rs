@@ -160,15 +160,26 @@ impl From<DomainFilter> for StorageDomainFilter {
             label_name_not_ends_with_nocase: extras.label_name_not_ends_with_nocase,
             labelhash: value.labelhash,
             labelhash_not: value.labelhash_not,
+            labelhash_gt: extras.labelhash_gt,
+            labelhash_lt: extras.labelhash_lt,
+            labelhash_gte: extras.labelhash_gte,
+            labelhash_lte: extras.labelhash_lte,
             labelhash_in: value.labelhash_in,
             labelhash_not_in: value.labelhash_not_in,
+            labelhash_contains: extras.labelhash_contains,
+            labelhash_not_contains: extras.labelhash_not_contains,
             parent_id: value.parent,
             parent_filter: value.parent_filter.map(|filter| Box::new((*filter).into())),
             subdomain_count: value.subdomain_count,
+            subdomain_count_not: extras
+                .subdomain_count_not
+                .and_then(|value| value.parse().ok()),
             subdomain_count_gt: value.subdomain_count_gt,
             subdomain_count_lt: value.subdomain_count_lt,
             subdomain_count_gte: value.subdomain_count_gte,
             subdomain_count_lte: value.subdomain_count_lte,
+            subdomain_count_in: extras.subdomain_count_in,
+            subdomain_count_not_in: extras.subdomain_count_not_in,
             resolved_address_id: value.resolved_address,
             resolved_address_filter: value
                 .resolved_address_filter
