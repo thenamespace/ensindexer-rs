@@ -145,90 +145,197 @@ impl DomainsRepo<'_> {
             &mut has_where,
             "is_migrated",
             "=",
-            filter.is_migrated,
+            filter.is_migrated.take(),
         );
         push_bool_filter(
             &mut separated,
             &mut has_where,
             "is_migrated",
             "!=",
-            filter.is_migrated_not,
+            filter.is_migrated_not.take(),
+        );
+        push_bool_array_filter(
+            &mut separated,
+            &mut has_where,
+            "is_migrated",
+            filter.is_migrated_in.take(),
+            false,
+        );
+        push_bool_array_filter(
+            &mut separated,
+            &mut has_where,
+            "is_migrated",
+            filter.is_migrated_not_in.take(),
+            true,
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "created_at",
             "=",
-            filter.created_at,
+            filter.created_at.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "created_at",
+            "!=",
+            filter.created_at_not.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "created_at",
             ">",
-            filter.created_at_gt,
+            filter.created_at_gt.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "created_at",
             "<",
-            filter.created_at_lt,
+            filter.created_at_lt.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "created_at",
             ">=",
-            filter.created_at_gte,
+            filter.created_at_gte.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "created_at",
             "<=",
-            filter.created_at_lte,
+            filter.created_at_lte.take(),
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "created_at",
+            filter.created_at_in.take(),
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "created_at",
+            filter.created_at_not_in.take(),
+            true,
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             "=",
-            filter.expiry_date,
+            filter.expiry_date.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            "!=",
+            filter.expiry_date_not.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             ">",
-            filter.expiry_date_gt,
+            filter.expiry_date_gt.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             "<",
-            filter.expiry_date_lt,
+            filter.expiry_date_lt.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             ">=",
-            filter.expiry_date_gte,
+            filter.expiry_date_gte.take(),
         );
         push_numeric_text_filter(
             &mut separated,
             &mut has_where,
             "expiry_date",
             "<=",
-            filter.expiry_date_lte,
+            filter.expiry_date_lte.take(),
         );
-        push_numeric_text_filter(&mut separated, &mut has_where, "ttl", "=", filter.ttl);
-        push_numeric_text_filter(&mut separated, &mut has_where, "ttl", ">", filter.ttl_gt);
-        push_numeric_text_filter(&mut separated, &mut has_where, "ttl", "<", filter.ttl_lt);
-        push_numeric_text_filter(&mut separated, &mut has_where, "ttl", ">=", filter.ttl_gte);
-        push_numeric_text_filter(&mut separated, &mut has_where, "ttl", "<=", filter.ttl_lte);
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_in.take(),
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "expiry_date",
+            filter.expiry_date_not_in.take(),
+            true,
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            "=",
+            filter.ttl.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            "!=",
+            filter.ttl_not.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            ">",
+            filter.ttl_gt.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            "<",
+            filter.ttl_lt.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            ">=",
+            filter.ttl_gte.take(),
+        );
+        push_numeric_text_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            "<=",
+            filter.ttl_lte.take(),
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            filter.ttl_in.take(),
+            false,
+        );
+        push_numeric_text_array_filter(
+            &mut separated,
+            &mut has_where,
+            "ttl",
+            filter.ttl_not_in.take(),
+            true,
+        );
 
         if has_where {
             separated.push_unseparated(" ");
