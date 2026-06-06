@@ -4,6 +4,7 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use self::filtering::push_resolver_filters;
 use crate::{error::*, filters::*, models::*, query::resolver_order_column};
 
+mod composition;
 mod filtering;
 
 pub struct ResolversRepo<'a> {

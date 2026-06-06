@@ -126,6 +126,12 @@ impl From<ResolverFilter> for StorageResolverFilter {
             coin_types_contains_nocase: extras.coin_types_contains_nocase,
             coin_types_not_contains: extras.coin_types_not_contains,
             coin_types_not_contains_nocase: extras.coin_types_not_contains_nocase,
+            and: extras
+                .and
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
+            or: extras
+                .or
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
         }
     }
 }

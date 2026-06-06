@@ -1,5 +1,6 @@
 use sqlx::{Postgres, query_builder::Separated};
 
+use super::composition::push_resolver_filter_group;
 use crate::{filters::ResolverFilter, query::*};
 
 pub(super) fn push_resolver_filters<'qb>(
@@ -20,6 +21,8 @@ pub(super) fn push_resolver_filters<'qb>(
     );
     push_text_array_filter(separated, has_where, "id", filter.id_in.take());
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in.take());
+    let and_filters = filter.and.take();
+    let or_filters = filter.or.take();
     push_text_field_filters(separated, has_where, "domain_id", domain_field(&mut filter));
     push_domain_relation_filter(
         separated,
@@ -37,6 +40,8 @@ pub(super) fn push_resolver_filters<'qb>(
         content_hash_field(&mut filter),
     );
     push_record_array_filters(separated, has_where, filter);
+    push_resolver_filter_group(separated, has_where, " and ", and_filters);
+    push_resolver_filter_group(separated, has_where, " or ", or_filters);
 }
 
 fn domain_field(filter: &mut ResolverFilter) -> TextFieldFilter {
@@ -216,4 +221,45 @@ fn push_record_array_filters<'qb>(
         filter.coin_types_not_contains_nocase.take(),
         true,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Execute, Postgres, QueryBuilder};
+
+    use super::*;
+
+    #[test]
+    fn resolver_filters_support_boolean_composition() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from resolvers");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_resolver_filters(
+                &mut separated,
+                &mut has_where,
+                ResolverFilter {
+                    address: Some("0xresolver".into()),
+                    or: Some(vec![
+                        ResolverFilter {
+                            content_hash_contains: Some("0xabc".into()),
+                            ..ResolverFilter::default()
+                        },
+                        ResolverFilter {
+                            texts_contains: Some("email".into()),
+                            ..ResolverFilter::default()
+                        },
+                    ]),
+                    ..ResolverFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from resolvers where address = $1 and (id in (select id from resolvers where content_hash like $2) or id in (select id from resolvers where texts @> array[$3]::text[])) "
+        );
+    }
 }
