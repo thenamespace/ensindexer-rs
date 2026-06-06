@@ -4,7 +4,8 @@ use crate::{
     filters::{AccountFilter, DomainFilter},
     query::{
         push_account_filters, push_account_relation_filter, push_domain_relation_filter,
-        push_numeric_text_filter, push_text_filter,
+        push_numeric_text_filter, push_text_filter, push_text_not_contains_filter,
+        push_text_not_prefix_filter, push_text_prefix_nocase_filter,
     },
 };
 
@@ -146,5 +147,55 @@ fn account_relation_filter_supports_boolean_composition() {
     assert_eq!(
         built.sql(),
         "select id from domains where owner_id in (select id from accounts where ((id = any($1)))) "
+    );
+}
+
+#[test]
+fn negated_text_like_filters_keep_predicates_grouped() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_text_not_contains_filter(
+            &mut separated,
+            &mut has_where,
+            "label_name",
+            Some("foo".into()),
+            true,
+        );
+        push_text_not_prefix_filter(
+            &mut separated,
+            &mut has_where,
+            "label_name",
+            Some("bar".into()),
+            false,
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from registrations where not (lower(label_name) like lower($1)) and not (label_name like $2) "
+    );
+}
+
+#[test]
+fn nocase_prefix_filter_emits_lowered_predicate() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from wrapped_domains");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_text_filter(&mut separated, &mut has_where, "id", Some("abc".into()));
+        push_text_prefix_nocase_filter(&mut separated, &mut has_where, "name", Some("foo".into()));
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from wrapped_domains where id = $1 and lower(name) like lower($2) "
     );
 }

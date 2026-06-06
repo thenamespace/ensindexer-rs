@@ -131,6 +131,19 @@ pub(crate) fn push_text_contains_filter<'qb>(
     }
 }
 
+pub(crate) fn push_text_not_contains_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+    nocase: bool,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("%{value}%"), nocase, true);
+    }
+}
+
 pub(crate) fn push_text_prefix_filter<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
@@ -139,10 +152,32 @@ pub(crate) fn push_text_prefix_filter<'qb>(
 ) {
     if let Some(value) = value {
         push_where_prefix(separated, has_where);
-        separated
-            .push(column)
-            .push_unseparated(" like ")
-            .push_bind_unseparated(format!("{value}%"));
+        push_text_like_predicate(separated, column, format!("{value}%"), false, false);
+    }
+}
+
+pub(crate) fn push_text_not_prefix_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+    nocase: bool,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("{value}%"), nocase, true);
+    }
+}
+
+pub(crate) fn push_text_prefix_nocase_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("{value}%"), true, false);
     }
 }
 
@@ -154,10 +189,70 @@ pub(crate) fn push_text_suffix_filter<'qb>(
 ) {
     if let Some(value) = value {
         push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("%{value}"), false, false);
+    }
+}
+
+pub(crate) fn push_text_not_suffix_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+    nocase: bool,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("%{value}"), nocase, true);
+    }
+}
+
+pub(crate) fn push_text_suffix_nocase_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        push_text_like_predicate(separated, column, format!("%{value}"), true, false);
+    }
+}
+
+fn push_text_like_predicate<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    column: &'static str,
+    pattern: String,
+    nocase: bool,
+    negate: bool,
+) {
+    if negate {
+        separated.push("not (");
+    }
+
+    if nocase {
+        if negate {
+            separated.push_unseparated("lower(");
+        } else {
+            separated.push("lower(");
+        }
         separated
-            .push(column)
+            .push_unseparated(column)
+            .push_unseparated(") like lower(")
+            .push_bind_unseparated(pattern)
+            .push_unseparated(")");
+    } else {
+        if negate {
+            separated.push_unseparated(column);
+        } else {
+            separated.push(column);
+        }
+        separated
             .push_unseparated(" like ")
-            .push_bind_unseparated(format!("%{value}"));
+            .push_bind_unseparated(pattern);
+    }
+
+    if negate {
+        separated.push_unseparated(")");
     }
 }
 
