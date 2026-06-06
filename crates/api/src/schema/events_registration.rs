@@ -1,4 +1,4 @@
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
 use super::ensure_current_block;
@@ -22,7 +22,7 @@ impl RegistrationEventQueries {
     async fn name_registered_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameRegisteredEvent>> {
@@ -30,7 +30,7 @@ impl RegistrationEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_registered_by_id(&id)
+            .find_name_registered_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -68,7 +68,7 @@ impl RegistrationEventQueries {
     async fn name_renewed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameRenewedEvent>> {
@@ -76,7 +76,7 @@ impl RegistrationEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_renewed_by_id(&id)
+            .find_name_renewed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -114,7 +114,7 @@ impl RegistrationEventQueries {
     async fn name_transferred_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameTransferredEvent>> {
@@ -122,7 +122,7 @@ impl RegistrationEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_transferred_by_id(&id)
+            .find_name_transferred_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }

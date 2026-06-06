@@ -1,4 +1,4 @@
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
 use super::ensure_current_block;
@@ -30,7 +30,7 @@ impl ResolverEventQueries {
     async fn addr_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<AddrChangedEvent>> {
@@ -38,7 +38,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_addr_changed_by_id(&id)
+            .find_addr_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -76,7 +76,7 @@ impl ResolverEventQueries {
     async fn multicoin_addr_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<MulticoinAddrChangedEvent>> {
@@ -84,7 +84,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_multicoin_addr_changed_by_id(&id)
+            .find_multicoin_addr_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -122,7 +122,7 @@ impl ResolverEventQueries {
     async fn name_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameChangedEvent>> {
@@ -130,7 +130,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_changed_by_id(&id)
+            .find_name_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -168,7 +168,7 @@ impl ResolverEventQueries {
     async fn abi_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<AbiChangedEvent>> {
@@ -176,7 +176,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_abi_changed_by_id(&id)
+            .find_abi_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -214,7 +214,7 @@ impl ResolverEventQueries {
     async fn pubkey_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<PubkeyChangedEvent>> {
@@ -222,7 +222,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_pubkey_changed_by_id(&id)
+            .find_pubkey_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -260,7 +260,7 @@ impl ResolverEventQueries {
     async fn text_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<TextChangedEvent>> {
@@ -268,7 +268,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_text_changed_by_id(&id)
+            .find_text_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -306,7 +306,7 @@ impl ResolverEventQueries {
     async fn contenthash_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<ContenthashChangedEvent>> {
@@ -314,7 +314,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_contenthash_changed_by_id(&id)
+            .find_contenthash_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -352,7 +352,7 @@ impl ResolverEventQueries {
     async fn interface_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<InterfaceChangedEvent>> {
@@ -360,7 +360,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_interface_changed_by_id(&id)
+            .find_interface_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -398,7 +398,7 @@ impl ResolverEventQueries {
     async fn authorisation_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<AuthorisationChangedEvent>> {
@@ -406,7 +406,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_authorisation_changed_by_id(&id)
+            .find_authorisation_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -444,7 +444,7 @@ impl ResolverEventQueries {
     async fn version_changed_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<VersionChangedEvent>> {
@@ -452,7 +452,7 @@ impl ResolverEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_version_changed_by_id(&id)
+            .find_version_changed_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }

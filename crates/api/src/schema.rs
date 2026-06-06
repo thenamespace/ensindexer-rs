@@ -67,23 +67,23 @@ mod tests {
             .sdl();
 
         assert!(sdl.contains(
-            "domain(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "domain(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
         assert!(sdl.contains("domains(first: Int, skip: Int, where: Domain_filter, orderBy: Domain_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "transfer(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "transfer(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
         assert!(sdl.contains("transfers(first: Int, skip: Int, where: Transfer_filter, orderBy: Transfer_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "newTTL(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "newTTL(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
         assert!(sdl.contains("newTTLs(first: Int, skip: Int, where: NewTTL_filter, orderBy: NewTTL_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "nameRegistered(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "nameRegistered(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
         assert!(sdl.contains("nameRegistereds(first: Int, skip: Int, where: NameRegistered_filter, orderBy: NameRegistered_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "versionChanged(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "versionChanged(id: ID!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
         assert!(sdl.contains("versionChangeds(first: Int, skip: Int, where: VersionChanged_filter, orderBy: VersionChanged_orderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains("domainId: String"));

@@ -1,4 +1,4 @@
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
 use super::ensure_current_block;
@@ -22,13 +22,17 @@ impl EntityQueries {
     async fn domain(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<Domain>> {
         ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage.domains().find_by_id(&id).await?.map(Into::into))
+        Ok(storage
+            .domains()
+            .find_by_id(id.as_ref())
+            .await?
+            .map(Into::into))
     }
 
     async fn domains(
@@ -62,13 +66,17 @@ impl EntityQueries {
     async fn account(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<Account>> {
         ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage.accounts().find_by_id(&id).await?.map(Into::into))
+        Ok(storage
+            .accounts()
+            .find_by_id(id.as_ref())
+            .await?
+            .map(Into::into))
     }
 
     async fn accounts(
@@ -102,7 +110,7 @@ impl EntityQueries {
     async fn registration(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<Registration>> {
@@ -110,7 +118,7 @@ impl EntityQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .registrations()
-            .find_by_id(&id)
+            .find_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -146,7 +154,7 @@ impl EntityQueries {
     async fn wrapped_domain(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<WrappedDomain>> {
@@ -154,7 +162,7 @@ impl EntityQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .wrapped_domains()
-            .find_by_id(&id)
+            .find_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -190,13 +198,17 @@ impl EntityQueries {
     async fn resolver(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<Resolver>> {
         ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage.resolvers().find_by_id(&id).await?.map(Into::into))
+        Ok(storage
+            .resolvers()
+            .find_by_id(id.as_ref())
+            .await?
+            .map(Into::into))
     }
 
     async fn resolvers(

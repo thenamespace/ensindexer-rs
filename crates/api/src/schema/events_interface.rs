@@ -1,4 +1,4 @@
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
 use super::ensure_current_block;
@@ -24,7 +24,7 @@ impl InterfaceEventQueries {
     async fn domain_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<DomainEvent>> {
@@ -36,7 +36,7 @@ impl InterfaceEventQueries {
                 1,
                 0,
                 storage::EventFilter {
-                    id: Some(id),
+                    id: Some(id.to_string()),
                     ..storage::EventFilter::default()
                 },
                 storage::EventOrderField::Id,
@@ -84,7 +84,7 @@ impl InterfaceEventQueries {
     async fn registration_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<RegistrationEvent>> {
@@ -96,7 +96,7 @@ impl InterfaceEventQueries {
                 1,
                 0,
                 storage::EventFilter {
-                    id: Some(id),
+                    id: Some(id.to_string()),
                     ..storage::EventFilter::default()
                 },
                 storage::EventOrderField::Id,
@@ -144,7 +144,7 @@ impl InterfaceEventQueries {
     async fn resolver_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<ResolverEvent>> {
@@ -156,7 +156,7 @@ impl InterfaceEventQueries {
                 1,
                 0,
                 storage::EventFilter {
-                    id: Some(id),
+                    id: Some(id.to_string()),
                     ..storage::EventFilter::default()
                 },
                 storage::EventOrderField::Id,

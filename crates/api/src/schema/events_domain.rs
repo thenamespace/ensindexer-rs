@@ -1,4 +1,4 @@
-use async_graphql::{Context, Object, Result};
+use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
 use super::ensure_current_block;
@@ -28,7 +28,7 @@ impl DomainEventQueries {
     async fn transfer_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<TransferEvent>> {
@@ -36,7 +36,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_transfer_by_id(&id)
+            .find_transfer_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -74,7 +74,7 @@ impl DomainEventQueries {
     async fn new_owner_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NewOwnerEvent>> {
@@ -82,7 +82,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_new_owner_by_id(&id)
+            .find_new_owner_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -120,7 +120,7 @@ impl DomainEventQueries {
     async fn new_resolver_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NewResolverEvent>> {
@@ -128,7 +128,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_new_resolver_by_id(&id)
+            .find_new_resolver_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -166,7 +166,7 @@ impl DomainEventQueries {
     async fn new_ttl_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NewTtlEvent>> {
@@ -174,7 +174,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_new_ttl_by_id(&id)
+            .find_new_ttl_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -212,7 +212,7 @@ impl DomainEventQueries {
     async fn wrapped_transfer_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<WrappedTransferEvent>> {
@@ -220,7 +220,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_wrapped_transfer_by_id(&id)
+            .find_wrapped_transfer_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -258,7 +258,7 @@ impl DomainEventQueries {
     async fn name_wrapped_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameWrappedEvent>> {
@@ -266,7 +266,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_wrapped_by_id(&id)
+            .find_name_wrapped_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -304,7 +304,7 @@ impl DomainEventQueries {
     async fn name_unwrapped_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<NameUnwrappedEvent>> {
@@ -312,7 +312,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_name_unwrapped_by_id(&id)
+            .find_name_unwrapped_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -350,7 +350,7 @@ impl DomainEventQueries {
     async fn fuses_set_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<FusesSetEvent>> {
@@ -358,7 +358,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_fuses_set_by_id(&id)
+            .find_fuses_set_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
@@ -396,7 +396,7 @@ impl DomainEventQueries {
     async fn expiry_extended_event(
         &self,
         ctx: &Context<'_>,
-        id: String,
+        id: ID,
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError")] _subgraph_error: Option<SubgraphErrorPolicy>,
     ) -> Result<Option<ExpiryExtendedEvent>> {
@@ -404,7 +404,7 @@ impl DomainEventQueries {
         let storage = ctx.data::<Storage>()?;
         Ok(storage
             .events()
-            .find_expiry_extended_by_id(&id)
+            .find_expiry_extended_by_id(id.as_ref())
             .await?
             .map(Into::into))
     }
