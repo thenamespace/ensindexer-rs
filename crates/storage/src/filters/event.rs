@@ -223,4 +223,6 @@ pub struct EventFilter {
     pub version_lte: Option<String>,
     pub version_in: Option<Vec<String>>,
     pub version_not_in: Option<Vec<String>>,
+    pub and: Option<Vec<EventFilter>>,
+    pub or: Option<Vec<EventFilter>>,
 }

@@ -31,6 +31,12 @@ macro_rules! resolver_filter {
                 let mut filter = EventFilter::default();
                 value.base.apply(&mut filter);
                 $(value.$field.apply(&mut filter);)*
+                filter.and = value
+                    .and
+                    .map(|filters| filters.into_iter().map(EventFilter::from).collect());
+                filter.or = value
+                    .or
+                    .map(|filters| filters.into_iter().map(EventFilter::from).collect());
                 filter
             }
         }

@@ -333,7 +333,7 @@ or: [T_filter]
 _change_block: BlockChangedFilter
 ```
 
-Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, and `WrappedDomain_filter`. The same composition pattern still needs to be expanded to event filters and deeper recursive relationship predicates.
+Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, `WrappedDomain_filter`, concrete event filters, and event-interface filters. Deeper recursive relationship predicates remain compatibility-expansion work.
 
 Relationship filters use Graph Node's trailing underscore convention. Examples:
 
@@ -363,7 +363,7 @@ Current implementation supports shallow trailing-underscore filters on mutable e
 - `WrappedDomain_filter`: `domain_`, `owner_`;
 - `Resolver_filter`: `domain_`, `addr_`.
 
-Those relationship filters apply scalar predicates on the directly related entity. Fully recursive relationship filtering and boolean `and`/`or` composition remain compatibility-expansion work.
+Those relationship filters apply scalar predicates on the directly related entity. Fully recursive relationship filtering, including recursive boolean composition across relationship-filter boundaries, remains compatibility-expansion work.
 
 Current scalar filter coverage includes the main stored mutable-entity fields:
 

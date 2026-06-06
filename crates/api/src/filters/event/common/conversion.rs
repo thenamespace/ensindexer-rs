@@ -243,6 +243,24 @@ impl EventFilter {
             version_lte: self.version_lte,
             version_in: self.version_in,
             version_not_in: self.version_not_in,
+            and: self.and.map(|filters| {
+                filters
+                    .into_iter()
+                    .map(|filter| {
+                        let parent_id = filter.parent_id.clone();
+                        filter.into_storage_filter(parent_id)
+                    })
+                    .collect()
+            }),
+            or: self.or.map(|filters| {
+                filters
+                    .into_iter()
+                    .map(|filter| {
+                        let parent_id = filter.parent_id.clone();
+                        filter.into_storage_filter(parent_id)
+                    })
+                    .collect()
+            }),
         }
     }
 }

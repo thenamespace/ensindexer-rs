@@ -466,8 +466,9 @@ Current implementation state:
 - Mutable-entity, concrete-event, and event-interface roots accept `block: Block_height` and `subgraphError: _SubgraphErrorPolicy_`. Current-state reads work; non-current block reads return an explicit compatibility error until historical snapshots are implemented.
 - Entity filters support exact IDs, `id_not`, `id_in`, `id_not_in`, common string predicates for known name fields, labelhash/contenthash predicates, `subdomainCount_*`, `isMigrated`, resolver `texts_contains` and `coinTypes_contains`, numeric comparison filters for core `BigInt`/`Int` fields, and shallow trailing-underscore relationship filters on direct mutable-entity relationships.
 - `AccountFilter` supports `and` and `or` composition, including when used in account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`.
+- Scalar-compatible `DomainFilter`, `RegistrationFilter`, `WrappedDomainFilter`, `ResolverFilter`, concrete event filters, and event-interface filters support `and` and `or` composition.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, recursive nested filters, broad `and/or` composition for event filters, and `_change_block` filters are still compatibility-expansion work.
+- Historical block snapshots, recursive nested filters, event-interface-specific field predicates, and `_change_block` filters are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 
@@ -503,7 +504,7 @@ Tier 2 filters:
 - `_contains_nocase`, `_starts_with_nocase`, `_ends_with_nocase` for all strings;
 - recursive trailing-underscore filters and relationship filters on event entities;
 - event-interface-specific filtering over union queries;
-- `and` and `or` filter composition for non-account entity/event filters.
+- deeper recursive `and` and `or` semantics across relationship-filter boundaries.
 
 Tier 3 compatibility:
 

@@ -2,6 +2,7 @@ use sqlx::PgPool;
 
 mod columns;
 mod common;
+mod composition;
 mod domain;
 mod event_filters;
 mod event_sql;

@@ -3,7 +3,10 @@ use sqlx::{FromRow, Postgres, QueryBuilder, postgres::PgRow};
 use crate::{error::*, filters::*, models::*, query::*};
 
 use super::{
-    EventsRepo, event_filters::push_event_filters, specific_filters::push_event_specific_filters,
+    EventsRepo,
+    composition::{push_concrete_event_filter_group, push_event_ref_filter_group},
+    event_filters::push_event_filters,
+    specific_filters::push_event_specific_filters,
 };
 
 impl EventsRepo<'_> {
@@ -48,6 +51,22 @@ impl EventsRepo<'_> {
         let mut has_where = false;
         push_event_filters(&mut separated, &mut has_where, parent_column, &filter);
         push_event_specific_filters(&mut separated, &mut has_where, table, &filter);
+        push_concrete_event_filter_group(
+            &mut separated,
+            &mut has_where,
+            table,
+            parent_column,
+            " and ",
+            filter.and.clone(),
+        );
+        push_concrete_event_filter_group(
+            &mut separated,
+            &mut has_where,
+            table,
+            parent_column,
+            " or ",
+            filter.or.clone(),
+        );
         if has_where {
             separated.push_unseparated(" ");
         }
@@ -82,6 +101,20 @@ impl EventsRepo<'_> {
         let mut separated = query.separated(" and ");
         let mut has_where = false;
         push_event_filters(&mut separated, &mut has_where, "parent_id", &filter);
+        push_event_ref_filter_group(
+            &mut separated,
+            &mut has_where,
+            union_sql,
+            " and ",
+            filter.and.clone(),
+        );
+        push_event_ref_filter_group(
+            &mut separated,
+            &mut has_where,
+            union_sql,
+            " or ",
+            filter.or.clone(),
+        );
         if has_where {
             separated.push_unseparated(" ");
         }
