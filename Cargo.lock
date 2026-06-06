@@ -3355,6 +3355,7 @@ dependencies = [
  "hypersync-client",
  "projection",
  "serde",
+ "serde_json",
  "storage",
  "thiserror 2.0.18",
  "tokio",

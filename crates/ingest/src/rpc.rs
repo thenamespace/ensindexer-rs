@@ -9,10 +9,11 @@ use alloy::{
 use alloy_network_primitives::HeaderResponse;
 use alloy_primitives::{Address, B256};
 use contracts::{fixed_source_topic0s, resolver_topic0s};
+use serde::{Deserialize, Serialize};
 
 use crate::sources::{FixedSource, LogSource};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct BlockMeta {
     pub number: u64,
     pub hash: B256,

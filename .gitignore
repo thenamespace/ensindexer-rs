@@ -5,6 +5,7 @@ rustc-ice-*.txt
 **/mutants.out*/
 
 .repos
+.raw-archive
 
 .env
 .env.*

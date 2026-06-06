@@ -355,6 +355,7 @@ Backfill algorithm:
 for block_range in planned_ranges:
   fetch all source logs for the range
   fetch block timestamps for touched blocks
+  optionally write raw archive range JSON
   decode logs
   sort by block_number, transaction_index, log_index
   group by block
@@ -373,6 +374,13 @@ Resolver wildcard ingestion is the largest stream. Start with small block ranges
 - shrink range when returned log count is near provider limit;
 - grow range when log count is low;
 - cap retries with exponential backoff.
+
+Raw archive/replay:
+
+- `RAW_ARCHIVE_DIR` writes fetched logs and block metadata to filesystem JSON files keyed by inclusive range.
+- Archive files store chain ID, range bounds, raw logs with source tags, block metadata, and checkpoint source names.
+- `cli replay --from <block> --to <block>` reads contiguous archive files and applies the same decode/projection/checkpoint path as fetched backfill.
+- Projection development should prefer archive replay after the first fetch so compatibility fixes do not repeatedly spend RPC or HyperSync credits.
 
 ## Step 8: Live Indexing and Reorg Handling
 

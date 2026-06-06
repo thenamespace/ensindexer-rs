@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use alloy_primitives::Address;
 use contracts::FixedLogSource;
+use serde::{Deserialize, Serialize};
 use types::constants::{
     BASE_REGISTRAR_ADDRESS, ENS_REGISTRY_ADDRESS, LEGACY_ETH_REGISTRAR_CONTROLLER_ADDRESS,
     NAME_WRAPPER_ADDRESS, OLD_ENS_REGISTRY_ADDRESS, UNWRAPPED_ETH_REGISTRAR_CONTROLLER_ADDRESS,
@@ -15,7 +16,7 @@ pub struct FixedSource {
     pub start_block: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub(crate) enum LogSource {
     Fixed(FixedLogSource),
     Resolver,

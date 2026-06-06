@@ -29,12 +29,14 @@ Configuration is loaded from `.env` via `config`.
 Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox when `GRAPHQL_SANDBOX=true`.
 
 Historical backfills use Envio HyperSync automatically when `ENVIO_API_KEY` is set. Set `BACKFILL_SOURCE=rpc` to force JSON-RPC backfills, or `BACKFILL_SOURCE=hypersync` to fail fast unless HyperSync is configured. `HYPERSYNC_URL` defaults to `https://eth.hypersync.xyz`.
+Set `RAW_ARCHIVE_DIR` to persist fetched raw logs and block metadata as JSON range files. After changing projection code, use `cargo run -p cli -- replay --from <block> --to <block>` to rebuild from those files without spending RPC or HyperSync credits again.
 
 Indexer commands:
 
 ```bash
 make status
 make backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+cargo run -p cli -- replay --from 9380380 --to 9381380
 cargo run -p cli -- index
 make reset
 make check

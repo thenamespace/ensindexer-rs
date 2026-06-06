@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 use config::AppConfig;
 use ingest::IngestService;
@@ -25,6 +27,14 @@ enum Command {
         from: u64,
         #[arg(long)]
         to: u64,
+    },
+    Replay {
+        #[arg(long)]
+        from: u64,
+        #[arg(long)]
+        to: u64,
+        #[arg(long)]
+        archive_dir: Option<PathBuf>,
     },
     Index,
 }
@@ -61,6 +71,16 @@ pub async fn run() -> anyhow::Result<()> {
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .backfill_range(from, to)
+                .await?;
+        }
+        Command::Replay {
+            from,
+            to,
+            archive_dir,
+        } => {
+            storage.run_migrations().await?;
+            IngestService::new(config, storage)
+                .replay_archive_range(from, to, archive_dir)
                 .await?;
         }
         Command::Index => {

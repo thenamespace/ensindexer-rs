@@ -4,11 +4,10 @@ use alloy::{providers::ProviderBuilder, rpc::types::Log};
 use alloy_primitives::Address;
 use config::BackfillSource;
 use contracts::{EnsEvent, decode_fixed_source_log};
-use storage::BlockInsert;
 
 use super::IngestService;
 use crate::{
-    decode::decode_log,
+    archive::{ArchivedRange, write_range},
     hypersync::{HypersyncBackfillClient, LogBatch},
     rpc::{
         fetch_block_meta_by_number, fetch_block_metadata, fetch_resolver_logs, fetch_source_logs,
@@ -115,6 +114,10 @@ impl IngestService {
                 .iter()
                 .filter(|source| range_end >= source.start_block)
                 .collect::<Vec<_>>();
+            let checkpoint_sources = active_sources
+                .iter()
+                .map(|source| source.checkpoint_name().to_owned())
+                .collect::<Vec<_>>();
             if !active_sources.is_empty() && !block_meta.contains_key(&range_end) {
                 let meta = match &hypersync {
                     Some(client) => client.fetch_block_meta_by_number(range_end).await?,
@@ -123,50 +126,21 @@ impl IngestService {
                 block_meta.insert(range_end, meta);
             }
 
-            for meta in block_meta.values() {
-                self.storage
-                    .blocks()
-                    .upsert(BlockInsert {
-                        number: meta.number_i64()?,
-                        hash: types::hex_b256(meta.hash),
-                        parent_hash: Some(types::hex_b256(meta.parent_hash)),
-                        timestamp: meta.timestamp_i64()?,
-                    })
-                    .await?;
+            if let Some(dir) = &self.config.raw_archive_dir {
+                let archive = ArchivedRange::new(
+                    self.config.chain_id,
+                    range_start,
+                    range_end,
+                    batch.raw_logs.clone(),
+                    block_meta.clone(),
+                    checkpoint_sources.clone(),
+                );
+                let path = write_range(dir, &archive)?;
+                tracing::info!(path = %path.display(), "wrote raw archive range");
             }
 
-            let mut decoded = Vec::new();
-            for (source, log) in batch.raw_logs {
-                match decode_log(source, log, &block_meta) {
-                    Ok(indexed) => decoded.push(indexed),
-                    Err(error) => tracing::warn!(?source, %error, "skipping undecodable log"),
-                }
-            }
-
-            decoded.sort_by_key(|event| {
-                (
-                    event.ctx.block_number,
-                    event.ctx.transaction_index,
-                    event.ctx.log_index,
-                )
-            });
-
-            for event in decoded {
-                projection::apply_event(&self.storage, event).await?;
-            }
-
-            for source in active_sources {
-                if let Some(meta) = block_meta.get(&range_end) {
-                    self.storage
-                        .checkpoints()
-                        .upsert(
-                            source.checkpoint_name(),
-                            meta.number_i64()?,
-                            &types::hex_b256(meta.hash),
-                        )
-                        .await?;
-                }
-            }
+            self.apply_raw_range(range_end, batch.raw_logs, block_meta, checkpoint_sources)
+                .await?;
 
             tracing::info!(
                 from_block = range_start,

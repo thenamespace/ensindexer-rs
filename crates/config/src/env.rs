@@ -1,4 +1,4 @@
-use std::{env, net::SocketAddr};
+use std::{env, net::SocketAddr, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub envio_api_key: Option<String>,
     pub hypersync_url: Url,
     pub backfill_source: BackfillSource,
+    pub raw_archive_dir: Option<PathBuf>,
     pub chain_id: u64,
     pub bind_address: SocketAddr,
     pub graphql_sandbox: bool,
@@ -34,6 +35,7 @@ impl AppConfig {
                     .expect("default hypersync url is valid"),
             )?,
             backfill_source: optional("BACKFILL_SOURCE", BackfillSource::Auto)?,
+            raw_archive_dir: optional_path_with_fallback("RAW_ARCHIVE_DIR", "RAW_LOG_ARCHIVE_DIR"),
             chain_id: optional("CHAIN_ID", 1)?,
             bind_address: optional(
                 "BIND_ADDRESS",
@@ -110,6 +112,14 @@ fn optional_secret_with_fallback(key: &str, fallback_key: &str) -> Option<String
         .or_else(|_| env::var(fallback_key))
         .ok()
         .filter(|value| !value.trim().is_empty())
+}
+
+fn optional_path_with_fallback(key: &str, fallback_key: &str) -> Option<PathBuf> {
+    env::var(key)
+        .or_else(|_| env::var(fallback_key))
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(PathBuf::from)
 }
 
 impl std::str::FromStr for BackfillSource {

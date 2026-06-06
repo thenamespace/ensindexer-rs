@@ -1,5 +1,7 @@
+mod apply;
 mod backfill;
 mod live;
+mod replay;
 
 use config::AppConfig;
 use storage::Storage;
