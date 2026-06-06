@@ -79,6 +79,15 @@ impl RegistrationsRepo<'_> {
 
         push_text_filter(&mut separated, &mut has_where, "id", filter.id);
         push_text_not_filter(&mut separated, &mut has_where, "id", filter.id_not);
+        push_text_comparison_filters(
+            &mut separated,
+            &mut has_where,
+            "id",
+            filter.id_gt,
+            filter.id_lt,
+            filter.id_gte,
+            filter.id_lte,
+        );
         push_text_array_filter(&mut separated, &mut has_where, "id", filter.id_in);
         push_text_not_array_filter(&mut separated, &mut has_where, "id", filter.id_not_in);
         push_text_filter(

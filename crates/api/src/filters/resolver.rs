@@ -42,9 +42,14 @@ pub struct ResolverFilter {
 
 impl From<ResolverFilter> for StorageResolverFilter {
     fn from(value: ResolverFilter) -> Self {
+        let extras = value.extras;
         Self {
             id: value.id,
             id_not: value.id_not,
+            id_gt: extras.id_gt,
+            id_lt: extras.id_lt,
+            id_gte: extras.id_gte,
+            id_lte: extras.id_lte,
             id_in: value.id_in,
             id_not_in: value.id_not_in,
             domain_id: value.domain,

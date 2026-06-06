@@ -25,6 +25,10 @@ pub(super) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
 pub(super) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
+        || filter.id_gt.is_some()
+        || filter.id_lt.is_some()
+        || filter.id_gte.is_some()
+        || filter.id_lte.is_some()
         || filter.id_in.as_ref().is_some_and(|value| !value.is_empty())
         || filter
             .id_not_in
@@ -83,6 +87,10 @@ pub(super) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool
 pub(super) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
+        || filter.id_gt.is_some()
+        || filter.id_lt.is_some()
+        || filter.id_gte.is_some()
+        || filter.id_lte.is_some()
         || filter.id_in.as_ref().is_some_and(|value| !value.is_empty())
         || filter
             .id_not_in

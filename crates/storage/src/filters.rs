@@ -20,6 +20,10 @@ pub struct AccountFilter {
 pub struct DomainFilter {
     pub id: Option<String>,
     pub id_not: Option<String>,
+    pub id_gt: Option<String>,
+    pub id_lt: Option<String>,
+    pub id_gte: Option<String>,
+    pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
     pub name: Option<String>,
@@ -76,6 +80,10 @@ pub struct DomainFilter {
 pub struct RegistrationFilter {
     pub id: Option<String>,
     pub id_not: Option<String>,
+    pub id_gt: Option<String>,
+    pub id_lt: Option<String>,
+    pub id_gte: Option<String>,
+    pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
     pub domain_id: Option<String>,
@@ -108,6 +116,10 @@ pub struct RegistrationFilter {
 pub struct WrappedDomainFilter {
     pub id: Option<String>,
     pub id_not: Option<String>,
+    pub id_gt: Option<String>,
+    pub id_lt: Option<String>,
+    pub id_gte: Option<String>,
+    pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
     pub domain_id: Option<String>,
@@ -135,6 +147,10 @@ pub struct WrappedDomainFilter {
 pub struct ResolverFilter {
     pub id: Option<String>,
     pub id_not: Option<String>,
+    pub id_gt: Option<String>,
+    pub id_lt: Option<String>,
+    pub id_gte: Option<String>,
+    pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
     pub domain_id: Option<String>,

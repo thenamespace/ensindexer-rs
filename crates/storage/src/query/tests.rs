@@ -61,6 +61,33 @@ fn relationship_filter_fragments_keep_subquery_predicates_grouped() {
 }
 
 #[test]
+fn entity_id_comparison_filters_emit_sql_predicates() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_domain_relation_filter(
+            &mut separated,
+            &mut has_where,
+            "domain_id",
+            Some(Box::new(DomainFilter {
+                id_gt: Some("0x1000".into()),
+                id_lte: Some("0xffff".into()),
+                ..DomainFilter::default()
+            })),
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from registrations where domain_id in (select id from domains where id > $1 and id <= $2) "
+    );
+}
+
+#[test]
 fn account_filter_supports_boolean_composition() {
     let mut query = QueryBuilder::<Postgres>::new("select id from accounts");
     {

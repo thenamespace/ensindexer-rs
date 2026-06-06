@@ -9,6 +9,10 @@ pub(super) fn push_resolver_scalar_filter_conditions<'qb>(
 ) {
     push_sub_text_filter(separated, has_where, "id", "=", filter.id);
     push_sub_text_filter(separated, has_where, "id", "!=", filter.id_not);
+    push_sub_text_filter(separated, has_where, "id", ">", filter.id_gt);
+    push_sub_text_filter(separated, has_where, "id", "<", filter.id_lt);
+    push_sub_text_filter(separated, has_where, "id", ">=", filter.id_gte);
+    push_sub_text_filter(separated, has_where, "id", "<=", filter.id_lte);
     push_sub_text_array_filter(separated, has_where, "id", filter.id_in, false);
     push_sub_text_array_filter(separated, has_where, "id", filter.id_not_in, true);
     push_sub_text_filter(separated, has_where, "domain_id", "=", filter.domain_id);
