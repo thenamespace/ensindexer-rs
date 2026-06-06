@@ -10,7 +10,7 @@ pub struct AppConfig {
     pub eth_rpc_url: Url,
     pub chain_id: u64,
     pub bind_address: SocketAddr,
-    pub graphql_playground: bool,
+    pub graphql_sandbox: bool,
     pub indexer_confirmation_depth: u64,
     pub backfill_batch_blocks: u64,
     pub live_poll_seconds: u64,
@@ -30,7 +30,7 @@ impl AppConfig {
                     .parse()
                     .expect("default bind address is valid"),
             )?,
-            graphql_playground: optional("GRAPHQL_PLAYGROUND", true)?,
+            graphql_sandbox: optional_with_fallback("GRAPHQL_SANDBOX", "GRAPHQL_PLAYGROUND", true)?,
             indexer_confirmation_depth: optional("INDEXER_CONFIRMATION_DEPTH", 12)?,
             backfill_batch_blocks: optional("BACKFILL_BATCH_BLOCKS", 1_000)?,
             live_poll_seconds: optional("LIVE_POLL_SECONDS", 12)?,
@@ -56,6 +56,19 @@ where
     T::Err: std::fmt::Display,
 {
     match env::var(key) {
+        Ok(value) => value
+            .parse()
+            .map_err(|err| ConfigError::Invalid(format!("{key}: {err}"))),
+        Err(_) => Ok(default),
+    }
+}
+
+fn optional_with_fallback<T>(key: &str, fallback_key: &str, default: T) -> Result<T, ConfigError>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    match env::var(key).or_else(|_| env::var(fallback_key)) {
         Ok(value) => value
             .parse()
             .map_err(|err| ConfigError::Invalid(format!("{key}: {err}"))),

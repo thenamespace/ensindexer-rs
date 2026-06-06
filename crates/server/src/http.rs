@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use api::{EnsSchema, build_schema};
-use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     Router,
@@ -19,7 +18,7 @@ use tower_http::{
 pub struct ServerState {
     schema: EnsSchema,
     storage: Storage,
-    playground: bool,
+    sandbox: bool,
 }
 
 pub async fn serve(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
@@ -37,11 +36,11 @@ pub fn build_router(config: AppConfig, storage: Storage) -> Router {
     let state = ServerState {
         schema,
         storage,
-        playground: config.graphql_playground,
+        sandbox: config.graphql_sandbox,
     };
 
     Router::new()
-        .route("/graphql", post(graphql_handler).get(graphql_playground))
+        .route("/graphql", post(graphql_handler).get(graphql_sandbox))
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .with_state(state)
@@ -61,12 +60,39 @@ async fn graphql_handler(
     state.schema.execute(request.into_inner()).await.into()
 }
 
-async fn graphql_playground(State(state): State<ServerState>) -> impl IntoResponse {
-    if state.playground {
-        Html(GraphiQLSource::build().endpoint("/graphql").finish()).into_response()
+async fn graphql_sandbox(State(state): State<ServerState>) -> impl IntoResponse {
+    if state.sandbox {
+        Html(apollo_sandbox_html()).into_response()
     } else {
         axum::http::StatusCode::NOT_FOUND.into_response()
     }
+}
+
+fn apollo_sandbox_html() -> &'static str {
+    r##"<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ENS Indexer GraphQL Sandbox</title>
+    <style>
+      html, body, #sandbox {
+        height: 100%;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sandbox"></div>
+    <script src="https://embeddable-sandbox.cdn.apollographql.com/_latest/embeddable-sandbox.umd.production.min.js"></script>
+    <script>
+      new window.EmbeddedSandbox({
+        target: "#sandbox",
+        initialEndpoint: window.location.origin + "/graphql"
+      });
+    </script>
+  </body>
+</html>"##
 }
 
 async fn healthz() -> &'static str {
