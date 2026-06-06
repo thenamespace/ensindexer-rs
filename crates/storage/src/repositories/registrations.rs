@@ -90,11 +90,32 @@ impl RegistrationsRepo<'_> {
         );
         push_text_array_filter(&mut separated, &mut has_where, "id", filter.id_in);
         push_text_not_array_filter(&mut separated, &mut has_where, "id", filter.id_not_in);
-        push_text_filter(
+        push_text_field_filters(
             &mut separated,
             &mut has_where,
             "domain_id",
-            filter.domain_id,
+            TextFieldFilter {
+                exact: filter.domain_id,
+                not: filter.domain_id_not,
+                gt: filter.domain_id_gt,
+                lt: filter.domain_id_lt,
+                gte: filter.domain_id_gte,
+                lte: filter.domain_id_lte,
+                in_values: filter.domain_id_in,
+                not_in: filter.domain_id_not_in,
+                contains: filter.domain_id_contains,
+                contains_nocase: filter.domain_id_contains_nocase,
+                not_contains: filter.domain_id_not_contains,
+                not_contains_nocase: filter.domain_id_not_contains_nocase,
+                starts_with: filter.domain_id_starts_with,
+                starts_with_nocase: filter.domain_id_starts_with_nocase,
+                not_starts_with: filter.domain_id_not_starts_with,
+                not_starts_with_nocase: filter.domain_id_not_starts_with_nocase,
+                ends_with: filter.domain_id_ends_with,
+                ends_with_nocase: filter.domain_id_ends_with_nocase,
+                not_ends_with: filter.domain_id_not_ends_with,
+                not_ends_with_nocase: filter.domain_id_not_ends_with_nocase,
+            },
         );
         push_domain_relation_filter(
             &mut separated,
@@ -102,11 +123,32 @@ impl RegistrationsRepo<'_> {
             "domain_id",
             filter.domain_filter,
         );
-        push_text_filter(
+        push_text_field_filters(
             &mut separated,
             &mut has_where,
             "registrant_id",
-            filter.registrant_id,
+            TextFieldFilter {
+                exact: filter.registrant_id,
+                not: filter.registrant_id_not,
+                gt: filter.registrant_id_gt,
+                lt: filter.registrant_id_lt,
+                gte: filter.registrant_id_gte,
+                lte: filter.registrant_id_lte,
+                in_values: filter.registrant_id_in,
+                not_in: filter.registrant_id_not_in,
+                contains: filter.registrant_id_contains,
+                contains_nocase: filter.registrant_id_contains_nocase,
+                not_contains: filter.registrant_id_not_contains,
+                not_contains_nocase: filter.registrant_id_not_contains_nocase,
+                starts_with: filter.registrant_id_starts_with,
+                starts_with_nocase: filter.registrant_id_starts_with_nocase,
+                not_starts_with: filter.registrant_id_not_starts_with,
+                not_starts_with_nocase: filter.registrant_id_not_starts_with_nocase,
+                ends_with: filter.registrant_id_ends_with,
+                ends_with_nocase: filter.registrant_id_ends_with_nocase,
+                not_ends_with: filter.registrant_id_not_ends_with,
+                not_ends_with_nocase: filter.registrant_id_not_ends_with_nocase,
+            },
         );
         push_account_relation_filter(
             &mut separated,
