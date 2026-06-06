@@ -85,3 +85,151 @@ pub(super) fn text_field_value(filter: &EventFilter) -> TextFieldFilter {
         not_ends_with_nocase: filter.value_not_ends_with_nocase.clone(),
     }
 }
+
+pub(super) fn text_field_hash(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.hash.clone(),
+        filter.hash_not.clone(),
+        filter.hash_gt.clone(),
+        filter.hash_lt.clone(),
+        filter.hash_gte.clone(),
+        filter.hash_lte.clone(),
+        filter.hash_in.clone(),
+        filter.hash_not_in.clone(),
+        filter.hash_contains.clone(),
+        filter.hash_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_x(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.x.clone(),
+        filter.x_not.clone(),
+        filter.x_gt.clone(),
+        filter.x_lt.clone(),
+        filter.x_gte.clone(),
+        filter.x_lte.clone(),
+        filter.x_in.clone(),
+        filter.x_not_in.clone(),
+        filter.x_contains.clone(),
+        filter.x_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_y(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.y.clone(),
+        filter.y_not.clone(),
+        filter.y_gt.clone(),
+        filter.y_lt.clone(),
+        filter.y_gte.clone(),
+        filter.y_lte.clone(),
+        filter.y_in.clone(),
+        filter.y_not_in.clone(),
+        filter.y_contains.clone(),
+        filter.y_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_owner(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.owner_id.clone(),
+        filter.owner_id_not.clone(),
+        filter.owner_id_gt.clone(),
+        filter.owner_id_lt.clone(),
+        filter.owner_id_gte.clone(),
+        filter.owner_id_lte.clone(),
+        filter.owner_id_in.clone(),
+        filter.owner_id_not_in.clone(),
+        filter.owner_id_contains.clone(),
+        filter.owner_id_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_addr(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.addr_id.clone(),
+        filter.addr_id_not.clone(),
+        filter.addr_id_gt.clone(),
+        filter.addr_id_lt.clone(),
+        filter.addr_id_gte.clone(),
+        filter.addr_id_lte.clone(),
+        filter.addr_id_in.clone(),
+        filter.addr_id_not_in.clone(),
+        filter.addr_id_contains.clone(),
+        filter.addr_id_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_interface_id(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.interface_id.clone(),
+        filter.interface_id_not.clone(),
+        filter.interface_id_gt.clone(),
+        filter.interface_id_lt.clone(),
+        filter.interface_id_gte.clone(),
+        filter.interface_id_lte.clone(),
+        filter.interface_id_in.clone(),
+        filter.interface_id_not_in.clone(),
+        filter.interface_id_contains.clone(),
+        filter.interface_id_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_implementer(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.implementer.clone(),
+        filter.implementer_not.clone(),
+        filter.implementer_gt.clone(),
+        filter.implementer_lt.clone(),
+        filter.implementer_gte.clone(),
+        filter.implementer_lte.clone(),
+        filter.implementer_in.clone(),
+        filter.implementer_not_in.clone(),
+        filter.implementer_contains.clone(),
+        filter.implementer_not_contains.clone(),
+    )
+}
+
+pub(super) fn text_field_target(filter: &EventFilter) -> TextFieldFilter {
+    limited_text_field(
+        filter.target.clone(),
+        filter.target_not.clone(),
+        filter.target_gt.clone(),
+        filter.target_lt.clone(),
+        filter.target_gte.clone(),
+        filter.target_lte.clone(),
+        filter.target_in.clone(),
+        filter.target_not_in.clone(),
+        filter.target_contains.clone(),
+        filter.target_not_contains.clone(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn limited_text_field(
+    exact: Option<String>,
+    not: Option<String>,
+    gt: Option<String>,
+    lt: Option<String>,
+    gte: Option<String>,
+    lte: Option<String>,
+    in_values: Option<Vec<String>>,
+    not_in: Option<Vec<String>>,
+    contains: Option<String>,
+    not_contains: Option<String>,
+) -> TextFieldFilter {
+    TextFieldFilter {
+        exact,
+        not,
+        gt,
+        lt,
+        gte,
+        lte,
+        in_values,
+        not_in,
+        contains,
+        not_contains,
+        ..TextFieldFilter::default()
+    }
+}

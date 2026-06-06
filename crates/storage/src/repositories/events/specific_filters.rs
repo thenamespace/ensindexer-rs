@@ -1,7 +1,9 @@
 use sqlx::Postgres;
 
 use super::text_fields::{
-    push_text_event_field, text_field_key, text_field_name, text_field_value,
+    push_text_event_field, text_field_addr, text_field_hash, text_field_implementer,
+    text_field_interface_id, text_field_key, text_field_name, text_field_owner, text_field_target,
+    text_field_value, text_field_x, text_field_y,
 };
 use crate::{filters::EventFilter, query::*};
 
@@ -93,7 +95,7 @@ pub(super) fn push_event_specific_filters<'qb>(
                 filter,
                 NumericEventField::CoinType,
             );
-            push_text_filter(separated, has_where, "addr", filter.addr_id.clone());
+            push_text_event_field(separated, has_where, "addr", text_field_addr(filter));
         }
         "name_changed_events" => {
             push_text_event_field(separated, has_where, "name", text_field_name(filter));
@@ -108,33 +110,33 @@ pub(super) fn push_event_specific_filters<'qb>(
             );
         }
         "pubkey_changed_events" => {
-            push_text_filter(separated, has_where, "x", filter.x.clone());
-            push_text_filter(separated, has_where, "y", filter.y.clone());
+            push_text_event_field(separated, has_where, "x", text_field_x(filter));
+            push_text_event_field(separated, has_where, "y", text_field_y(filter));
         }
         "text_changed_events" => {
             push_text_event_field(separated, has_where, "key", text_field_key(filter));
             push_text_event_field(separated, has_where, "value", text_field_value(filter));
         }
         "contenthash_changed_events" => {
-            push_text_filter(separated, has_where, "hash", filter.hash.clone());
+            push_text_event_field(separated, has_where, "hash", text_field_hash(filter));
         }
         "interface_changed_events" => {
-            push_text_filter(
+            push_text_event_field(
                 separated,
                 has_where,
                 "interface_id",
-                filter.interface_id.clone(),
+                text_field_interface_id(filter),
             );
-            push_text_filter(
+            push_text_event_field(
                 separated,
                 has_where,
                 "implementer",
-                filter.implementer.clone(),
+                text_field_implementer(filter),
             );
         }
         "authorisation_changed_events" => {
-            push_text_filter(separated, has_where, "owner", filter.owner_id.clone());
-            push_text_filter(separated, has_where, "target", filter.target.clone());
+            push_text_event_field(separated, has_where, "owner", text_field_owner(filter));
+            push_text_event_field(separated, has_where, "target", text_field_target(filter));
             push_bool_filter(
                 separated,
                 has_where,

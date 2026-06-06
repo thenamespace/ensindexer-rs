@@ -268,4 +268,62 @@ mod tests {
             "select id from name_changed_events where not (lower(name) like lower($1)) and name like $2 and not (key = any($3)) and lower(key) like lower($4) and value >= $5 and not (value like $6) "
         );
     }
+
+    #[test]
+    fn resolver_event_filters_include_bytes_and_address_operator_variants() {
+        let filter = EventFilter {
+            addr_id_contains: Some("1234".into()),
+            x_not: Some("0x01".into()),
+            y_in: Some(vec!["0x02".into(), "0x03".into()]),
+            hash_not_contains: Some("0xdead".into()),
+            interface_id_gt: Some("0x1111".into()),
+            implementer_contains: Some("abcd".into()),
+            owner_id_not_in: Some(vec!["0xowner".into()]),
+            target_lte: Some("0xtarget".into()),
+            ..EventFilter::default()
+        };
+        let mut query =
+            QueryBuilder::<Postgres>::new("select id from multicoin_addr_changed_events");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "multicoin_addr_changed_events",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "pubkey_changed_events",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "contenthash_changed_events",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "interface_changed_events",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "authorisation_changed_events",
+                &filter,
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from multicoin_addr_changed_events where addr like $1 and x != $2 and y = any($3) and not (hash like $4) and interface_id > $5 and implementer like $6 and not (owner = any($7)) and target <= $8 "
+        );
+    }
 }

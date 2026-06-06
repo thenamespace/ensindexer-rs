@@ -29,6 +29,15 @@ pub(crate) struct AuthOwnerFieldFilter {
 impl ApplyEventFilter for AuthOwnerFieldFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.owner_id = self.owner;
+        filter.owner_id_not = self.owner_not;
+        filter.owner_id_gt = self.owner_gt;
+        filter.owner_id_lt = self.owner_lt;
+        filter.owner_id_gte = self.owner_gte;
+        filter.owner_id_lte = self.owner_lte;
+        filter.owner_id_in = self.owner_in;
+        filter.owner_id_not_in = self.owner_not_in;
+        filter.owner_id_contains = self.owner_contains;
+        filter.owner_id_not_contains = self.owner_not_contains;
     }
 }
 
@@ -59,5 +68,14 @@ pub(crate) struct AddrBytesFieldFilter {
 impl ApplyEventFilter for AddrBytesFieldFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.addr_id = self.addr;
+        filter.addr_id_not = self.addr_not;
+        filter.addr_id_gt = self.addr_gt;
+        filter.addr_id_lt = self.addr_lt;
+        filter.addr_id_gte = self.addr_gte;
+        filter.addr_id_lte = self.addr_lte;
+        filter.addr_id_in = self.addr_in;
+        filter.addr_id_not_in = self.addr_not_in;
+        filter.addr_id_contains = self.addr_contains;
+        filter.addr_id_not_contains = self.addr_not_contains;
     }
 }

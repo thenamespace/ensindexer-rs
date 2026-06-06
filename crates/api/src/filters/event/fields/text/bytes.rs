@@ -29,6 +29,15 @@ pub(crate) struct HashFieldFilter {
 impl ApplyEventFilter for HashFieldFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.hash = self.hash;
+        filter.hash_not = self.hash_not;
+        filter.hash_gt = self.hash_gt;
+        filter.hash_lt = self.hash_lt;
+        filter.hash_gte = self.hash_gte;
+        filter.hash_lte = self.hash_lte;
+        filter.hash_in = self.hash_in;
+        filter.hash_not_in = self.hash_not_in;
+        filter.hash_contains = self.hash_contains;
+        filter.hash_not_contains = self.hash_not_contains;
     }
 }
 
@@ -59,6 +68,15 @@ pub(crate) struct XFieldFilter {
 impl ApplyEventFilter for XFieldFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.x = self.x;
+        filter.x_not = self.x_not;
+        filter.x_gt = self.x_gt;
+        filter.x_lt = self.x_lt;
+        filter.x_gte = self.x_gte;
+        filter.x_lte = self.x_lte;
+        filter.x_in = self.x_in;
+        filter.x_not_in = self.x_not_in;
+        filter.x_contains = self.x_contains;
+        filter.x_not_contains = self.x_not_contains;
     }
 }
 
@@ -89,5 +107,14 @@ pub(crate) struct YFieldFilter {
 impl ApplyEventFilter for YFieldFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.y = self.y;
+        filter.y_not = self.y_not;
+        filter.y_gt = self.y_gt;
+        filter.y_lt = self.y_lt;
+        filter.y_gte = self.y_gte;
+        filter.y_lte = self.y_lte;
+        filter.y_in = self.y_in;
+        filter.y_not_in = self.y_not_in;
+        filter.y_contains = self.y_contains;
+        filter.y_not_contains = self.y_not_contains;
     }
 }
