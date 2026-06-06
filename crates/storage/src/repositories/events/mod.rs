@@ -11,6 +11,7 @@ mod insert_resolver;
 mod refs;
 mod registration;
 mod resolver;
+mod specific_filters;
 
 pub struct EventsRepo<'a> {
     pub(crate) pool: &'a PgPool,

@@ -7,18 +7,31 @@ use crate::filters::BlockChangedFilter;
 pub struct EventFilter {
     pub id: Option<String>,
     pub id_not: Option<String>,
+    pub id_gt: Option<String>,
+    pub id_lt: Option<String>,
+    pub id_gte: Option<String>,
+    pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
     pub parent_id: Option<String>,
     pub block_number: Option<i32>,
+    pub block_number_not: Option<i32>,
     pub block_number_gt: Option<i32>,
     pub block_number_lt: Option<i32>,
     pub block_number_gte: Option<i32>,
     pub block_number_lte: Option<i32>,
+    pub block_number_in: Option<Vec<i32>>,
+    pub block_number_not_in: Option<Vec<i32>>,
     pub transaction_id: Option<String>,
     pub transaction_id_not: Option<String>,
+    pub transaction_id_gt: Option<String>,
+    pub transaction_id_lt: Option<String>,
+    pub transaction_id_gte: Option<String>,
+    pub transaction_id_lte: Option<String>,
     pub transaction_id_in: Option<Vec<String>>,
     pub transaction_id_not_in: Option<Vec<String>>,
+    pub transaction_id_contains: Option<String>,
+    pub transaction_id_not_contains: Option<String>,
     pub owner_id: Option<String>,
     pub parent_domain_id: Option<String>,
     pub resolver_id: Option<String>,
@@ -85,18 +98,31 @@ impl EventFilter {
         StorageEventFilter {
             id: self.id,
             id_not: self.id_not,
+            id_gt: self.id_gt,
+            id_lt: self.id_lt,
+            id_gte: self.id_gte,
+            id_lte: self.id_lte,
             id_in: self.id_in,
             id_not_in: self.id_not_in,
             parent_id,
             block_number: self.block_number,
+            block_number_not: self.block_number_not,
             block_number_gt: self.block_number_gt,
             block_number_lt: self.block_number_lt,
             block_number_gte: self.block_number_gte,
             block_number_lte: self.block_number_lte,
+            block_number_in: self.block_number_in,
+            block_number_not_in: self.block_number_not_in,
             transaction_id: self.transaction_id,
             transaction_id_not: self.transaction_id_not,
+            transaction_id_gt: self.transaction_id_gt,
+            transaction_id_lt: self.transaction_id_lt,
+            transaction_id_gte: self.transaction_id_gte,
+            transaction_id_lte: self.transaction_id_lte,
             transaction_id_in: self.transaction_id_in,
             transaction_id_not_in: self.transaction_id_not_in,
+            transaction_id_contains: self.transaction_id_contains,
+            transaction_id_not_contains: self.transaction_id_not_contains,
             owner_id: self.owner_id,
             parent_domain_id: self.parent_domain_id,
             resolver_id: self.resolver_id,
@@ -206,17 +232,30 @@ impl BaseEventFilter {
     pub(crate) fn apply(self, filter: &mut EventFilter) {
         filter.id = self.id;
         filter.id_not = self.id_not;
+        filter.id_gt = self.id_gt;
+        filter.id_lt = self.id_lt;
+        filter.id_gte = self.id_gte;
+        filter.id_lte = self.id_lte;
         filter.id_in = self.id_in;
         filter.id_not_in = self.id_not_in;
         filter.block_number = self.block_number;
+        filter.block_number_not = self.block_number_not;
         filter.block_number_gt = self.block_number_gt;
         filter.block_number_lt = self.block_number_lt;
         filter.block_number_gte = self.block_number_gte;
         filter.block_number_lte = self.block_number_lte;
+        filter.block_number_in = self.block_number_in;
+        filter.block_number_not_in = self.block_number_not_in;
         filter.transaction_id = self.transaction_id;
         filter.transaction_id_not = self.transaction_id_not;
+        filter.transaction_id_gt = self.transaction_id_gt;
+        filter.transaction_id_lt = self.transaction_id_lt;
+        filter.transaction_id_gte = self.transaction_id_gte;
+        filter.transaction_id_lte = self.transaction_id_lte;
         filter.transaction_id_in = self.transaction_id_in;
         filter.transaction_id_not_in = self.transaction_id_not_in;
+        filter.transaction_id_contains = self.transaction_id_contains;
+        filter.transaction_id_not_contains = self.transaction_id_not_contains;
     }
 }
 

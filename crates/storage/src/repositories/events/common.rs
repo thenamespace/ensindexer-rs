@@ -3,8 +3,7 @@ use sqlx::{FromRow, Postgres, QueryBuilder, postgres::PgRow};
 use crate::{error::*, filters::*, models::*, query::*};
 
 use super::{
-    EventsRepo,
-    event_filters::{push_event_filters, push_event_specific_filters},
+    EventsRepo, event_filters::push_event_filters, specific_filters::push_event_specific_filters,
 };
 
 impl EventsRepo<'_> {
