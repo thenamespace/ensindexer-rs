@@ -3,6 +3,10 @@ use crate::filters::{AccountFilter, DomainFilter, ResolverFilter};
 pub(super) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
+        || filter.id_gt.is_some()
+        || filter.id_lt.is_some()
+        || filter.id_gte.is_some()
+        || filter.id_lte.is_some()
         || filter.id_in.as_ref().is_some_and(|value| !value.is_empty())
         || filter
             .id_not_in

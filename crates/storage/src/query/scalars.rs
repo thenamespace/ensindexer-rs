@@ -73,6 +73,39 @@ pub(crate) fn push_text_not_array_filter<'qb>(
     }
 }
 
+pub(crate) fn push_text_comparison_filters<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    gt: Option<String>,
+    lt: Option<String>,
+    gte: Option<String>,
+    lte: Option<String>,
+) {
+    push_text_order_filter(separated, has_where, column, ">", gt);
+    push_text_order_filter(separated, has_where, column, "<", lt);
+    push_text_order_filter(separated, has_where, column, ">=", gte);
+    push_text_order_filter(separated, has_where, column, "<=", lte);
+}
+
+fn push_text_order_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    op: &'static str,
+    value: Option<String>,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        separated
+            .push(column)
+            .push_unseparated(" ")
+            .push_unseparated(op)
+            .push_unseparated(" ")
+            .push_bind_unseparated(value);
+    }
+}
+
 pub(crate) fn push_text_contains_filter<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,

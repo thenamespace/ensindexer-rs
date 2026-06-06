@@ -9,8 +9,8 @@ mod subquery;
 use crate::{
     filters::{AccountFilter, DomainFilter, ResolverFilter},
     query::{
-        push_text_array_filter, push_text_filter, push_text_not_array_filter, push_text_not_filter,
-        push_where_prefix,
+        push_text_array_filter, push_text_comparison_filters, push_text_filter,
+        push_text_not_array_filter, push_text_not_filter, push_where_prefix,
     },
 };
 
@@ -53,6 +53,15 @@ pub(crate) fn push_account_filters<'qb>(
 ) {
     push_text_filter(separated, has_where, "id", filter.id);
     push_text_not_filter(separated, has_where, "id", filter.id_not);
+    push_text_comparison_filters(
+        separated,
+        has_where,
+        "id",
+        filter.id_gt,
+        filter.id_lt,
+        filter.id_gte,
+        filter.id_lte,
+    );
     push_text_array_filter(separated, has_where, "id", filter.id_in);
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in);
     push_account_filter_group(separated, has_where, " and ", filter.and);
