@@ -23,32 +23,48 @@ pub enum DomainOrderField {
     Id,
     Name,
     LabelName,
+    Labelhash,
+    Parent,
     SubdomainCount,
+    ResolvedAddress,
+    Resolver,
+    Ttl,
+    IsMigrated,
     CreatedAt,
+    Owner,
+    Registrant,
+    WrappedOwner,
     ExpiryDate,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegistrationOrderField {
     Id,
+    Domain,
     RegistrationDate,
     ExpiryDate,
     Cost,
+    Registrant,
     LabelName,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WrappedDomainOrderField {
     Id,
+    Domain,
     ExpiryDate,
     Fuses,
+    Owner,
     Name,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolverOrderField {
     Id,
+    Domain,
     Address,
+    Addr,
+    ContentHash,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,6 +72,30 @@ pub enum EventOrderField {
     Id,
     BlockNumber,
     TransactionId,
+    Domain,
+    ParentDomain,
+    Registration,
+    Resolver,
+    Owner,
+    Registrant,
+    NewOwner,
+    Addr,
+    Name,
+    Fuses,
+    Ttl,
+    ExpiryDate,
+    CoinType,
+    ContentType,
+    X,
+    Y,
+    Key,
+    Value,
+    Hash,
+    InterfaceId,
+    Implementer,
+    Target,
+    IsAuthorized,
+    Version,
 }
 
 #[derive(Debug, Clone, Default)]

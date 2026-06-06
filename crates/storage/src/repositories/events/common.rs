@@ -55,7 +55,7 @@ impl EventsRepo<'_> {
 
         query
             .push(" order by ")
-            .push(event_order_column(order_by))
+            .push(event_ref_order_column(order_by))
             .push(" ")
             .push(direction.sql())
             .push(" limit ")
@@ -100,5 +100,14 @@ impl EventsRepo<'_> {
             .push_bind(skip);
 
         Ok(query.build_query_as().fetch_all(self.pool).await?)
+    }
+}
+
+fn event_ref_order_column(order_by: EventOrderField) -> &'static str {
+    match order_by {
+        EventOrderField::Domain | EventOrderField::Registration | EventOrderField::Resolver => {
+            "parent_id"
+        }
+        _ => event_order_column(order_by),
     }
 }
