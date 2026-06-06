@@ -1,7 +1,7 @@
 use async_graphql::InputObject;
 use storage::ResolverFilter as StorageResolverFilter;
 
-use super::{AccountFilter, DomainFilter};
+use super::{AccountFilter, DomainFilter, extras::ResolverFilterExtras};
 
 #[derive(Debug, Clone, InputObject, Default)]
 #[graphql(name = "Resolver_filter")]
@@ -36,6 +36,8 @@ pub struct ResolverFilter {
     pub texts_contains: Option<String>,
     #[graphql(name = "coinTypes_contains")]
     pub coin_types_contains: Option<String>,
+    #[graphql(flatten)]
+    extras: ResolverFilterExtras,
 }
 
 impl From<ResolverFilter> for StorageResolverFilter {

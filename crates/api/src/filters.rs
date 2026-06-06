@@ -2,6 +2,7 @@ mod account;
 mod compat;
 mod domain;
 mod event;
+mod extras;
 mod order;
 mod registration;
 mod resolver;

@@ -1,7 +1,7 @@
 use async_graphql::InputObject;
 use storage::RegistrationFilter as StorageRegistrationFilter;
 
-use super::{AccountFilter, DomainFilter};
+use super::{AccountFilter, DomainFilter, extras::RegistrationFilterExtras};
 
 #[derive(Debug, Clone, InputObject, Default)]
 #[graphql(name = "Registration_filter")]
@@ -58,6 +58,8 @@ pub struct RegistrationFilter {
     pub cost_gte: Option<String>,
     #[graphql(name = "cost_lte")]
     pub cost_lte: Option<String>,
+    #[graphql(flatten)]
+    extras: RegistrationFilterExtras,
 }
 
 impl From<RegistrationFilter> for StorageRegistrationFilter {

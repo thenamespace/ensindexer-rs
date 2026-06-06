@@ -1,7 +1,7 @@
 use async_graphql::InputObject;
 use storage::WrappedDomainFilter as StorageWrappedDomainFilter;
 
-use super::{AccountFilter, DomainFilter};
+use super::{AccountFilter, DomainFilter, extras::WrappedDomainFilterExtras};
 
 #[derive(Debug, Clone, InputObject, Default)]
 #[graphql(name = "WrappedDomain_filter")]
@@ -47,6 +47,8 @@ pub struct WrappedDomainFilter {
     pub fuses_gte: Option<i32>,
     #[graphql(name = "fuses_lte")]
     pub fuses_lte: Option<i32>,
+    #[graphql(flatten)]
+    extras: WrappedDomainFilterExtras,
 }
 
 impl From<WrappedDomainFilter> for StorageWrappedDomainFilter {

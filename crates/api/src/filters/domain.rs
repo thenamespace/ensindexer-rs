@@ -1,7 +1,7 @@
 use async_graphql::InputObject;
 use storage::DomainFilter as StorageDomainFilter;
 
-use super::{AccountFilter, ResolverFilter};
+use super::{AccountFilter, ResolverFilter, extras::DomainFilterExtras};
 
 #[derive(Debug, Clone, InputObject, Default)]
 #[graphql(name = "Domain_filter")]
@@ -102,6 +102,8 @@ pub struct DomainFilter {
     pub ttl_gte: Option<String>,
     #[graphql(name = "ttl_lte")]
     pub ttl_lte: Option<String>,
+    #[graphql(flatten)]
+    extras: DomainFilterExtras,
 }
 
 impl From<DomainFilter> for StorageDomainFilter {
