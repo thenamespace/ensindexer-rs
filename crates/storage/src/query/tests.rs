@@ -4,9 +4,9 @@ use crate::{
     filters::{AccountFilter, DomainFilter},
     query::{
         push_account_filters, push_account_relation_filter, push_domain_relation_filter,
-        push_i32_array_filter, push_numeric_text_array_filter, push_numeric_text_filter,
-        push_text_filter, push_text_not_contains_filter, push_text_not_prefix_filter,
-        push_text_prefix_nocase_filter,
+        push_i32_array_filter, push_numeric_element_filter, push_numeric_text_array_filter,
+        push_numeric_text_filter, push_text_element_filter, push_text_filter,
+        push_text_not_contains_filter, push_text_not_prefix_filter, push_text_prefix_nocase_filter,
     },
 };
 
@@ -254,5 +254,69 @@ fn i32_array_filters_emit_any_predicates() {
     assert_eq!(
         built.sql(),
         "select id from wrapped_domains where fuses = any($1) and not (fuses = any($2)) "
+    );
+}
+
+#[test]
+fn text_element_filters_support_nocase_and_negation() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from resolvers");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_text_element_filter(
+            &mut separated,
+            &mut has_where,
+            "texts",
+            Some("email".into()),
+            false,
+            false,
+        );
+        push_text_element_filter(
+            &mut separated,
+            &mut has_where,
+            "texts",
+            Some("Url".into()),
+            true,
+            true,
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from resolvers where texts @> array[$1]::text[] and not (exists (select 1 from unnest(texts) as value where lower(value) = lower($2))) "
+    );
+}
+
+#[test]
+fn numeric_element_filters_support_negation() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from resolvers");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_numeric_element_filter(
+            &mut separated,
+            &mut has_where,
+            "coin_types",
+            Some("60".into()),
+            false,
+        );
+        push_numeric_element_filter(
+            &mut separated,
+            &mut has_where,
+            "coin_types",
+            Some("0".into()),
+            true,
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from resolvers where coin_types @> array[$1::numeric] and not (coin_types @> array[$2::numeric]) "
     );
 }

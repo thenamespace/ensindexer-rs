@@ -366,35 +366,3 @@ pub(crate) fn push_bool_filter<'qb>(
             .push_bind_unseparated(value);
     }
 }
-
-pub(crate) fn push_text_array_contains_filter<'qb>(
-    separated: &mut Separated<'qb, Postgres, &'static str>,
-    has_where: &mut bool,
-    column: &'static str,
-    value: Option<String>,
-) {
-    if let Some(value) = value {
-        push_where_prefix(separated, has_where);
-        separated
-            .push(column)
-            .push_unseparated(" @> array[")
-            .push_bind_unseparated(value)
-            .push_unseparated("]::text[]");
-    }
-}
-
-pub(crate) fn push_numeric_array_contains_filter<'qb>(
-    separated: &mut Separated<'qb, Postgres, &'static str>,
-    has_where: &mut bool,
-    column: &'static str,
-    value: Option<String>,
-) {
-    if let Some(value) = value {
-        push_where_prefix(separated, has_where);
-        separated
-            .push(column)
-            .push_unseparated(" @> array[")
-            .push_bind_unseparated(value)
-            .push_unseparated("::numeric]");
-    }
-}
