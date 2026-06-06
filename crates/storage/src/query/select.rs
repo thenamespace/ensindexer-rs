@@ -15,6 +15,13 @@ pub(crate) fn domain_select_sql() -> &'static str {
 pub(crate) fn account_order_column(order_by: AccountOrderField) -> &'static str {
     match order_by {
         AccountOrderField::Id => "id",
+        AccountOrderField::Domains => "(select count(*) from domains where owner_id = accounts.id)",
+        AccountOrderField::WrappedDomains => {
+            "(select count(*) from wrapped_domains where owner_id = accounts.id)"
+        }
+        AccountOrderField::Registrations => {
+            "(select count(*) from registrations where registrant_id = accounts.id)"
+        }
     }
 }
 

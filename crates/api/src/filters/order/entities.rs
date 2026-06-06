@@ -10,12 +10,21 @@ pub enum AccountOrderBy {
     #[default]
     #[graphql(name = "id")]
     Id,
+    #[graphql(name = "domains")]
+    Domains,
+    #[graphql(name = "wrappedDomains")]
+    WrappedDomains,
+    #[graphql(name = "registrations")]
+    Registrations,
 }
 
 impl From<AccountOrderBy> for AccountOrderField {
     fn from(value: AccountOrderBy) -> Self {
         match value {
             AccountOrderBy::Id => Self::Id,
+            AccountOrderBy::Domains => Self::Domains,
+            AccountOrderBy::WrappedDomains => Self::WrappedDomains,
+            AccountOrderBy::Registrations => Self::Registrations,
         }
     }
 }

@@ -16,6 +16,9 @@ impl OrderDirection {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccountOrderField {
     Id,
+    Domains,
+    WrappedDomains,
+    Registrations,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
