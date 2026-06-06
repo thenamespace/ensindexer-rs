@@ -15,6 +15,9 @@ pub struct AppConfig {
     pub chain_id: u64,
     pub bind_address: SocketAddr,
     pub graphql_sandbox: bool,
+    pub serve_indexer: bool,
+    pub serve_backfill_from: Option<u64>,
+    pub serve_backfill_to: Option<u64>,
     pub indexer_confirmation_depth: u64,
     pub backfill_batch_blocks: u64,
     pub live_poll_seconds: u64,
@@ -44,6 +47,9 @@ impl AppConfig {
                     .expect("default bind address is valid"),
             )?,
             graphql_sandbox: optional_with_fallback("GRAPHQL_SANDBOX", "GRAPHQL_PLAYGROUND", true)?,
+            serve_indexer: optional("SERVE_INDEXER", false)?,
+            serve_backfill_from: optional_value("SERVE_BACKFILL_FROM")?,
+            serve_backfill_to: optional_value("SERVE_BACKFILL_TO")?,
             indexer_confirmation_depth: optional("INDEXER_CONFIRMATION_DEPTH", 12)?,
             backfill_batch_blocks: optional("BACKFILL_BATCH_BLOCKS", 1_000)?,
             live_poll_seconds: optional("LIVE_POLL_SECONDS", 12)?,
@@ -91,6 +97,21 @@ where
             .parse()
             .map_err(|err| ConfigError::Invalid(format!("{key}: {err}"))),
         Err(_) => Ok(default),
+    }
+}
+
+fn optional_value<T>(key: &str) -> Result<Option<T>, ConfigError>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    match env::var(key) {
+        Ok(value) if value.trim().is_empty() => Ok(None),
+        Ok(value) => value
+            .parse()
+            .map(Some)
+            .map_err(|err| ConfigError::Invalid(format!("{key}: {err}"))),
+        Err(_) => Ok(None),
     }
 }
 

@@ -12,6 +12,7 @@ async-graphql-axum.workspace = true
 axum.workspace = true
 api.workspace = true
 config.workspace = true
+ingest.workspace = true
 storage.workspace = true
 sqlx.workspace = true
 tokio.workspace = true

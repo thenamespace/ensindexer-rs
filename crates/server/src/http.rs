@@ -21,7 +21,7 @@ pub struct ServerState {
     sandbox: bool,
 }
 
-pub async fn serve(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
+pub async fn serve_http(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
     let bind_address = config.bind_address;
     let app = build_router(config, storage);
     let listener = tokio::net::TcpListener::bind(bind_address).await?;
