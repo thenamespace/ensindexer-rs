@@ -4,6 +4,7 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use self::filtering::push_wrapped_domain_filters;
 use crate::{error::*, filters::*, models::*, query::wrapped_domain_order_column};
 
+mod composition;
 mod filtering;
 
 pub struct WrappedDomainsRepo<'a> {

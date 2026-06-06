@@ -467,7 +467,7 @@ Current implementation state:
 - Entity filters support exact IDs, `id_not`, `id_in`, `id_not_in`, common string predicates for known name fields, labelhash/contenthash predicates, `subdomainCount_*`, `isMigrated`, resolver `texts_contains` and `coinTypes_contains`, numeric comparison filters for core `BigInt`/`Int` fields, and shallow trailing-underscore relationship filters on direct mutable-entity relationships.
 - `AccountFilter` supports `and` and `or` composition, including when used in account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, recursive nested filters, broad `and/or` composition for all entity/event filters, and `_change_block` filters are still compatibility-expansion work.
+- Historical block snapshots, recursive nested filters, broad `and/or` composition for event filters, and `_change_block` filters are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 

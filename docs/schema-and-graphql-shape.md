@@ -333,7 +333,7 @@ or: [T_filter]
 _change_block: BlockChangedFilter
 ```
 
-Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. The same composition pattern still needs to be expanded to the rest of the entity and event filters.
+Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, and `WrappedDomain_filter`. The same composition pattern still needs to be expanded to event filters and deeper recursive relationship predicates.
 
 Relationship filters use Graph Node's trailing underscore convention. Examples:
 

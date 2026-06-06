@@ -1,5 +1,6 @@
 use sqlx::{Postgres, query_builder::Separated};
 
+use super::composition::push_wrapped_domain_filter_group;
 use crate::{filters::WrappedDomainFilter, query::*};
 
 pub(super) fn push_wrapped_domain_filters<'qb>(
@@ -20,6 +21,8 @@ pub(super) fn push_wrapped_domain_filters<'qb>(
     );
     push_text_array_filter(separated, has_where, "id", filter.id_in.take());
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in.take());
+    let and_filters = filter.and.take();
+    let or_filters = filter.or.take();
     push_text_field_filters(separated, has_where, "domain_id", domain_field(&mut filter));
     push_domain_relation_filter(
         separated,
@@ -31,6 +34,8 @@ pub(super) fn push_wrapped_domain_filters<'qb>(
     push_account_relation_filter(separated, has_where, "owner_id", filter.owner_filter.take());
     push_text_field_filters(separated, has_where, "name", name_field(&mut filter));
     push_numeric_filters(separated, has_where, filter);
+    push_wrapped_domain_filter_group(separated, has_where, " and ", and_filters);
+    push_wrapped_domain_filter_group(separated, has_where, " or ", or_filters);
 }
 
 fn domain_field(filter: &mut WrappedDomainFilter) -> TextFieldFilter {
@@ -171,4 +176,39 @@ fn push_numeric_filters<'qb>(
     push_i32_filter(separated, has_where, "fuses", "<=", filter.fuses_lte);
     push_i32_array_filter(separated, has_where, "fuses", filter.fuses_in, false);
     push_i32_array_filter(separated, has_where, "fuses", filter.fuses_not_in, true);
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Execute, Postgres, QueryBuilder};
+
+    use super::*;
+
+    #[test]
+    fn wrapped_domain_filters_support_boolean_composition() {
+        let filter = WrappedDomainFilter {
+            fuses_gte: Some(1),
+            or: Some(vec![
+                WrappedDomainFilter {
+                    name_contains: Some("foo".to_string()),
+                    ..Default::default()
+                },
+                WrappedDomainFilter {
+                    expiry_date_gt: Some("100".to_string()),
+                    ..Default::default()
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let mut query = QueryBuilder::<Postgres>::new("select id from wrapped_domains");
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_wrapped_domain_filters(&mut separated, &mut has_where, filter);
+
+        assert_eq!(
+            query.build().sql(),
+            "select id from wrapped_domains where fuses >= $1 and (id in (select id from wrapped_domains where name like $2) or id in (select id from wrapped_domains where expiry_date > $3::numeric))"
+        );
+    }
 }

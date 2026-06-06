@@ -141,6 +141,12 @@ impl From<WrappedDomainFilter> for StorageWrappedDomainFilter {
             fuses_lte: value.fuses_lte,
             fuses_in: extras.fuses_in,
             fuses_not_in: extras.fuses_not_in,
+            and: extras
+                .and
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
+            or: extras
+                .or
+                .map(|filters| filters.into_iter().map(Into::into).collect()),
         }
     }
 }
