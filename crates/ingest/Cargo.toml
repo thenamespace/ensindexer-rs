@@ -12,6 +12,7 @@ alloy-primitives.workspace = true
 anyhow.workspace = true
 config.workspace = true
 contracts.workspace = true
+hypersync-client.workspace = true
 projection.workspace = true
 storage.workspace = true
 types.workspace = true

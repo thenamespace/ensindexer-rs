@@ -32,7 +32,7 @@ Recommended crate responsibilities:
 | `config`     | `.env` loading and typed runtime configuration shared by CLI, server, and ingest jobs        | `dotenvy`, `serde`, `url`, `thiserror`              |
 | `storage`    | SQLx pool, migrations, repositories, transactional writes, query builders                    | `sqlx`, `serde_json`, `thiserror`, `anyhow`         |
 | `projection` | deterministic event handlers that convert decoded ENS events into entity/event table updates | `types`, `storage`, `alloy-primitives`              |
-| `ingest`     | RPC log fetching, backfill, live tailing, checkpointing, reorg detection, event dispatch     | `alloy`, `tokio`, `contracts`, `projection`         |
+| `ingest`     | HyperSync/RPC historical fetching, live tailing, checkpointing, reorg detection, event dispatch | `alloy`, `hypersync-client`, `tokio`, `contracts`, `projection` |
 | `api`        | `async-graphql` objects, interfaces, filters, order enums, pagination, resolvers             | `async-graphql`, `storage`, `serde`                 |
 | `server`     | Axum HTTP app, GraphQL endpoint, health/readiness, CORS, compression, tracing                | `axum`, `tower`, `tower-http`, `async-graphql-axum` |
 | `cli`        | operational commands: migrate, backfill, serve, index, reset, validate, compare              | `clap`, `tokio`, workspace crates                   |
@@ -49,7 +49,7 @@ crates/storage/src/{lib.rs,error.rs,models.rs,inserts.rs,filters.rs,query.rs,sto
 crates/storage/src/repositories/{accounts.rs,domains.rs,registrations.rs,resolvers.rs,wrapped_domains.rs,events.rs,blocks.rs,checkpoints.rs,utils.rs}
 crates/projection/src/{lib.rs,error.rs,support.rs,handlers.rs}
 crates/projection/src/handlers/{dispatcher.rs,registry.rs,registrar.rs,wrapper.rs,resolver.rs}
-crates/ingest/src/{lib.rs,sources.rs,rpc.rs,decode.rs,service.rs}
+crates/ingest/src/{lib.rs,sources.rs,rpc.rs,hypersync.rs,decode.rs,service.rs}
 crates/api/src/{lib.rs,filters.rs,objects.rs,pagination.rs,schema.rs}
 crates/server/src/{lib.rs,http.rs}
 crates/cli/src/{main.rs,app.rs}
@@ -560,6 +560,9 @@ Runtime config:
 | ---------------------------- | ----------------------------------------------------------- |
 | `DATABASE_URL`               | Postgres connection string                                  |
 | `ETH_RPC_URL`                | Ethereum JSON-RPC endpoint                                  |
+| `ENVIO_API_KEY`              | Envio HyperSync API key for fast historical backfills       |
+| `HYPERSYNC_URL`              | HyperSync endpoint, default `https://eth.hypersync.xyz`     |
+| `BACKFILL_SOURCE`            | historical source selector: `auto`, `hypersync`, or `rpc`   |
 | `CHAIN_ID`                   | chain selector                                              |
 | `GRAPHQL_PLAYGROUND`         | enable/disable playground                                   |
 | `INDEXER_CONFIRMATION_DEPTH` | live indexing lag                                           |

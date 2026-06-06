@@ -1,4 +1,5 @@
 pub mod decode;
+pub mod hypersync;
 pub mod rpc;
 pub mod service;
 pub mod sources;

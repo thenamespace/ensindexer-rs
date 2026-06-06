@@ -2,12 +2,14 @@ use std::{cmp, collections::BTreeSet, str::FromStr};
 
 use alloy::{providers::ProviderBuilder, rpc::types::Log};
 use alloy_primitives::Address;
+use config::BackfillSource;
 use contracts::{EnsEvent, decode_fixed_source_log};
 use storage::BlockInsert;
 
 use super::IngestService;
 use crate::{
     decode::decode_log,
+    hypersync::{HypersyncBackfillClient, LogBatch},
     rpc::{
         fetch_block_meta_by_number, fetch_block_metadata, fetch_resolver_logs, fetch_source_logs,
     },
@@ -26,12 +28,14 @@ impl IngestService {
             from_block,
             to_block,
             batch_blocks = self.config.backfill_batch_blocks,
+            backfill_source = ?self.config.backfill_source,
             "starting fixed-source backfill"
         );
 
         let provider = ProviderBuilder::new()
             .connect(self.config.eth_rpc_url.as_str())
             .await?;
+        let hypersync = self.hypersync_backfill_client()?;
         let sources = fixed_sources()?;
         let mut range_start = from_block;
 
@@ -41,51 +45,82 @@ impl IngestService {
                 range_start.saturating_add(self.config.backfill_batch_blocks.saturating_sub(1)),
             );
 
-            let mut raw_logs = Vec::new();
+            let mut batch = LogBatch::default();
             for source in &sources {
-                let logs = fetch_source_logs(&provider, source, range_start, range_end).await?;
+                let source_batch = match &hypersync {
+                    Some(client) => {
+                        client
+                            .fetch_source_logs(source, range_start, range_end)
+                            .await?
+                    }
+                    None => {
+                        let logs =
+                            fetch_source_logs(&provider, source, range_start, range_end).await?;
+                        LogBatch {
+                            raw_logs: logs
+                                .into_iter()
+                                .map(|log| (LogSource::Fixed(source.source), log))
+                                .collect(),
+                            block_meta: Default::default(),
+                        }
+                    }
+                };
                 tracing::debug!(
                     ?source,
                     from_block = range_start,
                     to_block = range_end,
-                    logs = logs.len(),
+                    logs = source_batch.raw_logs.len(),
                     "fetched logs"
                 );
 
-                raw_logs.extend(
-                    logs.into_iter()
-                        .map(|log| (LogSource::Fixed(source.source), log)),
-                );
+                batch.extend(source_batch);
             }
 
             let resolver_addresses = self
-                .resolver_addresses_for_batch(&raw_logs, range_start)
+                .resolver_addresses_for_batch(&batch.raw_logs, range_start)
                 .await?;
-            let resolver_logs =
-                fetch_resolver_logs(&provider, &resolver_addresses, range_start, range_end).await?;
+            let resolver_batch = match &hypersync {
+                Some(client) => {
+                    client
+                        .fetch_resolver_logs(&resolver_addresses, range_start, range_end)
+                        .await?
+                }
+                None => {
+                    let logs =
+                        fetch_resolver_logs(&provider, &resolver_addresses, range_start, range_end)
+                            .await?;
+                    LogBatch {
+                        raw_logs: logs
+                            .into_iter()
+                            .map(|log| (LogSource::Resolver, log))
+                            .collect(),
+                        block_meta: Default::default(),
+                    }
+                }
+            };
             tracing::debug!(
                 from_block = range_start,
                 to_block = range_end,
                 addresses = resolver_addresses.len(),
-                logs = resolver_logs.len(),
+                logs = resolver_batch.raw_logs.len(),
                 "fetched resolver logs"
             );
-            raw_logs.extend(
-                resolver_logs
-                    .into_iter()
-                    .map(|log| (LogSource::Resolver, log)),
-            );
+            batch.extend(resolver_batch);
 
-            let mut block_meta = fetch_block_metadata(&provider, &raw_logs).await?;
+            let mut block_meta = batch.block_meta;
+            if hypersync.is_none() {
+                block_meta.extend(fetch_block_metadata(&provider, &batch.raw_logs).await?);
+            }
             let active_sources = sources
                 .iter()
                 .filter(|source| range_end >= source.start_block)
                 .collect::<Vec<_>>();
             if !active_sources.is_empty() && !block_meta.contains_key(&range_end) {
-                block_meta.insert(
-                    range_end,
-                    fetch_block_meta_by_number(&provider, range_end).await?,
-                );
+                let meta = match &hypersync {
+                    Some(client) => client.fetch_block_meta_by_number(range_end).await?,
+                    None => fetch_block_meta_by_number(&provider, range_end).await?,
+                };
+                block_meta.insert(range_end, meta);
             }
 
             for meta in block_meta.values() {
@@ -101,7 +136,7 @@ impl IngestService {
             }
 
             let mut decoded = Vec::new();
-            for (source, log) in raw_logs {
+            for (source, log) in batch.raw_logs {
                 match decode_log(source, log, &block_meta) {
                     Ok(indexed) => decoded.push(indexed),
                     Err(error) => tracing::warn!(?source, %error, "skipping undecodable log"),
@@ -146,6 +181,25 @@ impl IngestService {
         }
 
         Ok(())
+    }
+
+    fn hypersync_backfill_client(&self) -> anyhow::Result<Option<HypersyncBackfillClient>> {
+        let Some(api_key) = self.config.envio_api_key.as_deref() else {
+            anyhow::ensure!(
+                self.config.backfill_source != BackfillSource::Hypersync,
+                "BACKFILL_SOURCE=hypersync requires ENVIO_API_KEY"
+            );
+            return Ok(None);
+        };
+
+        if !self.config.backfill_source.use_hypersync(Some(api_key)) {
+            return Ok(None);
+        }
+
+        Ok(Some(HypersyncBackfillClient::new(
+            self.config.hypersync_url.to_string(),
+            api_key.to_owned(),
+        )?))
     }
 
     async fn resolver_addresses_for_batch(

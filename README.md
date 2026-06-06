@@ -28,6 +28,8 @@ make serve
 Configuration is loaded from `.env` via `config`.
 Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox when `GRAPHQL_SANDBOX=true`.
 
+Historical backfills use Envio HyperSync automatically when `ENVIO_API_KEY` is set. Set `BACKFILL_SOURCE=rpc` to force JSON-RPC backfills, or `BACKFILL_SOURCE=hypersync` to fail fast unless HyperSync is configured. `HYPERSYNC_URL` defaults to `https://eth.hypersync.xyz`.
+
 Indexer commands:
 
 ```bash
