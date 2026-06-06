@@ -2,16 +2,18 @@
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
-DOCKER ?= $(shell command -v docker 2>/dev/null || printf /Applications/Docker.app/Contents/Resources/bin/docker)
+DOCKER_DESKTOP_BIN ?= /Applications/Docker.app/Contents/Resources/bin
+DOCKER ?= $(shell command -v docker 2>/dev/null || printf $(DOCKER_DESKTOP_BIN)/docker)
+DOCKER_ENV = PATH="$(DOCKER_DESKTOP_BIN):$(PATH)"
 
 db-up:
-	$(DOCKER) compose up -d postgres
+	$(DOCKER_ENV) $(DOCKER) compose up -d postgres
 
 db-down:
-	$(DOCKER) compose down
+	$(DOCKER_ENV) $(DOCKER) compose down
 
 db-logs:
-	$(DOCKER) compose logs -f postgres
+	$(DOCKER_ENV) $(DOCKER) compose logs -f postgres
 
 migrate:
 	cargo run -p cli -- migrate
