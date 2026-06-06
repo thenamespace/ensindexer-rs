@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::Context;
-use reqwest::Client;
+use reqwest::{Client, header};
 use serde_json::{Value, json};
 
 pub async fn run(
@@ -10,6 +10,7 @@ pub async fn run(
     auth_token: Option<String>,
     query_file: PathBuf,
     variables_file: Option<PathBuf>,
+    operation_name: Option<String>,
     show_json: bool,
 ) -> anyhow::Result<()> {
     let query = fs::read_to_string(&query_file)
@@ -17,13 +18,22 @@ pub async fn run(
     let variables = read_variables(variables_file)?;
 
     let client = Client::new();
-    let local = execute(&client, &local_url, None, &query, &variables).await?;
+    let local = execute(
+        &client,
+        &local_url,
+        None,
+        &query,
+        &variables,
+        &operation_name,
+    )
+    .await?;
     let official = execute(
         &client,
         &subgraph_url,
         auth_token.as_deref(),
         &query,
         &variables,
+        &operation_name,
     )
     .await?;
 
@@ -63,11 +73,24 @@ async fn execute(
     bearer: Option<&str>,
     query: &str,
     variables: &Value,
+    operation_name: &Option<String>,
 ) -> anyhow::Result<Value> {
-    let mut request = client.post(url).json(&json!({
+    let mut body = json!({
         "query": query,
         "variables": variables,
-    }));
+    });
+    if let Some(operation_name) = operation_name
+        .as_deref()
+        .filter(|operation_name| !operation_name.trim().is_empty())
+    {
+        body["operationName"] = json!(operation_name);
+    }
+
+    let mut request = client
+        .post(url)
+        .header(header::USER_AGENT, "curl/8.0.0")
+        .header(header::ACCEPT, "application/json")
+        .json(&body);
 
     if let Some(token) = bearer.filter(|token| !token.trim().is_empty()) {
         request = request.bearer_auth(token);

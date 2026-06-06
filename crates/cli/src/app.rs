@@ -51,6 +51,8 @@ enum Command {
         #[arg(long)]
         variables_file: Option<PathBuf>,
         #[arg(long)]
+        operation_name: Option<String>,
+        #[arg(long)]
         show_json: bool,
     },
 }
@@ -120,6 +122,7 @@ pub async fn run() -> anyhow::Result<()> {
             auth_token,
             query_file,
             variables_file,
+            operation_name,
             show_json,
         } => {
             compare::run(
@@ -128,6 +131,7 @@ pub async fn run() -> anyhow::Result<()> {
                 auth_token,
                 query_file,
                 variables_file,
+                operation_name,
                 show_json,
             )
             .await?;

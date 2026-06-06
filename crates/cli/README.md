@@ -21,7 +21,15 @@ Operational command-line entrypoint for the ENS indexer.
 
 The binary keeps `main.rs` small and delegates command execution to `app.rs`. Commands share the same `.env` configuration path as the server and ingest crates, so operational behavior does not diverge between local and production runs.
 
-`compare` is intentionally network-only and does not open the database. It reads `SUBGRAPH_URL` and optional `SUBGRAPH_AUTH_TOKEN` from `.env` or CLI flags, posts the same query and optional variables JSON to both endpoints, and fails with both pretty-printed responses when they differ.
+`compare` is intentionally network-only and does not open the database. It reads `SUBGRAPH_URL` and optional `SUBGRAPH_AUTH_TOKEN` from `.env` or CLI flags, posts the same query and optional variables JSON to both endpoints, and fails with both pretty-printed responses when they differ. Use `--operation-name` for named query documents; the request body and user agent intentionally match the official Graph gateway's documented curl shape.
+
+Example against the official ENS subgraph gateway:
+
+```bash
+cargo run -p cli -- compare \
+  --query-file fixtures/domains.graphql \
+  --operation-name Subgraphs
+```
 
 ## Boundary Rules
 
