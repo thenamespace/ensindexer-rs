@@ -2,9 +2,11 @@
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
+ORBSTACK_BIN ?= /Applications/OrbStack.app/Contents/MacOS/xbin
 DOCKER_DESKTOP_BIN ?= /Applications/Docker.app/Contents/Resources/bin
-DOCKER ?= $(shell command -v docker 2>/dev/null || printf $(DOCKER_DESKTOP_BIN)/docker)
-DOCKER_ENV = PATH="$(DOCKER_DESKTOP_BIN):$(PATH)"
+DOCKER_BIN ?= $(shell if [ -x "$(ORBSTACK_BIN)/docker" ]; then printf "$(ORBSTACK_BIN)"; elif command -v docker >/dev/null 2>&1; then dirname "$$(command -v docker)"; else printf "$(DOCKER_DESKTOP_BIN)"; fi)
+DOCKER ?= $(DOCKER_BIN)/docker
+DOCKER_ENV = PATH="$(DOCKER_BIN):$(PATH)"
 
 db-up:
 	$(DOCKER_ENV) $(DOCKER) compose up -d postgres

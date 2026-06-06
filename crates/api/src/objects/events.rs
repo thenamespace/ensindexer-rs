@@ -74,7 +74,7 @@ pub enum ResolverEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "Transfer")]
 pub struct TransferEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -111,7 +111,7 @@ impl TransferEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NewOwner")]
 pub struct NewOwnerEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -155,7 +155,7 @@ impl NewOwnerEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NewResolver")]
 pub struct NewResolverEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -192,7 +192,7 @@ impl NewResolverEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NewTTL")]
 pub struct NewTtlEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -224,9 +224,9 @@ impl NewTtlEvent {
 }
 
 macro_rules! impl_domain_owner_event {
-    ($name:ident, $row:ident) => {
+    ($name:ident, $graphql_name:literal, $row:ident) => {
         #[derive(Debug, Clone, SimpleObject)]
-        #[graphql(complex)]
+        #[graphql(complex, name = $graphql_name)]
         pub struct $name {
             pub id: String,
             #[graphql(name = "blockNumber")]
@@ -264,11 +264,15 @@ macro_rules! impl_domain_owner_event {
     };
 }
 
-impl_domain_owner_event!(WrappedTransferEvent, WrappedTransferEventRow);
-impl_domain_owner_event!(NameUnwrappedEvent, NameUnwrappedEventRow);
+impl_domain_owner_event!(
+    WrappedTransferEvent,
+    "WrappedTransfer",
+    WrappedTransferEventRow
+);
+impl_domain_owner_event!(NameUnwrappedEvent, "NameUnwrapped", NameUnwrappedEventRow);
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NameWrapped")]
 pub struct NameWrappedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -312,7 +316,7 @@ impl NameWrappedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "FusesSet")]
 pub struct FusesSetEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -344,7 +348,7 @@ impl FusesSetEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "ExpiryExtended")]
 pub struct ExpiryExtendedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -377,7 +381,7 @@ impl ExpiryExtendedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NameRegistered")]
 pub struct NameRegisteredEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -417,7 +421,7 @@ impl NameRegisteredEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NameRenewed")]
 pub struct NameRenewedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -450,7 +454,7 @@ impl NameRenewedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "NameTransferred")]
 pub struct NameTransferredEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -487,9 +491,9 @@ impl NameTransferredEvent {
 }
 
 macro_rules! impl_resolver_event {
-    ($name:ident, $row:ident, { $($field:ident : $ty:ty => $expr:expr),* $(,)? }) => {
+    ($name:ident, $graphql_name:literal, $row:ident, { $($field:ident : $ty:ty => $expr:expr),* $(,)? }) => {
         #[derive(Debug, Clone, SimpleObject)]
-        #[graphql(complex)]
+        #[graphql(complex, name = $graphql_name)]
         pub struct $name {
             pub id: String,
             #[graphql(name = "blockNumber")]
@@ -522,14 +526,14 @@ macro_rules! impl_resolver_event {
     };
 }
 
-impl_resolver_event!(NameChangedEvent, NameChangedEventRow, { name: String => |v: &NameChangedEventRow| v.name.clone() });
-impl_resolver_event!(PubkeyChangedEvent, PubkeyChangedEventRow, { x: String => |v: &PubkeyChangedEventRow| v.x.clone(), y: String => |v: &PubkeyChangedEventRow| v.y.clone() });
-impl_resolver_event!(TextChangedEvent, TextChangedEventRow, { key: String => |v: &TextChangedEventRow| v.key.clone(), value: Option<String> => |v: &TextChangedEventRow| v.value.clone() });
-impl_resolver_event!(ContenthashChangedEvent, ContenthashChangedEventRow, { hash: String => |v: &ContenthashChangedEventRow| v.hash.clone() });
-impl_resolver_event!(VersionChangedEvent, VersionChangedEventRow, { version: String => |v: &VersionChangedEventRow| v.version.to_string() });
+impl_resolver_event!(NameChangedEvent, "NameChanged", NameChangedEventRow, { name: String => |v: &NameChangedEventRow| v.name.clone() });
+impl_resolver_event!(PubkeyChangedEvent, "PubkeyChanged", PubkeyChangedEventRow, { x: String => |v: &PubkeyChangedEventRow| v.x.clone(), y: String => |v: &PubkeyChangedEventRow| v.y.clone() });
+impl_resolver_event!(TextChangedEvent, "TextChanged", TextChangedEventRow, { key: String => |v: &TextChangedEventRow| v.key.clone(), value: Option<String> => |v: &TextChangedEventRow| v.value.clone() });
+impl_resolver_event!(ContenthashChangedEvent, "ContenthashChanged", ContenthashChangedEventRow, { hash: String => |v: &ContenthashChangedEventRow| v.hash.clone() });
+impl_resolver_event!(VersionChangedEvent, "VersionChanged", VersionChangedEventRow, { version: String => |v: &VersionChangedEventRow| v.version.to_string() });
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "AddrChanged")]
 pub struct AddrChangedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -566,7 +570,7 @@ impl AddrChangedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "MulticoinAddrChanged")]
 pub struct MulticoinAddrChangedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -601,7 +605,7 @@ impl MulticoinAddrChangedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "ABIChanged")]
 pub struct AbiChangedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -634,7 +638,7 @@ impl AbiChangedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "InterfaceChanged")]
 pub struct InterfaceChangedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]
@@ -669,7 +673,7 @@ impl InterfaceChangedEvent {
 }
 
 #[derive(Debug, Clone, SimpleObject)]
-#[graphql(complex)]
+#[graphql(complex, name = "AuthorisationChanged")]
 pub struct AuthorisationChangedEvent {
     pub id: String,
     #[graphql(name = "blockNumber")]

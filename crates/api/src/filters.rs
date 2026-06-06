@@ -10,7 +10,9 @@ use storage::{
 #[derive(Debug, Clone, Copy, Enum, Eq, PartialEq, Default)]
 pub enum OrderDirection {
     #[default]
+    #[graphql(name = "asc")]
     Asc,
+    #[graphql(name = "desc")]
     Desc,
 }
 
