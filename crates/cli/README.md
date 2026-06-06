@@ -17,7 +17,7 @@ Operational command-line entrypoint for the ENS indexer.
 - `reset --yes`: clear indexed projection/event/checkpoint state for rebuilds.
 - `compare --query-file <file>`: run one GraphQL query against the local API and a reference subgraph, then diff the JSON response.
 - `schema-local [--output <file>]`: print or write the local `async-graphql` SDL.
-- `schema-diff [--output <file>]`: fetch the official subgraph introspection schema and fail if local query, input, or enum type names are missing.
+- `schema-diff [--output <file>]`: fetch the official subgraph introspection schema and fail if local query fields, query args, input fields, enum values, or their owning types are missing.
 
 ## Architecture Notes
 
@@ -25,7 +25,7 @@ The binary keeps `main.rs` small and delegates command execution to `app.rs`. Co
 
 `compare` is intentionally network-only and does not open the database. It reads `SUBGRAPH_URL` and optional `SUBGRAPH_AUTH_TOKEN` from `.env` or CLI flags, posts the same query and optional variables JSON to both endpoints, and fails with both pretty-printed responses when they differ. Use `--operation-name` for named query documents; the request body and user agent intentionally match the official Graph gateway's documented curl shape.
 
-`schema-local` and `schema-diff` are schema-contract checks. `schema-diff` uses the same `.env` gateway configuration as `compare`, writes the official introspection JSON when `--output` is provided, and compares high-level Graph Node compatibility names before any data is indexed. It intentionally exits non-zero while required official query fields, filter inputs, or order enums are missing.
+`schema-local` and `schema-diff` are schema-contract checks. `schema-diff` uses the same `.env` gateway configuration as `compare`, writes the official introspection JSON when `--output` is provided, and compares Graph Node compatibility names before any data is indexed. It intentionally exits non-zero while required official query fields, arguments, filter fields, or order enum values are missing.
 
 Example against the official ENS subgraph gateway:
 

@@ -27,6 +27,7 @@ impl From<OrderDirection> for StorageOrderDirection {
 #[graphql(name = "Account_orderBy")]
 pub enum AccountOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
 }
 
@@ -42,7 +43,9 @@ impl From<AccountOrderBy> for AccountOrderField {
 #[graphql(name = "Domain_orderBy")]
 pub enum DomainOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
+    #[graphql(name = "name")]
     Name,
     #[graphql(name = "labelName")]
     LabelName,
@@ -71,11 +74,13 @@ impl From<DomainOrderBy> for DomainOrderField {
 #[graphql(name = "Registration_orderBy")]
 pub enum RegistrationOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
     #[graphql(name = "registrationDate")]
     RegistrationDate,
     #[graphql(name = "expiryDate")]
     ExpiryDate,
+    #[graphql(name = "cost")]
     Cost,
     #[graphql(name = "labelName")]
     LabelName,
@@ -97,10 +102,13 @@ impl From<RegistrationOrderBy> for RegistrationOrderField {
 #[graphql(name = "WrappedDomain_orderBy")]
 pub enum WrappedDomainOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
     #[graphql(name = "expiryDate")]
     ExpiryDate,
+    #[graphql(name = "fuses")]
     Fuses,
+    #[graphql(name = "name")]
     Name,
 }
 
@@ -119,7 +127,9 @@ impl From<WrappedDomainOrderBy> for WrappedDomainOrderField {
 #[graphql(name = "Resolver_orderBy")]
 pub enum ResolverOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
+    #[graphql(name = "address")]
     Address,
 }
 
@@ -136,6 +146,7 @@ impl From<ResolverOrderBy> for ResolverOrderField {
 #[graphql(name = "DomainEvent_orderBy")]
 pub enum EventOrderBy {
     #[default]
+    #[graphql(name = "id")]
     Id,
     #[graphql(name = "blockNumber")]
     BlockNumber,
@@ -159,6 +170,7 @@ macro_rules! event_order_wrapper {
         #[graphql(name = $graphql_name)]
         pub enum $name {
             #[default]
+            #[graphql(name = "id")]
             Id,
             #[graphql(name = "blockNumber")]
             BlockNumber,

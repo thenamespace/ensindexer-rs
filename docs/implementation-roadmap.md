@@ -601,7 +601,7 @@ The current implementation includes `migrate`, `backfill`, `replay`, `index`, `s
 
 `compare` executes one GraphQL query file against the local Rust API and a reference subgraph endpoint, then compares the parsed JSON responses exactly. It does not require Postgres or indexer config, so it can run in CI against an already-started local server. Keep credentials outside committed files by passing `--subgraph-url`, `--auth-token`, or setting `SUBGRAPH_URL` and `SUBGRAPH_AUTH_TOKEN` in `.env`.
 
-`schema-local` exports the current generated SDL from `async-graphql`. `schema-diff` fetches the official subgraph introspection schema from `SUBGRAPH_URL`, using `SUBGRAPH_AUTH_TOKEN` when set, and compares query root names plus generated input and enum type names. This should run before each compatibility milestone. A non-zero exit means the local API still lacks official schema surface, even if some queries happen to work.
+`schema-local` exports the current generated SDL from `async-graphql`. `schema-diff` fetches the official subgraph introspection schema from `SUBGRAPH_URL`, using `SUBGRAPH_AUTH_TOKEN` when set, and compares query root names, query arguments, generated input fields, and enum values. This should run before each compatibility milestone. A non-zero exit means the local API still lacks official schema surface, even if some queries happen to work.
 
 Example:
 
