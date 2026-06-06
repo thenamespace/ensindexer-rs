@@ -42,10 +42,22 @@ async fn serve_with_indexer(config: AppConfig, storage: Storage) -> anyhow::Resu
 async fn run_startup_backfill(config: &AppConfig, storage: &Storage) -> anyhow::Result<()> {
     match (config.serve_backfill_from, config.serve_backfill_to) {
         (Some(from), Some(to)) => {
-            tracing::info!(from_block = from, to_block = to, "running startup backfill");
-            IngestService::new(config.clone(), storage.clone())
-                .backfill_range(from, to)
-                .await
+            tracing::info!(
+                from_block = from,
+                to_block = to,
+                source = ?config.serve_backfill_source,
+                "running startup backfill"
+            );
+            let service = IngestService::new(config.clone(), storage.clone());
+            if config.serve_backfill_source.is_raw() {
+                service.replay_archive_range(from, to, None).await
+            } else {
+                let mut backfill_config = config.clone();
+                backfill_config.backfill_source = config.serve_backfill_source;
+                IngestService::new(backfill_config, storage.clone())
+                    .backfill_range(from, to)
+                    .await
+            }
         }
         (None, None) => Ok(()),
         _ => anyhow::bail!(

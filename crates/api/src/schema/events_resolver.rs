@@ -19,6 +19,7 @@ pub(crate) struct ResolverEventQueries;
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl ResolverEventQueries {
+    #[graphql(name = "addrChanged")]
     async fn addr_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -35,6 +36,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "addrChangeds")]
     async fn addr_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -63,6 +65,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "multicoinAddrChanged")]
     async fn multicoin_addr_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -79,6 +82,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "multicoinAddrChangeds")]
     async fn multicoin_addr_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -107,6 +111,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "nameChanged")]
     async fn name_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -123,6 +128,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameChangeds")]
     async fn name_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -151,6 +157,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "abiChanged")]
     async fn abi_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -167,6 +174,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "abiChangeds")]
     async fn abi_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -195,6 +203,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "pubkeyChanged")]
     async fn pubkey_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -211,6 +220,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "pubkeyChangeds")]
     async fn pubkey_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -239,6 +249,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "textChanged")]
     async fn text_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -255,6 +266,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "textChangeds")]
     async fn text_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -283,6 +295,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "contenthashChanged")]
     async fn contenthash_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -299,6 +312,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "contenthashChangeds")]
     async fn contenthash_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -327,6 +341,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "interfaceChanged")]
     async fn interface_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -343,6 +358,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "interfaceChangeds")]
     async fn interface_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -371,6 +387,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "authorisationChanged")]
     async fn authorisation_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -387,6 +404,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "authorisationChangeds")]
     async fn authorisation_changed_events(
         &self,
         ctx: &Context<'_>,
@@ -415,6 +433,7 @@ impl ResolverEventQueries {
             .collect())
     }
 
+    #[graphql(name = "versionChanged")]
     async fn version_changed_event(
         &self,
         ctx: &Context<'_>,
@@ -431,6 +450,7 @@ impl ResolverEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "versionChangeds")]
     async fn version_changed_events(
         &self,
         ctx: &Context<'_>,

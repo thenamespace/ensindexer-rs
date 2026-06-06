@@ -18,6 +18,7 @@ pub(crate) struct DomainEventQueries;
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl DomainEventQueries {
+    #[graphql(name = "transfer")]
     async fn transfer_event(
         &self,
         ctx: &Context<'_>,
@@ -34,6 +35,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "transfers")]
     async fn transfer_events(
         &self,
         ctx: &Context<'_>,
@@ -62,6 +64,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "newOwner")]
     async fn new_owner_event(
         &self,
         ctx: &Context<'_>,
@@ -78,6 +81,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "newOwners")]
     async fn new_owner_events(
         &self,
         ctx: &Context<'_>,
@@ -106,6 +110,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "newResolver")]
     async fn new_resolver_event(
         &self,
         ctx: &Context<'_>,
@@ -122,6 +127,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "newResolvers")]
     async fn new_resolver_events(
         &self,
         ctx: &Context<'_>,
@@ -150,6 +156,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "newTTL")]
     async fn new_ttl_event(
         &self,
         ctx: &Context<'_>,
@@ -166,6 +173,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "newTTLs")]
     async fn new_ttl_events(
         &self,
         ctx: &Context<'_>,
@@ -194,6 +202,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "wrappedTransfer")]
     async fn wrapped_transfer_event(
         &self,
         ctx: &Context<'_>,
@@ -210,6 +219,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "wrappedTransfers")]
     async fn wrapped_transfer_events(
         &self,
         ctx: &Context<'_>,
@@ -238,6 +248,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "nameWrapped")]
     async fn name_wrapped_event(
         &self,
         ctx: &Context<'_>,
@@ -254,6 +265,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameWrappeds")]
     async fn name_wrapped_events(
         &self,
         ctx: &Context<'_>,
@@ -282,6 +294,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "nameUnwrapped")]
     async fn name_unwrapped_event(
         &self,
         ctx: &Context<'_>,
@@ -298,6 +311,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameUnwrappeds")]
     async fn name_unwrapped_events(
         &self,
         ctx: &Context<'_>,
@@ -326,6 +340,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "fusesSet")]
     async fn fuses_set_event(
         &self,
         ctx: &Context<'_>,
@@ -342,6 +357,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "fusesSets")]
     async fn fuses_set_events(
         &self,
         ctx: &Context<'_>,
@@ -370,6 +386,7 @@ impl DomainEventQueries {
             .collect())
     }
 
+    #[graphql(name = "expiryExtended")]
     async fn expiry_extended_event(
         &self,
         ctx: &Context<'_>,
@@ -386,6 +403,7 @@ impl DomainEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "expiryExtendeds")]
     async fn expiry_extended_events(
         &self,
         ctx: &Context<'_>,

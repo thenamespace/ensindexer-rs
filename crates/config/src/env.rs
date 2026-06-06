@@ -18,6 +18,7 @@ pub struct AppConfig {
     pub serve_indexer: bool,
     pub serve_backfill_from: Option<u64>,
     pub serve_backfill_to: Option<u64>,
+    pub serve_backfill_source: BackfillSource,
     pub indexer_confirmation_depth: u64,
     pub backfill_batch_blocks: u64,
     pub live_poll_seconds: u64,
@@ -26,6 +27,9 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> Result<Self, ConfigError> {
         dotenvy::dotenv().ok();
+
+        let backfill_source = optional("BACKFILL_SOURCE", BackfillSource::Auto)?;
+        let serve_backfill_source = optional("SERVE_BACKFILL_SOURCE", backfill_source)?;
 
         Ok(Self {
             database_url: required("DATABASE_URL")?,
@@ -37,7 +41,7 @@ impl AppConfig {
                     .parse()
                     .expect("default hypersync url is valid"),
             )?,
-            backfill_source: optional("BACKFILL_SOURCE", BackfillSource::Auto)?,
+            backfill_source,
             raw_archive_dir: optional_path_with_fallback("RAW_ARCHIVE_DIR", "RAW_LOG_ARCHIVE_DIR"),
             chain_id: optional("CHAIN_ID", 1)?,
             bind_address: optional(
@@ -50,6 +54,7 @@ impl AppConfig {
             serve_indexer: optional("SERVE_INDEXER", false)?,
             serve_backfill_from: optional_value("SERVE_BACKFILL_FROM")?,
             serve_backfill_to: optional_value("SERVE_BACKFILL_TO")?,
+            serve_backfill_source,
             indexer_confirmation_depth: optional("INDEXER_CONFIRMATION_DEPTH", 12)?,
             backfill_batch_blocks: optional("BACKFILL_BATCH_BLOCKS", 1_000)?,
             live_poll_seconds: optional("LIVE_POLL_SECONDS", 12)?,
@@ -63,6 +68,7 @@ pub enum BackfillSource {
     Auto,
     Hypersync,
     Rpc,
+    Raw,
 }
 
 impl BackfillSource {
@@ -70,8 +76,12 @@ impl BackfillSource {
         match self {
             Self::Auto => envio_api_key.is_some_and(|key| !key.trim().is_empty()),
             Self::Hypersync => true,
-            Self::Rpc => false,
+            Self::Rpc | Self::Raw => false,
         }
+    }
+
+    pub fn is_raw(self) -> bool {
+        matches!(self, Self::Raw)
     }
 }
 
@@ -151,8 +161,9 @@ impl std::str::FromStr for BackfillSource {
             "auto" => Ok(Self::Auto),
             "hypersync" | "envio" => Ok(Self::Hypersync),
             "rpc" => Ok(Self::Rpc),
+            "raw" | "archive" | "json" => Ok(Self::Raw),
             _ => Err(ConfigError::Invalid(
-                "BACKFILL_SOURCE: expected auto, hypersync, or rpc".to_owned(),
+                "BACKFILL_SOURCE: expected auto, hypersync, rpc, or raw".to_owned(),
             )),
         }
     }

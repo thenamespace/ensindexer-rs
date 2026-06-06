@@ -21,6 +21,10 @@ impl IngestService {
             from_block <= to_block,
             "from block must be less than or equal to to block"
         );
+        anyhow::ensure!(
+            !self.config.backfill_source.is_raw(),
+            "BACKFILL_SOURCE=raw is only valid for archive replay; use replay or SERVE_BACKFILL_SOURCE=raw"
+        );
 
         tracing::info!(
             chain_id = self.config.chain_id,

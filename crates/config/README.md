@@ -12,7 +12,7 @@ Runtime configuration crate.
 
 ## Architecture Notes
 
-Configuration is parsed once at command startup and then passed into dependent crates. `DATABASE_URL` and `ETH_RPC_URL` are required. Historical backfill transport is controlled by `BACKFILL_SOURCE`, with `auto` selecting HyperSync when `ENVIO_API_KEY` or `ENVIO_API_TOKEN` is present. `HYPERSYNC_URL` defaults to the Ethereum mainnet endpoint. `RAW_ARCHIVE_DIR` enables filesystem raw-log archives for replaying projection changes without chain IO. Runtime knobs such as confirmation depth, batch size, poll interval, bind address, Apollo Sandbox enablement, and unified serve/index mode have defaults. `GRAPHQL_SANDBOX` is the preferred UI flag; `GRAPHQL_PLAYGROUND` remains accepted as a backward-compatible fallback.
+Configuration is parsed once at command startup and then passed into dependent crates. `DATABASE_URL` and `ETH_RPC_URL` are required. Historical backfill transport is controlled by `BACKFILL_SOURCE`, with `auto` selecting HyperSync when `ENVIO_API_KEY` or `ENVIO_API_TOKEN` is present. `HYPERSYNC_URL` defaults to the Ethereum mainnet endpoint. `RAW_ARCHIVE_DIR` enables filesystem raw-log archives for replaying projection changes without chain IO. Runtime knobs such as confirmation depth, batch size, poll interval, bind address, Apollo Sandbox enablement, and unified serve/index mode have defaults. `SERVE_BACKFILL_SOURCE` controls bounded startup backfill and supports `raw` archive replay. `GRAPHQL_SANDBOX` is the preferred UI flag; `GRAPHQL_PLAYGROUND` remains accepted as a backward-compatible fallback.
 
 ## Boundary Rules
 

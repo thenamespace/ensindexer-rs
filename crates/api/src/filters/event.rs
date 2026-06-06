@@ -11,8 +11,14 @@ pub struct EventFilter {
     #[graphql(name = "id_not_in")]
     pub id_not_in: Option<Vec<String>>,
     pub domain: Option<String>,
+    #[graphql(name = "domainId")]
+    pub domain_id: Option<String>,
     pub registration: Option<String>,
+    #[graphql(name = "registrationId")]
+    pub registration_id: Option<String>,
     pub resolver: Option<String>,
+    #[graphql(name = "resolverId")]
+    pub resolver_id: Option<String>,
     #[graphql(name = "blockNumber")]
     pub block_number: Option<i32>,
     #[graphql(name = "blockNumber_gt")]
@@ -32,12 +38,22 @@ pub struct EventFilter {
     #[graphql(name = "transactionID_not_in")]
     pub transaction_id_not_in: Option<Vec<String>>,
     pub owner: Option<String>,
+    #[graphql(name = "ownerId")]
+    pub owner_id: Option<String>,
     #[graphql(name = "parentDomain")]
     pub parent_domain: Option<String>,
+    #[graphql(name = "parentDomainId")]
+    pub parent_domain_id: Option<String>,
     #[graphql(name = "newOwner")]
     pub new_owner: Option<String>,
+    #[graphql(name = "newOwnerId")]
+    pub new_owner_id: Option<String>,
     pub registrant: Option<String>,
+    #[graphql(name = "registrantId")]
+    pub registrant_id: Option<String>,
     pub addr: Option<String>,
+    #[graphql(name = "addrId")]
+    pub addr_id: Option<String>,
     pub name: Option<String>,
     #[graphql(name = "name_contains")]
     pub name_contains: Option<String>,
@@ -107,17 +123,20 @@ pub struct EventFilter {
 
 impl EventFilter {
     pub(crate) fn into_domain_filter(self) -> StorageEventFilter {
-        let parent_id = self.domain.clone();
+        let parent_id = self.domain_id.clone().or_else(|| self.domain.clone());
         self.into_storage_filter(parent_id)
     }
 
     pub(crate) fn into_registration_filter(self) -> StorageEventFilter {
-        let parent_id = self.registration.clone();
+        let parent_id = self
+            .registration_id
+            .clone()
+            .or_else(|| self.registration.clone());
         self.into_storage_filter(parent_id)
     }
 
     pub(crate) fn into_resolver_filter(self) -> StorageEventFilter {
-        let parent_id = self.resolver.clone();
+        let parent_id = self.resolver_id.clone().or_else(|| self.resolver.clone());
         self.into_storage_filter(parent_id)
     }
 
@@ -137,12 +156,12 @@ impl EventFilter {
             transaction_id_not: self.transaction_id_not,
             transaction_id_in: self.transaction_id_in,
             transaction_id_not_in: self.transaction_id_not_in,
-            owner_id: self.owner,
-            parent_domain_id: self.parent_domain,
-            resolver_id: self.resolver,
-            registrant_id: self.registrant,
-            new_owner_id: self.new_owner,
-            addr_id: self.addr,
+            owner_id: self.owner_id.or(self.owner),
+            parent_domain_id: self.parent_domain_id.or(self.parent_domain),
+            resolver_id: self.resolver_id.or(self.resolver),
+            registrant_id: self.registrant_id.or(self.registrant),
+            new_owner_id: self.new_owner_id.or(self.new_owner),
+            addr_id: self.addr_id.or(self.addr),
             name: self.name,
             name_contains: self.name_contains,
             name_contains_nocase: self.name_contains_nocase,

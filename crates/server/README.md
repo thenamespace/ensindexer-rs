@@ -15,7 +15,7 @@ HTTP server crate for the ENS indexer API.
 
 The server receives a preconfigured `Storage` handle and builds the `api` schema from it. `/graphql` accepts POST GraphQL requests and serves Apollo Sandbox on GET when enabled. `/healthz` is a lightweight liveness check, and `/readyz` verifies database connectivity. Tower layers provide compression, permissive CORS for local/API clients, timeout handling, and request tracing.
 
-`SERVE_INDEXER=true` starts the ingest service beside the HTTP server. If `SERVE_BACKFILL_FROM` and `SERVE_BACKFILL_TO` are both set, the process runs that bounded backfill first, then enters the live confirmed-block loop. If the background indexer returns an error, the unified service exits instead of continuing to serve stale data silently.
+`SERVE_INDEXER=true` starts the ingest service beside the HTTP server. If `SERVE_BACKFILL_FROM` and `SERVE_BACKFILL_TO` are both set, the process runs that bounded backfill first, then enters the live confirmed-block loop. `SERVE_BACKFILL_SOURCE` controls that startup range independently from ordinary CLI backfills: `auto`, `hypersync`, and `rpc` fetch from chain data sources, while `raw` replays JSON range files from `RAW_ARCHIVE_DIR`. If the background indexer returns an error, the unified service exits instead of continuing to serve stale data silently.
 
 ## Boundary Rules
 

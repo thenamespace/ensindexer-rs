@@ -15,6 +15,7 @@ pub(crate) struct RegistrationEventQueries;
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl RegistrationEventQueries {
+    #[graphql(name = "nameRegistered")]
     async fn name_registered_event(
         &self,
         ctx: &Context<'_>,
@@ -31,6 +32,7 @@ impl RegistrationEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameRegistereds")]
     async fn name_registered_events(
         &self,
         ctx: &Context<'_>,
@@ -59,6 +61,7 @@ impl RegistrationEventQueries {
             .collect())
     }
 
+    #[graphql(name = "nameRenewed")]
     async fn name_renewed_event(
         &self,
         ctx: &Context<'_>,
@@ -75,6 +78,7 @@ impl RegistrationEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameReneweds")]
     async fn name_renewed_events(
         &self,
         ctx: &Context<'_>,
@@ -103,6 +107,7 @@ impl RegistrationEventQueries {
             .collect())
     }
 
+    #[graphql(name = "nameTransferred")]
     async fn name_transferred_event(
         &self,
         ctx: &Context<'_>,
@@ -119,6 +124,7 @@ impl RegistrationEventQueries {
             .map(Into::into))
     }
 
+    #[graphql(name = "nameTransferreds")]
     async fn name_transferred_events(
         &self,
         ctx: &Context<'_>,

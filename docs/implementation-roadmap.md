@@ -570,7 +570,8 @@ Runtime config:
 | `ETH_RPC_URL`                | Ethereum JSON-RPC endpoint                                  |
 | `ENVIO_API_KEY`              | Envio HyperSync API key for fast historical backfills       |
 | `HYPERSYNC_URL`              | HyperSync endpoint, default `https://eth.hypersync.xyz`     |
-| `BACKFILL_SOURCE`            | historical source selector: `auto`, `hypersync`, or `rpc`   |
+| `BACKFILL_SOURCE`            | historical source selector: `auto`, `hypersync`, `rpc`, or `raw` for replay-only flows |
+| `SERVE_BACKFILL_SOURCE`      | startup range source; defaults to `BACKFILL_SOURCE`, supports `raw` archive replay |
 | `CHAIN_ID`                   | chain selector                                              |
 | `GRAPHQL_PLAYGROUND`         | enable/disable playground                                   |
 | `INDEXER_CONFIRMATION_DEPTH` | live indexing lag                                           |

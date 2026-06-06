@@ -60,17 +60,25 @@ mod tests {
         ));
         assert!(sdl.contains("domains(first: Int, skip: Int, where: DomainFilter, orderBy: DomainOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "domainEvent(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "transfer(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("domainEvents(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("transfers(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "transferEvent(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "newTTL(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("transferEvents(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("newTTLs(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
         assert!(sdl.contains(
-            "versionChangedEvent(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+            "nameRegistered(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
         ));
-        assert!(sdl.contains("versionChangedEvents(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("nameRegistereds(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains(
+            "versionChanged(id: String!, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"
+        ));
+        assert!(sdl.contains("versionChangeds(first: Int, skip: Int, where: EventFilter, orderBy: EventOrderBy, orderDirection: OrderDirection, block: Block_height, subgraphError: _SubgraphErrorPolicy_)"));
+        assert!(sdl.contains("domainId: String"));
+        assert!(sdl.contains("registrationId: String"));
+        assert!(sdl.contains("resolverId: String"));
+        assert!(sdl.contains("ownerId: String"));
         assert!(sdl.contains("enum _SubgraphErrorPolicy_"));
     }
 }
