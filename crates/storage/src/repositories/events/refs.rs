@@ -1,6 +1,6 @@
 use crate::{error::*, filters::*, models::*};
 
-use super::{EventsRepo, event_sql::*};
+use super::{EventsRepo, common::EventRefSource, event_sql::*};
 
 impl EventsRepo<'_> {
     pub async fn list_domain_event_refs(
@@ -12,7 +12,10 @@ impl EventsRepo<'_> {
         direction: OrderDirection,
     ) -> StorageResult<Vec<EventReferenceRow>> {
         self.list_event_refs(
-            domain_event_ref_union_sql(),
+            EventRefSource {
+                union_sql: domain_event_ref_union_sql(),
+                interface_table: "domain_event_refs",
+            },
             first,
             skip,
             filter,
@@ -31,7 +34,10 @@ impl EventsRepo<'_> {
         direction: OrderDirection,
     ) -> StorageResult<Vec<EventReferenceRow>> {
         self.list_event_refs(
-            registration_event_ref_union_sql(),
+            EventRefSource {
+                union_sql: registration_event_ref_union_sql(),
+                interface_table: "registration_event_refs",
+            },
             first,
             skip,
             filter,
@@ -50,7 +56,10 @@ impl EventsRepo<'_> {
         direction: OrderDirection,
     ) -> StorageResult<Vec<EventReferenceRow>> {
         self.list_event_refs(
-            resolver_event_ref_union_sql(),
+            EventRefSource {
+                union_sql: resolver_event_ref_union_sql(),
+                interface_table: "resolver_event_refs",
+            },
             first,
             skip,
             filter,

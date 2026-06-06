@@ -372,7 +372,7 @@ Current scalar filter coverage includes the main stored mutable-entity fields:
 - `WrappedDomain_filter`: ID predicates, `domain`, `owner`, `name_*`, `expiryDate_*`, and `fuses_*`;
 - `Resolver_filter`: ID predicates, `domain`, `address`, `address_in`, `addr`, `contentHash_*`, `texts_contains`, and `coinTypes_contains`.
 
-Concrete event filters use the shared `EventFilter` input plus table-aware event-specific predicates. The current implementation applies event-specific fields only on concrete event queries, not on interface union queries:
+Concrete event filters use the shared `EventFilter` input plus table-aware event-specific predicates. Event-interface reference unions expose typed nullable columns for their event-family-specific fields, so interface queries can apply the same scalar predicates over union results:
 
 - ownership/account fields: `owner`, `parentDomain`, `registrant`, `newOwner`, and `addr`;
 - domain wrapper fields: `name`, `name_contains`, `name_contains_nocase`, `fuses_*`, and `expiryDate_*`;

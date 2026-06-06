@@ -1,5 +1,6 @@
 use sqlx::Postgres;
 
+use super::interface_filters::push_interface_event_specific_filters;
 use super::text_fields::{
     push_text_event_field, text_field_addr, text_field_hash, text_field_implementer,
     text_field_interface_id, text_field_key, text_field_name, text_field_owner, text_field_target,
@@ -13,6 +14,10 @@ pub(super) fn push_event_specific_filters<'qb>(
     table: &'static str,
     filter: &EventFilter,
 ) {
+    if push_interface_event_specific_filters(separated, has_where, table, filter) {
+        return;
+    }
+
     match table {
         "transfer_events" | "wrapped_transfer_events" | "name_unwrapped_events" => {
             push_account_event_filter(separated, has_where, "owner_id", filter.owner_id.clone());
@@ -179,7 +184,7 @@ pub(super) fn push_event_specific_filters<'qb>(
     }
 }
 
-fn push_account_event_filter<'qb>(
+pub(super) fn push_account_event_filter<'qb>(
     separated: &mut sqlx::query_builder::Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     column: &'static str,
@@ -188,7 +193,7 @@ fn push_account_event_filter<'qb>(
     push_text_filter(separated, has_where, column, value);
 }
 
-fn push_i32_event_filter<'qb>(
+pub(super) fn push_i32_event_filter<'qb>(
     separated: &mut sqlx::query_builder::Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     column: &'static str,
@@ -210,7 +215,7 @@ fn push_i32_event_filter<'qb>(
     );
 }
 
-enum NumericEventField {
+pub(super) enum NumericEventField {
     Ttl,
     ExpiryDate,
     CoinType,
@@ -218,7 +223,7 @@ enum NumericEventField {
     Version,
 }
 
-fn push_numeric_event_filter<'qb>(
+pub(super) fn push_numeric_event_filter<'qb>(
     separated: &mut sqlx::query_builder::Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     column: &'static str,

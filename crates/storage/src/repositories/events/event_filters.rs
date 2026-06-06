@@ -326,4 +326,39 @@ mod tests {
             "select id from multicoin_addr_changed_events where addr like $1 and x != $2 and y = any($3) and not (hash like $4) and interface_id > $5 and implementer like $6 and not (owner = any($7)) and target <= $8 "
         );
     }
+
+    #[test]
+    fn event_interface_filters_include_specific_predicates() {
+        let filter = EventFilter {
+            fuses_gte: Some(32),
+            expiry_date_lt: Some("1000".into()),
+            key_contains_nocase: Some("avatar".into()),
+            is_authorized: Some(true),
+            ..EventFilter::default()
+        };
+        let mut query = QueryBuilder::<Postgres>::new("select id from event_refs");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "domain_event_refs",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "resolver_event_refs",
+                &filter,
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from event_refs where fuses >= $1 and expiry_date < $2::numeric and lower(key) like lower($3) and is_authorized = $4 "
+        );
+    }
 }

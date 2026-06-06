@@ -468,8 +468,9 @@ Current implementation state:
 - `AccountFilter` supports `and` and `or` composition, including when used in account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`.
 - Scalar-compatible `DomainFilter`, `RegistrationFilter`, `WrappedDomainFilter`, `ResolverFilter`, concrete event filters, and event-interface filters support `and` and `or` composition.
 - Relationship order fields compile to explicit SQL expressions for mutable entities, concrete events, and event-interface reference queries. Concrete event ordering uses table-specific parent columns such as `domain_id`, `registration_id`, and `resolver_id`; interface references use the union-level `parent_id`.
+- Event-interface reference unions project typed nullable columns for their concrete event-family fields, so interface filters can apply predicates such as `fuses_*`, `expiryDate_*`, `key_*`, `coinType_*`, and `isAuthorized`.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, recursive nested filters, event-interface-specific field predicates, and `_change_block` filters are still compatibility-expansion work.
+- Historical block snapshots, recursive nested filters, and `_change_block` filters are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 
@@ -504,7 +505,7 @@ Tier 2 filters:
 - `_not` and comparison operators for every scalar;
 - `_contains_nocase`, `_starts_with_nocase`, `_ends_with_nocase` for all strings;
 - recursive trailing-underscore filters and relationship filters on event entities;
-- event-interface-specific filtering over union queries;
+- deeper event-interface relationship filtering over union queries;
 - deeper recursive `and` and `or` semantics across relationship-filter boundaries.
 
 Tier 3 compatibility:

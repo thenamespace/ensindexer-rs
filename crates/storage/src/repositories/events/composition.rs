@@ -27,13 +27,17 @@ pub(super) fn push_event_ref_filter_group<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     union_sql: &'static str,
+    interface_table: &'static str,
     joiner: &'static str,
     filters: Option<Vec<EventFilter>>,
 ) {
     push_event_filter_group(
         separated,
         has_where,
-        EventFilterSource::Union { union_sql },
+        EventFilterSource::Union {
+            union_sql,
+            interface_table,
+        },
         joiner,
         filters,
     );
@@ -74,7 +78,7 @@ fn push_event_filter_subquery<'qb>(
     separated.push_unseparated("id in (select id from ");
     match source {
         EventFilterSource::Concrete { table, .. } => separated.push_unseparated(table),
-        EventFilterSource::Union { union_sql } => separated
+        EventFilterSource::Union { union_sql, .. } => separated
             .push_unseparated("(")
             .push_unseparated(union_sql)
             .push_unseparated(") event_refs"),
@@ -90,8 +94,11 @@ fn push_event_filter_subquery<'qb>(
             push_event_filters(separated, &mut sub_has_where, parent_column, &filter);
             push_event_specific_filters(separated, &mut sub_has_where, table, &filter);
         }
-        EventFilterSource::Union { .. } => {
+        EventFilterSource::Union {
+            interface_table, ..
+        } => {
             push_event_filters(separated, &mut sub_has_where, "parent_id", &filter);
+            push_event_specific_filters(separated, &mut sub_has_where, interface_table, &filter);
         }
     }
     push_event_filter_group(separated, &mut sub_has_where, source, " and ", and_filters);
@@ -107,6 +114,7 @@ enum EventFilterSource {
     },
     Union {
         union_sql: &'static str,
+        interface_table: &'static str,
     },
 }
 
@@ -186,6 +194,7 @@ mod tests {
             &mut separated,
             &mut has_where,
             UNION_SQL,
+            "domain_event_refs",
             " and ",
             filter.and,
         );

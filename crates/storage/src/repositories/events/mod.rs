@@ -9,6 +9,7 @@ mod event_sql;
 mod insert_domain;
 mod insert_registration;
 mod insert_resolver;
+mod interface_filters;
 mod refs;
 mod registration;
 mod resolver;

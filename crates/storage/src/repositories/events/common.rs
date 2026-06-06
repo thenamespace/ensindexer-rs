@@ -9,6 +9,12 @@ use super::{
     specific_filters::push_event_specific_filters,
 };
 
+#[derive(Clone, Copy)]
+pub(super) struct EventRefSource {
+    pub union_sql: &'static str,
+    pub interface_table: &'static str,
+}
+
 impl EventsRepo<'_> {
     pub(super) async fn find_event<T>(
         &self,
@@ -86,7 +92,7 @@ impl EventsRepo<'_> {
 
     pub(super) async fn list_event_refs(
         &self,
-        union_sql: &'static str,
+        source: EventRefSource,
         first: i64,
         skip: i64,
         filter: EventFilter,
@@ -96,22 +102,30 @@ impl EventsRepo<'_> {
         let mut query = QueryBuilder::<Postgres>::new(
             "select kind, id, block_number, transaction_id, parent_id from (",
         );
-        query.push(union_sql).push(") event_refs");
+        query.push(source.union_sql).push(") event_refs");
 
         let mut separated = query.separated(" and ");
         let mut has_where = false;
         push_event_filters(&mut separated, &mut has_where, "parent_id", &filter);
+        push_event_specific_filters(
+            &mut separated,
+            &mut has_where,
+            source.interface_table,
+            &filter,
+        );
         push_event_ref_filter_group(
             &mut separated,
             &mut has_where,
-            union_sql,
+            source.union_sql,
+            source.interface_table,
             " and ",
             filter.and.clone(),
         );
         push_event_ref_filter_group(
             &mut separated,
             &mut has_where,
-            union_sql,
+            source.union_sql,
+            source.interface_table,
             " or ",
             filter.or.clone(),
         );
