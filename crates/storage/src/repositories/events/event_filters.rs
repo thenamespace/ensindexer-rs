@@ -172,6 +172,7 @@ mod tests {
             owner_id: Some("0xowner".into()),
             fuses_gte: Some(32),
             expiry_date_lt: Some("1000".into()),
+            expiry_date_not_in: Some(vec!["2000".into()]),
             ..EventFilter::default()
         };
         let mut query = QueryBuilder::<Postgres>::new("select id from name_wrapped_events");
@@ -191,7 +192,43 @@ mod tests {
         let built = query.build();
         assert_eq!(
             built.sql(),
-            "select id from name_wrapped_events where domain_id = $1 and fuses >= $2 and owner_id = $3 and expiry_date < $4::numeric "
+            "select id from name_wrapped_events where domain_id = $1 and fuses >= $2 and owner_id = $3 and expiry_date < $4::numeric and not (expiry_date = any(array[$5::numeric])) "
+        );
+    }
+
+    #[test]
+    fn event_specific_filters_include_numeric_and_bool_variants() {
+        let filter = EventFilter {
+            content_type_not: Some("1".into()),
+            content_type_gte: Some("2".into()),
+            content_type_in: Some(vec!["3".into(), "4".into()]),
+            is_authorized_not: Some(false),
+            is_authorized_not_in: Some(vec![true]),
+            ..EventFilter::default()
+        };
+        let mut query = QueryBuilder::<Postgres>::new("select id from abi_changed_events");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "abi_changed_events",
+                &filter,
+            );
+            push_event_specific_filters(
+                &mut separated,
+                &mut has_where,
+                "authorisation_changed_events",
+                &filter,
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from abi_changed_events where content_type != $1::numeric and content_type >= $2::numeric and content_type = any(array[$3::numeric, $4::numeric]) and is_authorized != $5 and not (is_authorized = any($6)) "
         );
     }
 }

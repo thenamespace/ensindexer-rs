@@ -181,6 +181,27 @@ pub(super) fn push_event_specific_filters<'qb>(
                 "=",
                 filter.is_authorized,
             );
+            push_bool_filter(
+                separated,
+                has_where,
+                "is_authorized",
+                "!=",
+                filter.is_authorized_not,
+            );
+            push_bool_array_filter(
+                separated,
+                has_where,
+                "is_authorized",
+                filter.is_authorized_in.clone(),
+                false,
+            );
+            push_bool_array_filter(
+                separated,
+                has_where,
+                "is_authorized",
+                filter.is_authorized_not_in.clone(),
+                true,
+            );
         }
         "version_changed_events" => {
             push_numeric_event_filter(
@@ -211,10 +232,19 @@ fn push_i32_event_filter<'qb>(
     filter: &EventFilter,
 ) {
     push_i32_filter(separated, has_where, column, "=", filter.fuses);
+    push_i32_filter(separated, has_where, column, "!=", filter.fuses_not);
     push_i32_filter(separated, has_where, column, ">", filter.fuses_gt);
     push_i32_filter(separated, has_where, column, "<", filter.fuses_lt);
     push_i32_filter(separated, has_where, column, ">=", filter.fuses_gte);
     push_i32_filter(separated, has_where, column, "<=", filter.fuses_lte);
+    push_i32_array_filter(separated, has_where, column, filter.fuses_in.clone(), false);
+    push_i32_array_filter(
+        separated,
+        has_where,
+        column,
+        filter.fuses_not_in.clone(),
+        true,
+    );
 }
 
 enum NumericEventField {
@@ -232,47 +262,65 @@ fn push_numeric_event_filter<'qb>(
     filter: &EventFilter,
     field: NumericEventField,
 ) {
-    let (eq, gt, lt, gte, lte) = match field {
+    let (eq, not, gt, lt, gte, lte, in_values, not_in) = match field {
         NumericEventField::Ttl => (
             filter.ttl.clone(),
+            filter.ttl_not.clone(),
             filter.ttl_gt.clone(),
             filter.ttl_lt.clone(),
             filter.ttl_gte.clone(),
             filter.ttl_lte.clone(),
+            filter.ttl_in.clone(),
+            filter.ttl_not_in.clone(),
         ),
         NumericEventField::ExpiryDate => (
             filter.expiry_date.clone(),
+            filter.expiry_date_not.clone(),
             filter.expiry_date_gt.clone(),
             filter.expiry_date_lt.clone(),
             filter.expiry_date_gte.clone(),
             filter.expiry_date_lte.clone(),
+            filter.expiry_date_in.clone(),
+            filter.expiry_date_not_in.clone(),
         ),
         NumericEventField::CoinType => (
             filter.coin_type.clone(),
+            filter.coin_type_not.clone(),
             filter.coin_type_gt.clone(),
             filter.coin_type_lt.clone(),
-            None,
-            None,
+            filter.coin_type_gte.clone(),
+            filter.coin_type_lte.clone(),
+            filter.coin_type_in.clone(),
+            filter.coin_type_not_in.clone(),
         ),
         NumericEventField::ContentType => (
             filter.content_type.clone(),
+            filter.content_type_not.clone(),
             filter.content_type_gt.clone(),
             filter.content_type_lt.clone(),
-            None,
-            None,
+            filter.content_type_gte.clone(),
+            filter.content_type_lte.clone(),
+            filter.content_type_in.clone(),
+            filter.content_type_not_in.clone(),
         ),
         NumericEventField::Version => (
             filter.version.clone(),
+            filter.version_not.clone(),
             filter.version_gt.clone(),
             filter.version_lt.clone(),
-            None,
-            None,
+            filter.version_gte.clone(),
+            filter.version_lte.clone(),
+            filter.version_in.clone(),
+            filter.version_not_in.clone(),
         ),
     };
 
     push_numeric_text_filter(separated, has_where, column, "=", eq);
+    push_numeric_text_filter(separated, has_where, column, "!=", not);
     push_numeric_text_filter(separated, has_where, column, ">", gt);
     push_numeric_text_filter(separated, has_where, column, "<", lt);
     push_numeric_text_filter(separated, has_where, column, ">=", gte);
     push_numeric_text_filter(separated, has_where, column, "<=", lte);
+    push_numeric_text_array_filter(separated, has_where, column, in_values, false);
+    push_numeric_text_array_filter(separated, has_where, column, not_in, true);
 }
