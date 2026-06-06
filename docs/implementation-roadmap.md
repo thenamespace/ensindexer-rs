@@ -576,6 +576,8 @@ Runtime config:
 | `INDEXER_CONFIRMATION_DEPTH` | live indexing lag                                           |
 | `BACKFILL_BATCH_BLOCKS`      | initial range size                                          |
 | `LIVE_POLL_SECONDS`          | live loop sleep interval when the safe head has no new work |
+| `SUBGRAPH_URL`               | official or reference GraphQL endpoint for diff checks      |
+| `SUBGRAPH_AUTH_TOKEN`        | optional bearer token for the reference GraphQL endpoint    |
 
 ## Step 12: CLI Commands
 
@@ -589,12 +591,31 @@ cli serve
 cli status
 cli reset --yes
 cli validate --sample-file fixtures/queries.json
-cli compare --subgraph-url <url> --query-file fixtures/queries.json
+cli compare --subgraph-url <url> --query-file fixtures/domain.graphql
 ```
 
-The current implementation includes `migrate`, `backfill`, `index`, `serve`, `status`, and guarded `reset --yes`. `status` prints the latest locally stored block and per-source checkpoints. `reset --yes` truncates indexed projection/event/checkpoint state so a local database can be rebuilt from canonical source start blocks after manual maintenance or coarse reorg recovery.
+The current implementation includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, guarded `reset --yes`, and `compare`. `status` prints the latest locally stored block and per-source checkpoints. `reset --yes` truncates indexed projection/event/checkpoint state so a local database can be rebuilt from canonical source start blocks after manual maintenance or coarse reorg recovery.
 
-`compare` should execute selected queries against the Rust API and the official subgraph, normalize ordering where needed, and diff JSON results. Keep credentials outside committed files.
+`compare` executes one GraphQL query file against the local Rust API and a reference subgraph endpoint, then compares the parsed JSON responses exactly. It does not require Postgres or indexer config, so it can run in CI against an already-started local server. Keep credentials outside committed files by passing `--subgraph-url`, `--auth-token`, or setting `SUBGRAPH_URL` and `SUBGRAPH_AUTH_TOKEN` in `.env`.
+
+Example:
+
+```text
+SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
+cargo run -p cli -- compare \
+  --local-url http://127.0.0.1:8080/subgraph \
+  --query-file fixtures/domain.graphql
+```
+
+For authenticated hosted Graph endpoints:
+
+```text
+SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/<id> \
+SUBGRAPH_AUTH_TOKEN=<token> \
+cargo run -p cli -- compare --query-file fixtures/domain.graphql
+```
+
+Future comparison work should add fixture sets, response normalization for intentionally unordered lists, and a mode that compares many query/variables pairs in one run.
 
 ## Testing Strategy
 

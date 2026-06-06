@@ -1827,6 +1827,8 @@ dependencies = [
  "clap",
  "config",
  "ingest",
+ "reqwest 0.13.4",
+ "serde_json",
  "server",
  "storage",
  "tokio",

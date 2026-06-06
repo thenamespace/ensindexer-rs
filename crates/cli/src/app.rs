@@ -6,6 +6,8 @@ use ingest::IngestService;
 use storage::Storage;
 use tracing_subscriber::{EnvFilter, fmt};
 
+use crate::compare;
+
 #[derive(Debug, Parser)]
 #[command(name = "cli", about = "Custom Rust ENS indexer")]
 struct Cli {
@@ -37,25 +39,42 @@ enum Command {
         archive_dir: Option<PathBuf>,
     },
     Index,
+    Compare {
+        #[arg(long, default_value = "http://127.0.0.1:8080/subgraph")]
+        local_url: String,
+        #[arg(long, env = "SUBGRAPH_URL")]
+        subgraph_url: String,
+        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
+        auth_token: Option<String>,
+        #[arg(long)]
+        query_file: PathBuf,
+        #[arg(long)]
+        variables_file: Option<PathBuf>,
+        #[arg(long)]
+        show_json: bool,
+    },
 }
 
 pub async fn run() -> anyhow::Result<()> {
     init_tracing();
 
     let cli = Cli::parse();
-    let config = AppConfig::from_env()?;
-    let storage = Storage::connect(&config.database_url).await?;
-
     match cli.command {
         Command::Serve => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             server::serve(config, storage).await?;
         }
         Command::Migrate => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             tracing::info!("migrations complete");
         }
         Command::Status => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             print_status(&storage).await?;
         }
         Command::Reset { yes } => {
@@ -63,11 +82,15 @@ pub async fn run() -> anyhow::Result<()> {
                 anyhow::bail!("reset deletes all indexed data; rerun with --yes to confirm");
             }
 
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             storage.maintenance().reset_indexed_data().await?;
             tracing::warn!("indexed data reset complete");
         }
         Command::Backfill { from, to } => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .backfill_range(from, to)
@@ -78,14 +101,36 @@ pub async fn run() -> anyhow::Result<()> {
             to,
             archive_dir,
         } => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .replay_archive_range(from, to, archive_dir)
                 .await?;
         }
         Command::Index => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage).run_live().await?;
+        }
+        Command::Compare {
+            local_url,
+            subgraph_url,
+            auth_token,
+            query_file,
+            variables_file,
+            show_json,
+        } => {
+            compare::run(
+                local_url,
+                subgraph_url,
+                auth_token,
+                query_file,
+                variables_file,
+                show_json,
+            )
+            .await?;
         }
     }
 
