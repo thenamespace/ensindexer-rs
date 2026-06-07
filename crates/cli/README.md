@@ -11,6 +11,7 @@ Operational command-line entrypoint for the ENS indexer.
 - `serve`: run migrations and start the Axum GraphQL API.
 - `migrate`: apply SQLx migrations.
 - `backfill --from <block> --to <block>`: index a bounded historical range.
+- `archive --from <block> --to <block> [--archive-dir <dir>]`: fetch raw chain data into archive files without applying projection writes.
 - `replay --from <block> --to <block> [--archive-dir <dir>]`: rebuild a bounded range from raw JSON archives without chain IO.
 - `archive-status [--from <block>] [--to <block>] [--archive-dir <dir>]`: verify raw archive checksums and report range coverage gaps.
 - `index`: run the confirmation-depth live indexing loop.

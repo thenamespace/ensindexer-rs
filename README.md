@@ -37,6 +37,7 @@ Indexer commands:
 ```bash
 make status
 cargo run -p cli -- backfill --from 9380380 --to 9381380
+cargo run -p cli -- archive --from 9380380 --to 9381380
 cargo run -p cli -- replay --from 9380380 --to 9381380
 cargo run -p cli -- index
 make reset
@@ -46,7 +47,11 @@ make check
 Archive workflow for repeatable projection testing:
 
 ```bash
-# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save raw JSON.
+# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save raw JSON
+# without applying projection writes to Postgres.
+BACKFILL_SOURCE=hypersync make archive-only BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+
+# Or fetch and apply in one pass when you want both archive and database state.
 BACKFILL_SOURCE=hypersync make archive-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
 
 # Rebuild a fresh dev database without spending RPC/HyperSync credits again.
@@ -58,6 +63,7 @@ BACKFILL_SOURCE=raw make raw-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
 
 `make db-reset` deletes the local Postgres compose volume. Use it only for disposable development databases.
 `make archive-status` verifies archive checksums and reports coverage gaps before replay.
+For a complete archive-only run, start from `3327417` so resolver discovery is complete across the continuous fetch. After the archive is complete, use `BACKFILL_SOURCE=raw` or `make raw-backfill` to project from those files.
 
 Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 

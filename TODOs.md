@@ -24,6 +24,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical ingestion can fetch from RPC.
 - [x] Historical ingestion can fetch from HyperSync when configured.
 - [x] Raw log archive writing is supported.
+- [x] Archive-only fetching is supported through `cli archive`, allowing raw range files to be stored without projection writes.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.

@@ -30,6 +30,14 @@ enum Command {
         #[arg(long)]
         to: Option<u64>,
     },
+    Archive {
+        #[arg(long)]
+        from: Option<u64>,
+        #[arg(long)]
+        to: Option<u64>,
+        #[arg(long)]
+        archive_dir: Option<PathBuf>,
+    },
     Replay {
         #[arg(long)]
         from: u64,
@@ -117,6 +125,18 @@ pub async fn run() -> anyhow::Result<()> {
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .run_configured_backfill(from, to)
+                .await?;
+        }
+        Command::Archive {
+            from,
+            to,
+            archive_dir,
+        } => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
+            storage.run_migrations().await?;
+            IngestService::new(config, storage)
+                .run_configured_archive(from, to, archive_dir)
                 .await?;
         }
         Command::Replay {

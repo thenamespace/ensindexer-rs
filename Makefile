@@ -1,6 +1,6 @@
-.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-backfill raw-backfill archive-status test lint check
+.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-only archive-backfill raw-backfill archive-status test lint check
 
-BACKFILL_FROM ?= 9380380
+BACKFILL_FROM ?= 3327417
 BACKFILL_TO ?= 9381380
 RAW_ARCHIVE_DIR ?= .raw-archive
 IMAGE ?= ensindexer:local
@@ -45,6 +45,9 @@ reset:
 
 backfill:
 	cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
+
+archive-only:
+	RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- archive --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
 
 archive-backfill:
 	ARCHIVE_BACKFILLS=true RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)

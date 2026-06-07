@@ -21,6 +21,8 @@ Backfills fetch bounded ranges, merge logs from all active sources, sort by cano
 
 When `ARCHIVE_BACKFILLS=true`, each fetched range is written to `RAW_ARCHIVE_DIR/ranges/{from}-{to}.json` after log and block metadata fetching. A manifest records file paths, byte lengths, log counts, and SHA-256 checksums. Replay reads those range files, verifies manifest checksums when present, and runs the same decode/projection/checkpoint path as live backfill without touching RPC or HyperSync. This is intended for projection development: archive once, reset indexed state, change projection code, then replay until the output matches the official subgraph.
 
+`cli archive` uses the same RPC/HyperSync fetch path but writes raw archive ranges without applying projection writes. During a continuous archive-only run it keeps resolver addresses discovered from registry events in memory, so resolver log fetching remains complete even though the database is not being projected yet. For complete historical archives, run archive-only from the first ENS source block before replaying from raw files.
+
 Live indexing runs behind a configurable confirmation depth and verifies parent hashes before applying new ranges. `INDEXING_SOURCE=http_rpc` uses `ETH_RPC_URL`; `INDEXING_SOURCE=wss` uses `ETH_WS_URL`. Current reorg repair uses a coarse indexed-state reset followed by canonical rebuild.
 
 ## Boundary Rules

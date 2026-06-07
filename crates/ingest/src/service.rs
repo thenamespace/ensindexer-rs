@@ -34,6 +34,16 @@ impl IngestService {
         }
     }
 
+    pub async fn run_configured_archive(
+        &self,
+        from_block: Option<u64>,
+        to_block: Option<u64>,
+        archive_dir: Option<std::path::PathBuf>,
+    ) -> anyhow::Result<()> {
+        let (from_block, to_block) = self.resolve_backfill_range(from_block, to_block).await?;
+        self.archive_range(from_block, to_block, archive_dir).await
+    }
+
     async fn resolve_backfill_range(
         &self,
         from_block: Option<u64>,
