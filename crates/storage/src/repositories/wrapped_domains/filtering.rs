@@ -182,6 +182,8 @@ fn push_numeric_filters<'qb>(
 mod tests {
     use sqlx::{Execute, Postgres, QueryBuilder};
 
+    use crate::filters::{AccountFilter, DomainFilter};
+
     use super::*;
 
     #[test]
@@ -209,6 +211,42 @@ mod tests {
         assert_eq!(
             query.build().sql(),
             "select id from wrapped_domains where fuses >= $1 and (id in (select id from wrapped_domains where name like $2) or id in (select id from wrapped_domains where expiry_date > $3::numeric))"
+        );
+    }
+
+    #[test]
+    fn wrapped_domain_composition_supports_nested_relationship_filters() {
+        let filter = WrappedDomainFilter {
+            or: Some(vec![
+                WrappedDomainFilter {
+                    domain_filter: Some(Box::new(DomainFilter {
+                        parent_filter: Some(Box::new(DomainFilter {
+                            name: Some("eth".into()),
+                            ..DomainFilter::default()
+                        })),
+                        ..DomainFilter::default()
+                    })),
+                    ..WrappedDomainFilter::default()
+                },
+                WrappedDomainFilter {
+                    owner_filter: Some(Box::new(AccountFilter {
+                        id: Some("0xowner".into()),
+                        ..AccountFilter::default()
+                    })),
+                    ..WrappedDomainFilter::default()
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let mut query = QueryBuilder::<Postgres>::new("select id from wrapped_domains");
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_wrapped_domain_filters(&mut separated, &mut has_where, filter);
+
+        assert_eq!(
+            query.build().sql(),
+            "select id from wrapped_domains where (id in (select id from wrapped_domains where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) or id in (select id from wrapped_domains where owner_id in (select id from accounts where id = $2)))"
         );
     }
 }

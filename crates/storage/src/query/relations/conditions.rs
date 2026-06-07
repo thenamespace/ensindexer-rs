@@ -1,6 +1,6 @@
 use crate::filters::{AccountFilter, DomainFilter, ResolverFilter};
 
-pub(super) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
+pub(crate) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
         || filter.id_gt.is_some()
@@ -22,7 +22,7 @@ pub(super) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
             .is_some_and(|filters| filters.iter().any(account_filter_has_conditions))
 }
 
-pub(super) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool {
+pub(crate) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
         || filter.id_gt.is_some()
@@ -92,7 +92,7 @@ pub(super) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool
             .is_some_and(|filters| filters.iter().any(domain_filter_has_scalar_conditions))
 }
 
-pub(super) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
+pub(crate) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
     domain_filter_has_scalar_conditions(filter)
         || filter
             .parent_filter
@@ -128,7 +128,7 @@ pub(super) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
             .is_some_and(|filters| filters.iter().any(domain_filter_has_conditions))
 }
 
-pub(super) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> bool {
+pub(crate) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
         || filter.id_gt.is_some()

@@ -6,7 +6,7 @@ use crate::{
     query::relations::{conditions::*, subquery::*},
 };
 
-pub(super) fn push_domain_scalar_filter_conditions<'qb>(
+pub(crate) fn push_domain_scalar_filter_conditions<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     filter: DomainFilter,

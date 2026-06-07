@@ -2,7 +2,7 @@ use sqlx::{Postgres, query_builder::Separated};
 
 use crate::{filters::ResolverFilter, query::relations::subquery::*};
 
-pub(super) fn push_resolver_scalar_filter_conditions<'qb>(
+pub(crate) fn push_resolver_scalar_filter_conditions<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     filter: ResolverFilter,

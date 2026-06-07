@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-pub(super) fn push_account_filter_conditions<'qb>(
+pub(crate) fn push_account_filter_conditions<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     filter: AccountFilter,

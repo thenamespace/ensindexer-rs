@@ -208,6 +208,8 @@ fn push_numeric_field<'qb>(
 mod tests {
     use sqlx::{Execute, Postgres, QueryBuilder};
 
+    use crate::filters::{AccountFilter, DomainFilter};
+
     use super::*;
 
     #[test]
@@ -241,6 +243,48 @@ mod tests {
         assert_eq!(
             built.sql(),
             "select id from registrations where cost >= $1::numeric and (id in (select id from registrations where label_name like $2) or id in (select id from registrations where expiry_date > $3::numeric)) "
+        );
+    }
+
+    #[test]
+    fn registration_composition_supports_nested_relationship_filters() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_registration_filters(
+                &mut separated,
+                &mut has_where,
+                RegistrationFilter {
+                    and: Some(vec![
+                        RegistrationFilter {
+                            domain_filter: Some(Box::new(DomainFilter {
+                                parent_filter: Some(Box::new(DomainFilter {
+                                    name: Some("eth".into()),
+                                    ..DomainFilter::default()
+                                })),
+                                ..DomainFilter::default()
+                            })),
+                            ..RegistrationFilter::default()
+                        },
+                        RegistrationFilter {
+                            registrant_filter: Some(Box::new(AccountFilter {
+                                id: Some("0xregistrant".into()),
+                                ..AccountFilter::default()
+                            })),
+                            ..RegistrationFilter::default()
+                        },
+                    ]),
+                    ..RegistrationFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from registrations where (id in (select id from registrations where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) and id in (select id from registrations where registrant_id in (select id from accounts where id = $2))) "
         );
     }
 }

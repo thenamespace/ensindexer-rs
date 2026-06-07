@@ -14,17 +14,17 @@ use crate::{
     },
 };
 
-use self::{
-    account::{push_account_filter_conditions, push_account_filter_group},
+pub(crate) use self::{
+    account::push_account_filter_conditions,
     conditions::{
         account_filter_has_conditions, domain_filter_has_conditions,
         resolver_filter_has_scalar_conditions,
     },
-    domain::push_domain_scalar_filter_conditions,
+    domain::{push_domain_filter_group, push_domain_scalar_filter_conditions},
     resolver::push_resolver_scalar_filter_conditions,
 };
 
-pub(crate) use domain::push_domain_filter_group;
+use self::account::push_account_filter_group;
 
 pub(crate) fn push_account_relation_filter<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,

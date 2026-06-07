@@ -470,6 +470,7 @@ Current implementation state:
 - Relationship order fields compile to explicit SQL expressions for mutable entities, concrete events, and event-interface reference queries. Concrete event ordering uses table-specific parent columns such as `domain_id`, `registration_id`, and `resolver_id`; interface references use the union-level `parent_id`.
 - Event-interface reference unions project typed nullable columns for their concrete event-family fields, so interface filters can apply predicates such as `fuses_*`, `expiryDate_*`, `key_*`, `coinType_*`, and `isAuthorized`.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
+- `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
 - Historical block snapshots, recursive nested filters, and `_change_block` filters are still compatibility-expansion work.
 
