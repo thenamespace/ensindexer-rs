@@ -1,7 +1,8 @@
-.PHONY: db-up db-down db-logs docker-build docker-run migrate serve sandbox status reset backfill test lint check
+.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-backfill raw-backfill test lint check
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
+RAW_ARCHIVE_DIR ?= .raw-archive
 IMAGE ?= ensindexer:local
 ORBSTACK_BIN ?= /Applications/OrbStack.app/Contents/MacOS/xbin
 DOCKER_DESKTOP_BIN ?= /Applications/Docker.app/Contents/Resources/bin
@@ -14,6 +15,10 @@ db-up:
 
 db-down:
 	$(DOCKER_ENV) $(DOCKER) compose down
+
+db-reset:
+	$(DOCKER_ENV) $(DOCKER) compose down -v
+	$(MAKE) db-up
 
 db-logs:
 	$(DOCKER_ENV) $(DOCKER) compose logs -f postgres
@@ -40,6 +45,12 @@ reset:
 
 backfill:
 	cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
+
+archive-backfill:
+	ARCHIVE_BACKFILLS=true RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
+
+raw-backfill:
+	BACKFILL_SOURCE=raw RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
 
 test:
 	cargo test --workspace

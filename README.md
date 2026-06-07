@@ -43,6 +43,20 @@ make reset
 make check
 ```
 
+Archive workflow for repeatable projection testing:
+
+```bash
+# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save raw JSON.
+BACKFILL_SOURCE=hypersync make archive-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+
+# Rebuild a fresh dev database without spending RPC/HyperSync credits again.
+make db-reset
+make migrate
+BACKFILL_SOURCE=raw make raw-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+```
+
+`make db-reset` deletes the local Postgres compose volume. Use it only for disposable development databases.
+
 Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 
 ## Docker
