@@ -259,6 +259,34 @@ fn domain_relation_filter_supports_nested_domain_relationships() {
 }
 
 #[test]
+fn domain_relation_filter_supports_subdomains_predicates() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_domain_relation_filter(
+            &mut separated,
+            &mut has_where,
+            "domain_id",
+            Some(Box::new(DomainFilter {
+                subdomains_filter: Some(Box::new(DomainFilter {
+                    label_name_starts_with: Some("sub".into()),
+                    ..DomainFilter::default()
+                })),
+                ..DomainFilter::default()
+            })),
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from registrations where domain_id in (select id from domains where id in (select parent_id from domains where label_name like $1)) "
+    );
+}
+
+#[test]
 fn domain_filter_composition_supports_nested_relationship_only_conditions() {
     let mut query = QueryBuilder::<Postgres>::new("select id from domains");
     {

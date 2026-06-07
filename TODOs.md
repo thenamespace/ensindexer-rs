@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the `Domain_filter.registration_` and `Domain_filter.wrappedDomain_` derived-relation slice.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the `Domain_filter.subdomains_` derived-collection filter slice.
 
 ## Completed
 
@@ -77,6 +77,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Shallow mutable-entity relationship filters are implemented for `Domain.parent_`, `Domain.owner_`, `Domain.resolver_`, `Domain.registrant_`, `Domain.wrappedOwner_`, `Registration.domain_`, `Registration.registrant_`, `WrappedDomain.domain_`, `WrappedDomain.owner_`, `Resolver.domain_`, and `Resolver.addr_`.
 - [x] `DomainFilter` relationship predicates recurse through nested parent/account/resolver predicates, including relation-only `and`/`or` branches.
 - [x] `RegistrationFilter`, `WrappedDomainFilter`, and `ResolverFilter` composition preserves nested relation-only predicates.
+- [x] `Domain_filter.subdomains_` compiles to derived child-domain collection subqueries over `domains.parent_id`, including nested domain relation paths.
 - [x] `Domain_filter.registration_` and `Domain_filter.wrappedDomain_` compile to derived one-to-one relation subqueries over `registrations` and `wrapped_domains`.
 - [x] Event owner/addr scalar operators are mapped through API conversion and SQL predicates.
 - [x] Event parent relation scalar operators are mapped for `domain_*`, `registration_*`, and `resolver_*` predicates.
@@ -98,7 +99,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 ### Full Subgraph Compatibility
 
 - [ ] Implement historical `block` reads for entity and event roots instead of returning compatibility errors for non-current blocks.
-- [ ] Finish deeper recursive trailing-underscore filters beyond the mutable-entity relation composition currently covered, especially derived collection filters such as `Domain_filter.subdomains_`, `Domain_filter.events_`, `Registration_filter.events_`, and `Resolver_filter.events_`.
+- [ ] Finish deeper recursive trailing-underscore filters beyond the mutable-entity relation composition currently covered, especially derived event collection filters such as `Domain_filter.events_`, `Registration_filter.events_`, and `Resolver_filter.events_`.
 - [ ] Audit and complete generated scalar operators for every remaining official scalar field, including less common `_not`, comparison, nocase, starts-with, and ends-with variants.
 - [ ] Audit list-field edge cases against Graph Node behavior.
 - [ ] Add compatibility tests that execute the same representative GraphQL queries against the local API and the official hosted ENS subgraph.

@@ -101,6 +101,10 @@ pub(crate) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
             .as_ref()
             .is_some_and(|filter| domain_filter_has_conditions(filter))
         || filter
+            .subdomains_filter
+            .as_ref()
+            .is_some_and(|filter| domain_filter_has_conditions(filter))
+        || filter
             .resolved_address_filter
             .as_ref()
             .is_some_and(|filter| account_filter_has_conditions(filter))

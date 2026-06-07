@@ -217,6 +217,7 @@ pub(crate) fn push_domain_scalar_filter_conditions<'qb>(
         filter.change_block_number_gte,
     );
     push_sub_domain_relation_filter(separated, has_where, "parent_id", filter.parent_filter);
+    push_subdomains_relation_filter(separated, has_where, filter.subdomains_filter);
     push_sub_account_relation_filter(
         separated,
         has_where,
@@ -320,6 +321,25 @@ fn push_sub_domain_relation_filter<'qb>(
     separated
         .push_unseparated(column)
         .push_unseparated(" in (select id from domains");
+    let mut sub_has_where = false;
+    push_domain_scalar_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
+}
+
+fn push_subdomains_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    filter: Option<Box<DomainFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !domain_filter_has_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated.push_unseparated("id in (select parent_id from domains");
     let mut sub_has_where = false;
     push_domain_scalar_filter_conditions(separated, &mut sub_has_where, *filter);
     separated.push_unseparated(")");

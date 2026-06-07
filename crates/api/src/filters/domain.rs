@@ -189,6 +189,7 @@ impl From<DomainFilter> for StorageDomainFilter {
             parent_id_not_ends_with: extras.parent_not_ends_with,
             parent_id_not_ends_with_nocase: extras.parent_not_ends_with_nocase,
             parent_filter: value.parent_filter.map(|filter| Box::new((*filter).into())),
+            subdomains_filter: extras.subdomains_.map(|filter| Box::new((*filter).into())),
             subdomain_count: value.subdomain_count,
             subdomain_count_not: extras
                 .subdomain_count_not

@@ -81,6 +81,7 @@ pub struct DomainFilter {
     pub parent_id_not_ends_with: Option<String>,
     pub parent_id_not_ends_with_nocase: Option<String>,
     pub parent_filter: Option<Box<DomainFilter>>,
+    pub subdomains_filter: Option<Box<DomainFilter>>,
     pub subdomain_count: Option<i32>,
     pub subdomain_count_not: Option<i32>,
     pub subdomain_count_gt: Option<i32>,

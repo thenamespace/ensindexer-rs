@@ -347,6 +347,7 @@ impl DomainsRepo<'_> {
         push_domain_derived_relation_filters(
             &mut separated,
             &mut has_where,
+            filter.subdomains_filter.take(),
             filter.registration_filter.take(),
             filter.wrapped_domain_filter.take(),
         );
