@@ -1,21 +1,18 @@
-use std::{
-    collections::BTreeSet,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::{
     AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
     MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo, StorageResult,
-    WrappedDomainsRepo, change_buffer::EntityChange, entity_cache::EntityCache,
+    WrappedDomainsRepo, change_buffer::ChangeBuffer, entity_cache::EntityCache,
     event_buffer::EventBuffer,
 };
 
 #[derive(Clone)]
 pub struct Storage {
     pool: PgPool,
-    pub(crate) change_buffer: Arc<Mutex<Option<BTreeSet<EntityChange>>>>,
+    pub(crate) change_buffer: Arc<Mutex<Option<ChangeBuffer>>>,
     pub(crate) event_buffer: Arc<Mutex<Option<EventBuffer>>>,
     pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
 }

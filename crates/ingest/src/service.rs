@@ -1,6 +1,7 @@
 mod apply;
 mod backfill;
 mod live;
+mod preload;
 mod replay;
 
 use alloy::providers::{Provider, ProviderBuilder};

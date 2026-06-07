@@ -12,8 +12,12 @@ pub struct AccountsRepo<'a> {
 impl AccountsRepo<'_> {
     pub async fn create_if_missing(&self, id: &str) -> StorageResult<bool> {
         if self.cache_active()? {
-            if self.cached_account(id)? {
-                return Ok(false);
+            if let Some(exists) = self.cached_account_state(id)? {
+                if exists {
+                    return Ok(false);
+                }
+                self.insert_cached_account(id)?;
+                return Ok(true);
             }
             if self.find_by_id_uncached(id).await?.is_some() {
                 self.remember_account(id)?;
@@ -39,12 +43,14 @@ impl AccountsRepo<'_> {
         Ok(cache.is_some())
     }
 
-    fn cached_account(&self, id: &str) -> StorageResult<bool> {
+    fn cached_account_state(&self, id: &str) -> StorageResult<Option<bool>> {
         let cache = self
             .entity_cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
-        Ok(cache.as_ref().is_some_and(|active| active.has_account(id)))
+        Ok(cache
+            .as_ref()
+            .and_then(|active| active.get_account_state(id)))
     }
 
     fn remember_account(&self, id: &str) -> StorageResult<()> {

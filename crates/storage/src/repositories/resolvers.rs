@@ -24,16 +24,15 @@ impl ResolversRepo<'_> {
         address: &str,
     ) -> StorageResult<bool> {
         if self.cache_active()? {
-            if let Some(row) = self.cached_resolver(id)? {
-                if row.is_some() {
-                    return Ok(false);
+            match self.cached_resolver(id)? {
+                Some(Some(_)) => return Ok(false),
+                Some(None) => {}
+                None => {
+                    if let Some(row) = self.find_by_id_uncached(id).await? {
+                        self.remember_resolver(id, Some(row))?;
+                        return Ok(false);
+                    }
                 }
-            }
-            if self.cached_resolver(id)?.is_none()
-                && let Some(row) = self.find_by_id_uncached(id).await?
-            {
-                self.remember_resolver(id, Some(row))?;
-                return Ok(false);
             }
             self.put_cached_resolver(ResolverRow {
                 id: id.to_owned(),
@@ -60,6 +59,16 @@ impl ResolversRepo<'_> {
         .fetch_optional(self.pool)
         .await?;
         Ok(inserted.is_some())
+    }
+
+    pub async fn exists(&self, id: &str) -> StorageResult<bool> {
+        if let Some(row) = self.cached_resolver(id)? {
+            return Ok(row.is_some());
+        }
+        let row = self.find_by_id_uncached(id).await?;
+        let exists = row.is_some();
+        self.remember_resolver(id, row)?;
+        Ok(exists)
     }
 
     fn cache_active(&self) -> StorageResult<bool> {

@@ -66,13 +66,17 @@ pub(crate) async fn ensure_resolver(
     timestamp: i64,
     block_number: i32,
 ) -> ProjectionResult<String> {
-    let domain_id = DomainId(node).as_subgraph_id();
-    ensure_domain(storage, &domain_id, timestamp, true, block_number).await?;
     let resolver_id = ResolverId {
         address: resolver,
         node,
     }
     .as_subgraph_id();
+    if storage.resolvers().exists(&resolver_id).await? {
+        return Ok(resolver_id);
+    }
+
+    let domain_id = DomainId(node).as_subgraph_id();
+    ensure_domain(storage, &domain_id, timestamp, true, block_number).await?;
     if storage
         .resolvers()
         .create_if_missing(&resolver_id, &domain_id, &hex_address(resolver))

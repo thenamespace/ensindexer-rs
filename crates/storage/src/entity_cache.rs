@@ -1,26 +1,47 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use sqlx::{Postgres, QueryBuilder};
-
 use crate::{
     AccountRow, DomainRow, RegistrationRow, ResolverRow, Storage, StorageError, StorageResult,
     WrappedDomainRow,
 };
 
-const CURRENT_FLUSH_CHUNK_ROWS: usize = 3_000;
+#[derive(Debug, Default)]
+pub struct EntityPreloadIds {
+    pub accounts: BTreeSet<String>,
+    pub domains: BTreeSet<String>,
+    pub registrations: BTreeSet<String>,
+    pub resolvers: BTreeSet<String>,
+    pub wrapped_domains: BTreeSet<String>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct EntityPreloadStats {
+    pub accounts: usize,
+    pub domains: usize,
+    pub registrations: usize,
+    pub resolvers: usize,
+    pub wrapped_domains: usize,
+}
+
+impl EntityPreloadStats {
+    pub fn rows(self) -> usize {
+        self.accounts + self.domains + self.registrations + self.resolvers + self.wrapped_domains
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct EntityCache {
     pub(crate) accounts: BTreeMap<String, AccountRow>,
+    account_misses: BTreeSet<String>,
     pub(crate) domains: BTreeMap<String, Option<DomainRow>>,
     pub(crate) registrations: BTreeMap<String, Option<RegistrationRow>>,
     pub(crate) resolvers: BTreeMap<String, Option<ResolverRow>>,
     pub(crate) wrapped_domains: BTreeMap<String, Option<WrappedDomainRow>>,
-    dirty_accounts: BTreeSet<String>,
-    dirty_domains: BTreeSet<String>,
-    dirty_registrations: BTreeSet<String>,
-    dirty_resolvers: BTreeSet<String>,
-    dirty_wrapped_domains: BTreeSet<String>,
+    pub(crate) dirty_accounts: BTreeSet<String>,
+    pub(crate) dirty_domains: BTreeSet<String>,
+    pub(crate) dirty_registrations: BTreeSet<String>,
+    pub(crate) dirty_resolvers: BTreeSet<String>,
+    pub(crate) dirty_wrapped_domains: BTreeSet<String>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -29,17 +50,31 @@ pub struct EntityCacheFlushStats {
 }
 
 impl EntityCache {
-    pub(crate) fn has_account(&self, id: &str) -> bool {
-        self.accounts.contains_key(id)
+    pub(crate) fn get_account_state(&self, id: &str) -> Option<bool> {
+        if self.accounts.contains_key(id) {
+            Some(true)
+        } else if self.account_misses.contains(id) {
+            Some(false)
+        } else {
+            None
+        }
     }
 
     pub(crate) fn remember_account(&mut self, id: String) {
+        self.account_misses.remove(&id);
         self.accounts
             .entry(id.clone())
             .or_insert_with(|| AccountRow { id });
     }
 
+    pub(crate) fn remember_missing_account(&mut self, id: String) {
+        if !self.accounts.contains_key(&id) {
+            self.account_misses.insert(id);
+        }
+    }
+
     pub(crate) fn insert_account(&mut self, id: String) {
+        self.account_misses.remove(&id);
         self.accounts
             .entry(id.clone())
             .or_insert_with(|| AccountRow { id: id.clone() });
@@ -85,30 +120,6 @@ impl EntityCache {
     pub(crate) fn delete_wrapped_domain(&mut self, id: &str) {
         self.dirty_wrapped_domains.insert(id.to_owned());
         self.wrapped_domains.insert(id.to_owned(), None);
-    }
-
-    async fn flush(&mut self, storage: &Storage) -> StorageResult<EntityCacheFlushStats> {
-        let account_ids = take_dirty_rows(&mut self.dirty_accounts, &self.accounts);
-        let domains = take_dirty_optional_rows(&mut self.dirty_domains, &self.domains);
-        let registrations =
-            take_dirty_optional_rows(&mut self.dirty_registrations, &self.registrations);
-        let resolvers = take_dirty_optional_rows(&mut self.dirty_resolvers, &self.resolvers);
-        let wrapped_domains =
-            take_dirty_optional_rows(&mut self.dirty_wrapped_domains, &self.wrapped_domains);
-
-        flush_accounts(storage, &account_ids).await?;
-        flush_domains(storage, &domains).await?;
-        flush_registrations(storage, &registrations).await?;
-        flush_resolvers(storage, &resolvers).await?;
-        flush_wrapped_domains(storage, &wrapped_domains).await?;
-
-        Ok(EntityCacheFlushStats {
-            rows: account_ids.len()
-                + domains.len()
-                + registrations.len()
-                + resolvers.len()
-                + wrapped_domains.len(),
-        })
     }
 }
 
@@ -166,301 +177,5 @@ impl Storage {
             .map_err(|_| StorageError::EntityCachePoisoned)?;
         *guard = Some(cache);
         Ok(stats)
-    }
-}
-
-fn take_dirty_rows<T: Clone>(dirty: &mut BTreeSet<String>, rows: &BTreeMap<String, T>) -> Vec<T> {
-    let ids = std::mem::take(dirty);
-    ids.into_iter()
-        .filter_map(|id| rows.get(&id).cloned())
-        .collect()
-}
-
-fn take_dirty_optional_rows<T: Clone>(
-    dirty: &mut BTreeSet<String>,
-    rows: &BTreeMap<String, Option<T>>,
-) -> Vec<(String, Option<T>)> {
-    let ids = std::mem::take(dirty);
-    ids.into_iter()
-        .filter_map(|id| rows.get(&id).cloned().map(|row| (id, row)))
-        .collect()
-}
-
-async fn flush_accounts(storage: &Storage, rows: &[AccountRow]) -> StorageResult<()> {
-    for chunk in rows.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-        let mut query = QueryBuilder::<Postgres>::new("insert into accounts (id) ");
-        query.push_values(chunk, |mut row, account| {
-            row.push_bind(&account.id);
-        });
-        query.push(" on conflict (id) do nothing");
-        query.build().execute(storage.pool()).await?;
-    }
-    Ok(())
-}
-
-async fn flush_domains(
-    storage: &Storage,
-    rows: &[(String, Option<DomainRow>)],
-) -> StorageResult<()> {
-    let rows = order_domain_rows_by_parent(
-        rows.iter()
-            .filter_map(|(_, row)| row.clone())
-            .collect::<Vec<_>>(),
-    );
-    for chunk in rows.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-        let mut query = QueryBuilder::<Postgres>::new(
-            r#"insert into domains (
-                id, name, label_name, labelhash, parent_id, subdomain_count,
-                resolved_address_id, resolver_id, ttl, is_migrated, created_at,
-                owner_id, registrant_id, wrapped_owner_id, expiry_date
-            ) "#,
-        );
-        query.push_values(chunk, |mut row, domain| {
-            row.push_bind(&domain.id)
-                .push_bind(&domain.name)
-                .push_bind(&domain.label_name)
-                .push_bind(&domain.labelhash)
-                .push_bind(&domain.parent_id)
-                .push_bind(domain.subdomain_count)
-                .push_bind(&domain.resolved_address_id)
-                .push_bind(&domain.resolver_id)
-                .push_bind(&domain.ttl)
-                .push_bind(domain.is_migrated)
-                .push_bind(&domain.created_at)
-                .push_bind(&domain.owner_id)
-                .push_bind(&domain.registrant_id)
-                .push_bind(&domain.wrapped_owner_id)
-                .push_bind(&domain.expiry_date);
-        });
-        query.push(
-            r#" on conflict (id) do update set
-                name = excluded.name,
-                label_name = excluded.label_name,
-                labelhash = excluded.labelhash,
-                parent_id = excluded.parent_id,
-                subdomain_count = excluded.subdomain_count,
-                resolved_address_id = excluded.resolved_address_id,
-                resolver_id = excluded.resolver_id,
-                ttl = excluded.ttl,
-                is_migrated = excluded.is_migrated,
-                created_at = excluded.created_at,
-                owner_id = excluded.owner_id,
-                registrant_id = excluded.registrant_id,
-                wrapped_owner_id = excluded.wrapped_owner_id,
-                expiry_date = excluded.expiry_date"#,
-        );
-        query.build().execute(storage.pool()).await?;
-    }
-    Ok(())
-}
-
-fn order_domain_rows_by_parent(rows: Vec<DomainRow>) -> Vec<DomainRow> {
-    let mut pending = rows
-        .into_iter()
-        .map(|row| (row.id.clone(), row))
-        .collect::<BTreeMap<_, _>>();
-    let mut ordered = Vec::with_capacity(pending.len());
-
-    while !pending.is_empty() {
-        let ready_ids = pending
-            .iter()
-            .filter(|(_, row)| {
-                row.parent_id
-                    .as_ref()
-                    .is_none_or(|parent_id| !pending.contains_key(parent_id))
-            })
-            .map(|(id, _)| id.clone())
-            .collect::<Vec<_>>();
-
-        if ready_ids.is_empty() {
-            tracing::warn!(
-                remaining_domains = pending.len(),
-                "could not parent-order all dirty domains before flush"
-            );
-            ordered.extend(pending.into_values());
-            break;
-        }
-
-        for id in ready_ids {
-            if let Some(row) = pending.remove(&id) {
-                ordered.push(row);
-            }
-        }
-    }
-
-    ordered
-}
-
-async fn flush_registrations(
-    storage: &Storage,
-    rows: &[(String, Option<RegistrationRow>)],
-) -> StorageResult<()> {
-    let rows = rows
-        .iter()
-        .filter_map(|(_, row)| row.clone())
-        .collect::<Vec<_>>();
-    for chunk in rows.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-        let mut query = QueryBuilder::<Postgres>::new(
-            r#"insert into registrations (
-                id, domain_id, registration_date, expiry_date, cost, registrant_id, label_name
-            ) "#,
-        );
-        query.push_values(chunk, |mut row, registration| {
-            row.push_bind(&registration.id)
-                .push_bind(&registration.domain_id)
-                .push_bind(&registration.registration_date)
-                .push_bind(&registration.expiry_date)
-                .push_bind(&registration.cost)
-                .push_bind(&registration.registrant_id)
-                .push_bind(&registration.label_name);
-        });
-        query.push(
-            r#" on conflict (id) do update set
-                domain_id = excluded.domain_id,
-                registration_date = excluded.registration_date,
-                expiry_date = excluded.expiry_date,
-                cost = excluded.cost,
-                registrant_id = excluded.registrant_id,
-                label_name = excluded.label_name"#,
-        );
-        query.build().execute(storage.pool()).await?;
-    }
-    Ok(())
-}
-
-async fn flush_resolvers(
-    storage: &Storage,
-    rows: &[(String, Option<ResolverRow>)],
-) -> StorageResult<()> {
-    let rows = rows
-        .iter()
-        .filter_map(|(_, row)| row.clone())
-        .collect::<Vec<_>>();
-    for chunk in rows.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-        let mut query = QueryBuilder::<Postgres>::new(
-            r#"insert into resolvers (
-                id, domain_id, address, addr_id, content_hash, texts, coin_types
-            ) "#,
-        );
-        query.push_values(chunk, |mut row, resolver| {
-            row.push_bind(&resolver.id)
-                .push_bind(&resolver.domain_id)
-                .push_bind(&resolver.address)
-                .push_bind(&resolver.addr_id)
-                .push_bind(&resolver.content_hash)
-                .push_bind(&resolver.texts)
-                .push_bind(&resolver.coin_types);
-        });
-        query.push(
-            r#" on conflict (id) do update set
-                domain_id = excluded.domain_id,
-                address = excluded.address,
-                addr_id = excluded.addr_id,
-                content_hash = excluded.content_hash,
-                texts = excluded.texts,
-                coin_types = excluded.coin_types"#,
-        );
-        query.build().execute(storage.pool()).await?;
-    }
-    Ok(())
-}
-
-async fn flush_wrapped_domains(
-    storage: &Storage,
-    rows: &[(String, Option<WrappedDomainRow>)],
-) -> StorageResult<()> {
-    let upserts = rows
-        .iter()
-        .filter_map(|(_, row)| row.clone())
-        .collect::<Vec<_>>();
-    let delete_ids = rows
-        .iter()
-        .filter_map(|(id, row)| row.is_none().then_some(id.as_str()))
-        .collect::<Vec<_>>();
-
-    if !delete_ids.is_empty() {
-        for chunk in delete_ids.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-            let mut query =
-                QueryBuilder::<Postgres>::new("delete from wrapped_domains where id in (");
-            let mut separated = query.separated(", ");
-            for id in chunk {
-                separated.push_bind(id);
-            }
-            query.push(")");
-            query.build().execute(storage.pool()).await?;
-        }
-    }
-
-    for chunk in upserts.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
-        let mut query = QueryBuilder::<Postgres>::new(
-            r#"insert into wrapped_domains (
-                id, domain_id, expiry_date, fuses, owner_id, name
-            ) "#,
-        );
-        query.push_values(chunk, |mut row, wrapped| {
-            row.push_bind(&wrapped.id)
-                .push_bind(&wrapped.domain_id)
-                .push_bind(&wrapped.expiry_date)
-                .push_bind(wrapped.fuses)
-                .push_bind(&wrapped.owner_id)
-                .push_bind(&wrapped.name);
-        });
-        query.push(
-            r#" on conflict (id) do update set
-                domain_id = excluded.domain_id,
-                expiry_date = excluded.expiry_date,
-                fuses = excluded.fuses,
-                owner_id = excluded.owner_id,
-                name = excluded.name"#,
-        );
-        query.build().execute(storage.pool()).await?;
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use bigdecimal::BigDecimal;
-
-    use super::*;
-
-    fn domain(id: &str, parent_id: Option<&str>) -> DomainRow {
-        DomainRow {
-            id: id.to_owned(),
-            name: None,
-            label_name: None,
-            labelhash: None,
-            parent_id: parent_id.map(ToOwned::to_owned),
-            subdomain_count: 0,
-            resolved_address_id: None,
-            resolver_id: None,
-            ttl: None,
-            is_migrated: true,
-            created_at: BigDecimal::from(0),
-            owner_id: "0x0000000000000000000000000000000000000000".to_owned(),
-            registrant_id: None,
-            wrapped_owner_id: None,
-            expiry_date: None,
-        }
-    }
-
-    #[test]
-    fn domain_rows_are_ordered_parent_first() {
-        let ordered = order_domain_rows_by_parent(vec![
-            domain("child", Some("parent")),
-            domain("grandchild", Some("child")),
-            domain("parent", None),
-        ]);
-        let ids = ordered.into_iter().map(|row| row.id).collect::<Vec<_>>();
-
-        assert_eq!(ids, ["parent", "child", "grandchild"]);
-    }
-
-    #[test]
-    fn domain_rows_allow_existing_external_parents() {
-        let ordered = order_domain_rows_by_parent(vec![domain("child", Some("already-flushed"))]);
-        let ids = ordered.into_iter().map(|row| row.id).collect::<Vec<_>>();
-
-        assert_eq!(ids, ["child"]);
     }
 }

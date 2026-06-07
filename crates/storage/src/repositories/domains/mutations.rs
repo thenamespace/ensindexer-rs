@@ -8,16 +8,15 @@ use crate::{error::*, inserts::DomainUpsert, models::DomainRow};
 impl DomainsRepo<'_> {
     pub async fn create_if_missing(&self, input: DomainUpsert) -> StorageResult<bool> {
         if self.cache_active()? {
-            if let Some(row) = self.cached_domain(&input.id)? {
-                if row.is_some() {
-                    return Ok(false);
+            match self.cached_domain(&input.id)? {
+                Some(Some(_)) => return Ok(false),
+                Some(None) => {}
+                None => {
+                    if let Some(row) = self.find_by_id_uncached(&input.id).await? {
+                        self.remember_domain(&input.id, Some(row))?;
+                        return Ok(false);
+                    }
                 }
-            }
-            if self.cached_domain(&input.id)?.is_none()
-                && let Some(row) = self.find_by_id_uncached(&input.id).await?
-            {
-                self.remember_domain(&input.id, Some(row))?;
-                return Ok(false);
             }
             let row = DomainRow {
                 id: input.id.clone(),

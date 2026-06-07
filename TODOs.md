@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the binary-only archive cleanup and crate README refresh. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the range-wide snapshot buffering and entity-cache module split. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -48,6 +48,11 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical fill logs include `current_flush_rows` and `current_flush_ms`.
 - [x] Historical fills write mutable-entity block snapshots directly from the current-state projection cache instead of selecting the current tables at each block boundary.
 - [x] Historical fills flush dirty current-state rows once at the end of each range instead of once per indexed block.
+- [x] Historical fills preload touched current-state accounts, domains, registrations, resolvers, and wrapped domains before projection to reduce per-entity point queries.
+- [x] Resolver event projection avoids ensuring the parent domain when the resolver already exists, reducing resolver-heavy range work.
+- [x] Historical fills capture exact block snapshot rows in memory when entities are marked changed, preserving historical block reads without per-block flushes.
+- [x] Historical fills batch `entity_changes` and all mutable-entity snapshots range-wide per table instead of issuing snapshot writes per `(entity, block)` group.
+- [x] Release raw replay benchmark improved from roughly `3.0k logs/sec` in the preloader-only sample to roughly `8.6k logs/sec` overall and `9.3k logs/sec` on 50k+ log ranges after range-wide snapshot batching.
 - [x] Historical fill batch sizes are capped below Postgres' bind-parameter limit for wide current-state and snapshot inserts.
 - [x] Current-state domain cache flushes dirty domains in parent-first order to satisfy the self-referential `domains.parent_id` foreign key during range-level batch writes.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
@@ -161,9 +166,12 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.
-- [ ] Profile historical fills after direct cache-backed snapshot flushing with dense resolver ranges and record logs/sec, SQL time, and top write queries.
-- [ ] Audit direct cache-backed historical snapshots against seeded fixtures for block-boundary correctness across repeated mutations in the same range.
-- [ ] Add explicit range-level bulk preloading for touched domains, accounts, resolvers, registrations, and wrapped domains before projection.
+- [ ] Profile historical fills with a real flamegraph or `tokio-console` style instrumentation on dense 250k+ log ranges and record top CPU/SQL paths.
+- [ ] Audit range-wide buffered historical snapshots against seeded fixtures for block-boundary correctness across repeated mutations in the same range.
+- [ ] Benchmark the upcoming 250k+ and 500k+ log ranges after range-wide snapshot batching; current measured throughput is still short of the 3-hour target for 150M raw logs.
+- [ ] Evaluate Postgres `COPY` or staging-table merge paths for event tables, current-state tables, entity changes, and snapshots to target 14k+ sustained logs/sec.
+- [ ] Evaluate partitioned/unlogged staging tables during historical replay, followed by indexed merge into durable tables.
+- [ ] Add per-table flush timing inside current-state, event, and snapshot flushes to identify which tables dominate dense ranges.
 - [ ] Audit current-state cache behavior against official subgraph fixtures for representative registry, registrar, wrapper, and resolver ranges.
 
 ### Performance And API Quality

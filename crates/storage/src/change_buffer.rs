@@ -2,7 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use sqlx::{Postgres, QueryBuilder};
 
-use crate::{Storage, StorageError, StorageResult};
+use crate::{
+    DomainRow, RegistrationRow, ResolverRow, Storage, StorageError, StorageResult, WrappedDomainRow,
+};
 
 mod snapshot_flush;
 
@@ -17,11 +19,34 @@ pub enum EntityKind {
     WrappedDomain,
 }
 
+#[derive(Debug, Default)]
+pub(crate) struct ChangeBuffer {
+    changes: BTreeSet<EntityChange>,
+    snapshots: BufferedSnapshots,
+}
+
+#[derive(Debug, Default)]
+pub(super) struct BufferedSnapshots {
+    pub(super) accounts: BTreeMap<(i32, String), String>,
+    pub(super) domains: BTreeMap<(i32, String), DomainRow>,
+    pub(super) registrations: BTreeMap<(i32, String), RegistrationRow>,
+    pub(super) resolvers: BTreeMap<(i32, String), ResolverRow>,
+    pub(super) wrapped_domains: BTreeMap<(i32, String), (String, Option<WrappedDomainRow>)>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct EntityChange {
+struct EntityChange {
     kind: EntityKind,
     id: String,
     block_number: i32,
+}
+
+enum CapturedSnapshot {
+    Account(String),
+    Domain(DomainRow),
+    Registration(RegistrationRow),
+    Resolver(ResolverRow),
+    WrappedDomain(String, Option<WrappedDomainRow>),
 }
 
 impl EntityKind {
@@ -45,7 +70,7 @@ impl Storage {
         if buffer.is_some() {
             return Err(StorageError::ChangeBufferAlreadyActive);
         }
-        *buffer = Some(BTreeSet::new());
+        *buffer = Some(ChangeBuffer::default());
         Ok(())
     }
 
@@ -71,7 +96,7 @@ impl Storage {
     }
 
     pub async fn flush_change_buffer(&self) -> StorageResult<usize> {
-        let changes = {
+        let buffer = {
             let mut buffer = self
                 .change_buffer
                 .lock()
@@ -82,23 +107,22 @@ impl Storage {
             std::mem::take(active)
         };
 
-        let count = changes.len();
-        let mut grouped = BTreeMap::<(EntityKind, i32), Vec<String>>::new();
-        for change in changes {
-            grouped
-                .entry((change.kind, change.block_number))
-                .or_default()
-                .push(change.id);
-        }
-
-        let use_cached_snapshots = self.entity_cache_is_active()?;
-        for ((kind, block_number), ids) in grouped {
-            self.write_entity_changes_batch(kind, block_number, &ids)
-                .await?;
-            if use_cached_snapshots {
-                self.write_cached_snapshots_batch(kind, block_number, &ids)
+        let count = buffer.changes.len();
+        let use_buffered_snapshots = !buffer.snapshots.is_empty();
+        if use_buffered_snapshots {
+            self.write_entity_changes_buffered(&buffer.changes).await?;
+            self.write_buffered_snapshots(&buffer.snapshots).await?;
+        } else {
+            let mut grouped = BTreeMap::<(EntityKind, i32), Vec<String>>::new();
+            for change in buffer.changes {
+                grouped
+                    .entry((change.kind, change.block_number))
+                    .or_default()
+                    .push(change.id);
+            }
+            for ((kind, block_number), ids) in grouped {
+                self.write_entity_changes_batch(kind, block_number, &ids)
                     .await?;
-            } else {
                 self.write_snapshots_batch(kind, block_number, &ids).await?;
             }
         }
@@ -111,6 +135,18 @@ impl Storage {
         id: &str,
         block_number: i32,
     ) -> StorageResult<bool> {
+        let has_buffer = {
+            let buffer = self
+                .change_buffer
+                .lock()
+                .map_err(|_| StorageError::ChangeBufferPoisoned)?;
+            buffer.is_some()
+        };
+        if !has_buffer {
+            return Ok(false);
+        };
+
+        let snapshot = self.capture_entity_snapshot(kind, id)?;
         let mut buffer = self
             .change_buffer
             .lock()
@@ -123,7 +159,48 @@ impl Storage {
             id: id.to_owned(),
             block_number,
         });
+        active.snapshots.insert(block_number, id, snapshot);
         Ok(true)
+    }
+
+    fn capture_entity_snapshot(
+        &self,
+        kind: EntityKind,
+        id: &str,
+    ) -> StorageResult<Option<CapturedSnapshot>> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        let Some(cache) = cache.as_ref() else {
+            return Ok(None);
+        };
+        Ok(match kind {
+            EntityKind::Account => cache
+                .accounts
+                .contains_key(id)
+                .then(|| CapturedSnapshot::Account(id.to_owned())),
+            EntityKind::Domain => cache
+                .domains
+                .get(id)
+                .and_then(Clone::clone)
+                .map(CapturedSnapshot::Domain),
+            EntityKind::Registration => cache
+                .registrations
+                .get(id)
+                .and_then(Clone::clone)
+                .map(CapturedSnapshot::Registration),
+            EntityKind::Resolver => cache
+                .resolvers
+                .get(id)
+                .and_then(Clone::clone)
+                .map(CapturedSnapshot::Resolver),
+            EntityKind::WrappedDomain => cache
+                .wrapped_domains
+                .get(id)
+                .cloned()
+                .map(|row| CapturedSnapshot::WrappedDomain(id.to_owned(), row)),
+        })
     }
 
     async fn write_entity_change(
@@ -172,5 +249,65 @@ impl Storage {
             query.build().execute(self.pool()).await?;
         }
         Ok(())
+    }
+
+    async fn write_entity_changes_buffered(
+        &self,
+        changes: &BTreeSet<EntityChange>,
+    ) -> StorageResult<()> {
+        let changes = changes.iter().collect::<Vec<_>>();
+        for chunk in changes.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
+            let mut query = QueryBuilder::<Postgres>::new(
+                "insert into entity_changes (entity_type, entity_id, block_number) ",
+            );
+            query.push_values(chunk, |mut row, change| {
+                row.push_bind(change.kind.as_str())
+                    .push_bind(&change.id)
+                    .push_bind(change.block_number);
+            });
+            query.push(" on conflict do nothing");
+            query.build().execute(self.pool()).await?;
+        }
+        Ok(())
+    }
+}
+
+impl ChangeBuffer {
+    fn insert(&mut self, change: EntityChange) {
+        self.changes.insert(change);
+    }
+}
+
+impl BufferedSnapshots {
+    fn is_empty(&self) -> bool {
+        self.accounts.is_empty()
+            && self.domains.is_empty()
+            && self.registrations.is_empty()
+            && self.resolvers.is_empty()
+            && self.wrapped_domains.is_empty()
+    }
+
+    fn insert(&mut self, block_number: i32, id: &str, snapshot: Option<CapturedSnapshot>) {
+        let Some(snapshot) = snapshot else {
+            return;
+        };
+        let key = (block_number, id.to_owned());
+        match snapshot {
+            CapturedSnapshot::Account(account_id) => {
+                self.accounts.insert(key, account_id);
+            }
+            CapturedSnapshot::Domain(row) => {
+                self.domains.insert(key, row);
+            }
+            CapturedSnapshot::Registration(row) => {
+                self.registrations.insert(key, row);
+            }
+            CapturedSnapshot::Resolver(row) => {
+                self.resolvers.insert(key, row);
+            }
+            CapturedSnapshot::WrappedDomain(id, row) => {
+                self.wrapped_domains.insert(key, (id, row));
+            }
+        }
     }
 }

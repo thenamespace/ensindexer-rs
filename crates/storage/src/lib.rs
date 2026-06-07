@@ -1,5 +1,7 @@
 pub mod change_buffer;
 pub mod entity_cache;
+mod entity_cache_flush;
+mod entity_cache_preload;
 pub mod error;
 pub mod event_buffer;
 pub mod filters;

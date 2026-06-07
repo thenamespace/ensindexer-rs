@@ -1,51 +1,22 @@
 use sqlx::{Postgres, QueryBuilder};
 
-use crate::{
-    DomainRow, EntityKind, RegistrationRow, ResolverRow, Storage, StorageError, StorageResult,
-    WrappedDomainRow,
-};
+use crate::{EntityKind, Storage, StorageResult};
 
-use super::CHANGE_FLUSH_CHUNK_ROWS;
+use super::{BufferedSnapshots, CHANGE_FLUSH_CHUNK_ROWS};
 
 mod db;
 
 impl Storage {
-    pub(crate) fn entity_cache_is_active(&self) -> StorageResult<bool> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        Ok(cache.is_some())
-    }
-
-    pub(crate) async fn write_cached_snapshots_batch(
+    pub(super) async fn write_buffered_snapshots(
         &self,
-        kind: EntityKind,
-        block_number: i32,
-        ids: &[String],
+        snapshots: &BufferedSnapshots,
     ) -> StorageResult<()> {
-        match kind {
-            EntityKind::Account => {
-                let rows = self.cached_account_snapshot_rows(ids)?;
-                write_account_snapshots(self, block_number, &rows).await
-            }
-            EntityKind::Domain => {
-                let rows = self.cached_domain_snapshot_rows(ids)?;
-                write_domain_snapshots(self, block_number, &rows).await
-            }
-            EntityKind::Registration => {
-                let rows = self.cached_registration_snapshot_rows(ids)?;
-                write_registration_snapshots(self, block_number, &rows).await
-            }
-            EntityKind::Resolver => {
-                let rows = self.cached_resolver_snapshot_rows(ids)?;
-                write_resolver_snapshots(self, block_number, &rows).await
-            }
-            EntityKind::WrappedDomain => {
-                let rows = self.cached_wrapped_domain_snapshot_rows(ids)?;
-                write_wrapped_domain_snapshots(self, block_number, &rows).await
-            }
-        }
+        write_buffered_account_snapshots(self, snapshots).await?;
+        write_buffered_domain_snapshots(self, snapshots).await?;
+        write_buffered_registration_snapshots(self, snapshots).await?;
+        write_buffered_resolver_snapshots(self, snapshots).await?;
+        write_buffered_wrapped_domain_snapshots(self, snapshots).await?;
+        Ok(())
     }
 
     pub(crate) async fn write_snapshots_batch(
@@ -68,102 +39,19 @@ impl Storage {
             }
         }
     }
-
-    fn cached_account_snapshot_rows(&self, ids: &[String]) -> StorageResult<Vec<String>> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        let Some(cache) = cache.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(ids
-            .iter()
-            .filter(|id| cache.accounts.contains_key(id.as_str()))
-            .cloned()
-            .collect())
-    }
-
-    fn cached_domain_snapshot_rows(&self, ids: &[String]) -> StorageResult<Vec<DomainRow>> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        let Some(cache) = cache.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(ids
-            .iter()
-            .filter_map(|id| cache.domains.get(id).and_then(Clone::clone))
-            .collect())
-    }
-
-    fn cached_registration_snapshot_rows(
-        &self,
-        ids: &[String],
-    ) -> StorageResult<Vec<RegistrationRow>> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        let Some(cache) = cache.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(ids
-            .iter()
-            .filter_map(|id| cache.registrations.get(id).and_then(Clone::clone))
-            .collect())
-    }
-
-    fn cached_resolver_snapshot_rows(&self, ids: &[String]) -> StorageResult<Vec<ResolverRow>> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        let Some(cache) = cache.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(ids
-            .iter()
-            .filter_map(|id| cache.resolvers.get(id).and_then(Clone::clone))
-            .collect())
-    }
-
-    fn cached_wrapped_domain_snapshot_rows(
-        &self,
-        ids: &[String],
-    ) -> StorageResult<Vec<(String, Option<WrappedDomainRow>)>> {
-        let cache = self
-            .entity_cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        let Some(cache) = cache.as_ref() else {
-            return Ok(Vec::new());
-        };
-        Ok(ids
-            .iter()
-            .filter_map(|id| {
-                cache
-                    .wrapped_domains
-                    .get(id)
-                    .cloned()
-                    .map(|row| (id.clone(), row))
-            })
-            .collect())
-    }
 }
 
-async fn write_account_snapshots(
+async fn write_buffered_account_snapshots(
     storage: &Storage,
-    block_number: i32,
-    rows: &[String],
+    snapshots: &BufferedSnapshots,
 ) -> StorageResult<()> {
+    let rows = snapshots.accounts.iter().collect::<Vec<_>>();
     for chunk in rows.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             "insert into account_snapshots (id, block_number, deleted) ",
         );
-        query.push_values(chunk, |mut row, id| {
-            row.push_bind(id).push_bind(block_number).push_bind(false);
+        query.push_values(chunk, |mut row, ((block_number, _), id)| {
+            row.push_bind(id).push_bind(*block_number).push_bind(false);
         });
         query.push(" on conflict (id, block_number) do update set deleted = excluded.deleted");
         query.build().execute(storage.pool()).await?;
@@ -171,11 +59,11 @@ async fn write_account_snapshots(
     Ok(())
 }
 
-async fn write_domain_snapshots(
+async fn write_buffered_domain_snapshots(
     storage: &Storage,
-    block_number: i32,
-    rows: &[DomainRow],
+    snapshots: &BufferedSnapshots,
 ) -> StorageResult<()> {
+    let rows = snapshots.domains.iter().collect::<Vec<_>>();
     for chunk in rows.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             r#"insert into domain_snapshots (
@@ -184,9 +72,9 @@ async fn write_domain_snapshots(
                 created_at, owner_id, registrant_id, wrapped_owner_id, expiry_date
             ) "#,
         );
-        query.push_values(chunk, |mut row, domain| {
+        query.push_values(chunk, |mut row, ((block_number, _), domain)| {
             row.push_bind(&domain.id)
-                .push_bind(block_number)
+                .push_bind(*block_number)
                 .push_bind(false)
                 .push_bind(&domain.name)
                 .push_bind(&domain.label_name)
@@ -203,34 +91,17 @@ async fn write_domain_snapshots(
                 .push_bind(&domain.wrapped_owner_id)
                 .push_bind(&domain.expiry_date);
         });
-        query.push(
-            r#" on conflict (id, block_number) do update set
-                deleted = excluded.deleted,
-                name = excluded.name,
-                label_name = excluded.label_name,
-                labelhash = excluded.labelhash,
-                parent_id = excluded.parent_id,
-                subdomain_count = excluded.subdomain_count,
-                resolved_address_id = excluded.resolved_address_id,
-                resolver_id = excluded.resolver_id,
-                ttl = excluded.ttl,
-                is_migrated = excluded.is_migrated,
-                created_at = excluded.created_at,
-                owner_id = excluded.owner_id,
-                registrant_id = excluded.registrant_id,
-                wrapped_owner_id = excluded.wrapped_owner_id,
-                expiry_date = excluded.expiry_date"#,
-        );
+        push_domain_snapshot_conflict(&mut query);
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
 }
 
-async fn write_registration_snapshots(
+async fn write_buffered_registration_snapshots(
     storage: &Storage,
-    block_number: i32,
-    rows: &[RegistrationRow],
+    snapshots: &BufferedSnapshots,
 ) -> StorageResult<()> {
+    let rows = snapshots.registrations.iter().collect::<Vec<_>>();
     for chunk in rows.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             r#"insert into registration_snapshots (
@@ -238,9 +109,9 @@ async fn write_registration_snapshots(
                 expiry_date, cost, registrant_id, label_name
             ) "#,
         );
-        query.push_values(chunk, |mut row, registration| {
+        query.push_values(chunk, |mut row, ((block_number, _), registration)| {
             row.push_bind(&registration.id)
-                .push_bind(block_number)
+                .push_bind(*block_number)
                 .push_bind(false)
                 .push_bind(&registration.domain_id)
                 .push_bind(&registration.registration_date)
@@ -249,26 +120,17 @@ async fn write_registration_snapshots(
                 .push_bind(&registration.registrant_id)
                 .push_bind(&registration.label_name);
         });
-        query.push(
-            r#" on conflict (id, block_number) do update set
-                deleted = excluded.deleted,
-                domain_id = excluded.domain_id,
-                registration_date = excluded.registration_date,
-                expiry_date = excluded.expiry_date,
-                cost = excluded.cost,
-                registrant_id = excluded.registrant_id,
-                label_name = excluded.label_name"#,
-        );
+        push_registration_snapshot_conflict(&mut query);
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
 }
 
-async fn write_resolver_snapshots(
+async fn write_buffered_resolver_snapshots(
     storage: &Storage,
-    block_number: i32,
-    rows: &[ResolverRow],
+    snapshots: &BufferedSnapshots,
 ) -> StorageResult<()> {
+    let rows = snapshots.resolvers.iter().collect::<Vec<_>>();
     for chunk in rows.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             r#"insert into resolver_snapshots (
@@ -276,9 +138,9 @@ async fn write_resolver_snapshots(
                 content_hash, texts, coin_types
             ) "#,
         );
-        query.push_values(chunk, |mut row, resolver| {
+        query.push_values(chunk, |mut row, ((block_number, _), resolver)| {
             row.push_bind(&resolver.id)
-                .push_bind(block_number)
+                .push_bind(*block_number)
                 .push_bind(false)
                 .push_bind(&resolver.domain_id)
                 .push_bind(&resolver.address)
@@ -287,34 +149,25 @@ async fn write_resolver_snapshots(
                 .push_bind(&resolver.texts)
                 .push_bind(&resolver.coin_types);
         });
-        query.push(
-            r#" on conflict (id, block_number) do update set
-                deleted = excluded.deleted,
-                domain_id = excluded.domain_id,
-                address = excluded.address,
-                addr_id = excluded.addr_id,
-                content_hash = excluded.content_hash,
-                texts = excluded.texts,
-                coin_types = excluded.coin_types"#,
-        );
+        push_resolver_snapshot_conflict(&mut query);
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
 }
 
-async fn write_wrapped_domain_snapshots(
+async fn write_buffered_wrapped_domain_snapshots(
     storage: &Storage,
-    block_number: i32,
-    rows: &[(String, Option<WrappedDomainRow>)],
+    snapshots: &BufferedSnapshots,
 ) -> StorageResult<()> {
+    let rows = snapshots.wrapped_domains.iter().collect::<Vec<_>>();
     for chunk in rows.chunks(CHANGE_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             r#"insert into wrapped_domain_snapshots (
                 id, block_number, deleted, domain_id, expiry_date, fuses, owner_id, name
             ) "#,
         );
-        query.push_values(chunk, |mut row, (id, wrapped)| {
-            row.push_bind(id).push_bind(block_number);
+        query.push_values(chunk, |mut row, ((block_number, _), (id, wrapped))| {
+            row.push_bind(id).push_bind(*block_number);
             match wrapped {
                 Some(wrapped) => {
                     row.push_bind(false)
@@ -334,16 +187,67 @@ async fn write_wrapped_domain_snapshots(
                 }
             }
         });
-        query.push(
-            r#" on conflict (id, block_number) do update set
-                deleted = excluded.deleted,
-                domain_id = excluded.domain_id,
-                expiry_date = excluded.expiry_date,
-                fuses = excluded.fuses,
-                owner_id = excluded.owner_id,
-                name = excluded.name"#,
-        );
+        push_wrapped_domain_snapshot_conflict(&mut query);
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
+}
+
+fn push_domain_snapshot_conflict(query: &mut QueryBuilder<Postgres>) {
+    query.push(
+        r#" on conflict (id, block_number) do update set
+            deleted = excluded.deleted,
+            name = excluded.name,
+            label_name = excluded.label_name,
+            labelhash = excluded.labelhash,
+            parent_id = excluded.parent_id,
+            subdomain_count = excluded.subdomain_count,
+            resolved_address_id = excluded.resolved_address_id,
+            resolver_id = excluded.resolver_id,
+            ttl = excluded.ttl,
+            is_migrated = excluded.is_migrated,
+            created_at = excluded.created_at,
+            owner_id = excluded.owner_id,
+            registrant_id = excluded.registrant_id,
+            wrapped_owner_id = excluded.wrapped_owner_id,
+            expiry_date = excluded.expiry_date"#,
+    );
+}
+
+fn push_registration_snapshot_conflict(query: &mut QueryBuilder<Postgres>) {
+    query.push(
+        r#" on conflict (id, block_number) do update set
+            deleted = excluded.deleted,
+            domain_id = excluded.domain_id,
+            registration_date = excluded.registration_date,
+            expiry_date = excluded.expiry_date,
+            cost = excluded.cost,
+            registrant_id = excluded.registrant_id,
+            label_name = excluded.label_name"#,
+    );
+}
+
+fn push_resolver_snapshot_conflict(query: &mut QueryBuilder<Postgres>) {
+    query.push(
+        r#" on conflict (id, block_number) do update set
+            deleted = excluded.deleted,
+            domain_id = excluded.domain_id,
+            address = excluded.address,
+            addr_id = excluded.addr_id,
+            content_hash = excluded.content_hash,
+            texts = excluded.texts,
+            coin_types = excluded.coin_types"#,
+    );
+}
+
+fn push_wrapped_domain_snapshot_conflict(query: &mut QueryBuilder<Postgres>) {
+    query.push(
+        r#" on conflict (id, block_number) do update set
+            deleted = excluded.deleted,
+            domain_id = excluded.domain_id,
+            expiry_date = excluded.expiry_date,
+            fuses = excluded.fuses,
+            owner_id = excluded.owner_id,
+            name = excluded.name"#,
+    );
 }
