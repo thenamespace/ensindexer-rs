@@ -1,11 +1,12 @@
 use sqlx::{Postgres, query_builder::Separated};
 
 use crate::{
-    filters::{DomainFilter, RegistrationFilter, WrappedDomainFilter},
+    filters::{DomainFilter, EventFilter, RegistrationFilter, WrappedDomainFilter},
     query::{
         domain_filter_has_conditions, push_domain_scalar_filter_conditions, push_where_prefix,
     },
     repositories::{
+        events::push_domain_events_filter,
         registrations::{push_registration_subquery_filters, registration_filter_has_conditions},
         wrapped_domains::{
             push_wrapped_domain_subquery_filters, wrapped_domain_filter_has_conditions,
@@ -16,10 +17,12 @@ use crate::{
 pub(super) fn push_domain_derived_relation_filters<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
+    events_filter: Option<Box<EventFilter>>,
     subdomains_filter: Option<Box<DomainFilter>>,
     registration_filter: Option<Box<RegistrationFilter>>,
     wrapped_domain_filter: Option<Box<WrappedDomainFilter>>,
 ) {
+    push_domain_events_filter(separated, has_where, events_filter);
     push_subdomains_filter(separated, has_where, subdomains_filter);
     push_registration_filter(separated, has_where, registration_filter);
     push_wrapped_domain_filter(separated, has_where, wrapped_domain_filter);
@@ -100,7 +103,14 @@ mod tests {
         let mut query = QueryBuilder::<Postgres>::new("select id from domains");
         let mut separated = query.separated(" and ");
         let mut has_where = false;
-        push_domain_derived_relation_filters(&mut separated, &mut has_where, filter, None, None);
+        push_domain_derived_relation_filters(
+            &mut separated,
+            &mut has_where,
+            None,
+            filter,
+            None,
+            None,
+        );
 
         assert_eq!(
             query.build().sql(),
@@ -118,7 +128,14 @@ mod tests {
         let mut query = QueryBuilder::<Postgres>::new("select id from domains");
         let mut separated = query.separated(" and ");
         let mut has_where = false;
-        push_domain_derived_relation_filters(&mut separated, &mut has_where, None, filter, None);
+        push_domain_derived_relation_filters(
+            &mut separated,
+            &mut has_where,
+            None,
+            None,
+            filter,
+            None,
+        );
 
         assert_eq!(
             query.build().sql(),
@@ -137,7 +154,14 @@ mod tests {
         let mut query = QueryBuilder::<Postgres>::new("select id from domains");
         let mut separated = query.separated(" and ");
         let mut has_where = false;
-        push_domain_derived_relation_filters(&mut separated, &mut has_where, None, None, filter);
+        push_domain_derived_relation_filters(
+            &mut separated,
+            &mut has_where,
+            None,
+            None,
+            None,
+            filter,
+        );
 
         assert_eq!(
             query.build().sql(),

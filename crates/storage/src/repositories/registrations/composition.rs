@@ -7,6 +7,7 @@ use crate::{
         push_account_filter_conditions, push_domain_scalar_filter_conditions,
         push_sub_change_block_filter, push_where_prefix,
     },
+    repositories::events::push_registration_events_filter,
 };
 
 pub(super) fn push_registration_filter_group<'qb>(
@@ -119,6 +120,7 @@ pub(crate) fn push_registration_subquery_filters<'qb>(
         "id",
         filter.change_block_number_gte,
     );
+    push_registration_events_filter(separated, has_where, filter.events_filter);
     push_registration_filter_group(separated, has_where, " and ", filter.and);
     push_registration_filter_group(separated, has_where, " or ", filter.or);
 }
@@ -136,6 +138,7 @@ pub(crate) fn registration_filter_has_conditions(filter: &RegistrationFilter) ->
             .as_ref()
             .is_some_and(|value| !value.is_empty())
         || filter.change_block_number_gte.is_some()
+        || filter.events_filter.is_some()
         || filter.domain_id.is_some()
         || filter.domain_id_not.is_some()
         || filter.domain_id_contains.is_some()

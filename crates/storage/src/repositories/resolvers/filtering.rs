@@ -1,7 +1,7 @@
 use sqlx::{Postgres, query_builder::Separated};
 
 use super::composition::push_resolver_filter_group;
-use crate::{filters::ResolverFilter, query::*};
+use crate::{filters::ResolverFilter, query::*, repositories::events::push_resolver_events_filter};
 
 pub(super) fn push_resolver_filters<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
@@ -28,6 +28,7 @@ pub(super) fn push_resolver_filters<'qb>(
         "resolvers.id",
         filter.change_block_number_gte.take(),
     );
+    push_resolver_events_filter(separated, has_where, filter.events_filter.take());
     let and_filters = filter.and.take();
     let or_filters = filter.or.take();
     push_text_field_filters(separated, has_where, "domain_id", domain_field(&mut filter));

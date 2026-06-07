@@ -96,6 +96,7 @@ pub(crate) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool
 
 pub(crate) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
     domain_filter_has_scalar_conditions(filter)
+        || filter.events_filter.is_some()
         || filter
             .parent_filter
             .as_ref()
@@ -136,6 +137,7 @@ pub(crate) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
 
 pub(crate) fn resolver_filter_has_conditions(filter: &ResolverFilter) -> bool {
     resolver_filter_has_scalar_conditions(filter)
+        || filter.events_filter.is_some()
         || filter
             .domain_filter
             .as_ref()

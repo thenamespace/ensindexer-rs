@@ -1,4 +1,4 @@
-use super::{AccountFilter, DomainFilter};
+use super::{AccountFilter, DomainFilter, EventFilter};
 
 #[derive(Debug, Clone, Default)]
 pub struct ResolverFilter {
@@ -84,6 +84,7 @@ pub struct ResolverFilter {
     pub coin_types_contains_nocase: Option<String>,
     pub coin_types_not_contains: Option<String>,
     pub coin_types_not_contains_nocase: Option<String>,
+    pub events_filter: Option<Box<EventFilter>>,
     pub change_block_number_gte: Option<i32>,
     pub and: Option<Vec<ResolverFilter>>,
     pub or: Option<Vec<ResolverFilter>>,

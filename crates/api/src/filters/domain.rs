@@ -314,6 +314,10 @@ impl From<DomainFilter> for StorageDomainFilter {
             wrapped_owner_filter: value
                 .wrapped_owner_filter
                 .map(|filter| Box::new((*filter).into())),
+            events_filter: extras.events_.map(|filter| {
+                let filter: super::EventFilter = (*filter).into();
+                Box::new(filter.into_domain_filter())
+            }),
             registration_filter: extras
                 .registration_
                 .map(|filter| Box::new((*filter).into())),

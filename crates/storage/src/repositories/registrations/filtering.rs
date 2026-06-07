@@ -1,7 +1,9 @@
 use sqlx::{Postgres, query_builder::Separated};
 
 use super::composition::push_registration_filter_group;
-use crate::{filters::RegistrationFilter, query::*};
+use crate::{
+    filters::RegistrationFilter, query::*, repositories::events::push_registration_events_filter,
+};
 
 pub(crate) fn push_registration_filters<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
@@ -30,6 +32,7 @@ pub(crate) fn push_registration_filters<'qb>(
         "registrations.id",
         filter.change_block_number_gte,
     );
+    push_registration_events_filter(separated, has_where, filter.events_filter.clone());
     push_registration_text_fields(separated, has_where, remaining_filter);
     push_registration_filter_group(separated, has_where, " and ", group_filter.and);
     push_registration_filter_group(separated, has_where, " or ", group_filter.or);

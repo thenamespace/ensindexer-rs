@@ -7,6 +7,7 @@ use crate::{
         push_account_filter_conditions, push_domain_scalar_filter_conditions,
         push_sub_change_block_filter, push_where_prefix, resolver_filter_has_conditions,
     },
+    repositories::events::push_resolver_events_filter,
 };
 
 pub(super) fn push_resolver_filter_group<'qb>(
@@ -94,6 +95,7 @@ fn push_resolver_subquery_filters<'qb>(
         "id",
         filter.change_block_number_gte,
     );
+    push_resolver_events_filter(separated, has_where, filter.events_filter);
     push_resolver_filter_group(separated, has_where, " and ", filter.and);
     push_resolver_filter_group(separated, has_where, " or ", filter.or);
 }

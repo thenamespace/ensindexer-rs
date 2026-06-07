@@ -477,6 +477,7 @@ Current implementation state:
 - Mutable entity filters support `_change_block: { number_gte }` through the `entity_changes` table populated by projection when `Account`, `Domain`, `Registration`, `WrappedDomain`, or `Resolver` rows are inserted or updated.
 - `Domain_filter.subdomains_` is implemented as a derived child-domain collection subquery against `domains.parent_id`, including nested domain relation paths.
 - `Domain_filter.registration_` and `Domain_filter.wrappedDomain_` are implemented as derived one-to-one relation subqueries against `registrations.domain_id` and `wrapped_domains.domain_id`.
+- `Domain_filter.events_`, `Registration_filter.events_`, and `Resolver_filter.events_` are implemented as derived collection subqueries against their event-interface unions.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
 - `ResolverFilter` `and`/`or` composition applies nested `domain_` and `addr_` relation predicates instead of dropping relation-only branches.
@@ -526,7 +527,7 @@ Tier 3 compatibility:
 - `_change_block`;
 - historical `block` argument;
 - list-field edge cases;
-- relationship filters on derived event collections such as `events_`.
+- audit-driven generated filter edge cases found by official/local query comparisons.
 
 Implementation pattern:
 
