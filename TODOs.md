@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the migration split and archive helper slice.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the migration split and archive helper slice. Archive backfill and raw replay were validated locally for blocks `9380380..9380390`.
 
 ## Completed
 
@@ -31,6 +31,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Backfill ranges can omit `from` and `to`; defaults resolve to the earliest ENS source block and latest available target.
 - [x] Backfill archive writes are explicit through `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR`.
 - [x] Makefile includes archive and raw replay helpers for repeatable projection testing.
+- [x] Raw archive replay was validated against a fresh dev Postgres database for a small ENS deployment range.
 - [x] Source checkpoints are stored per indexed source.
 - [x] Live indexing loop runs with configurable confirmation depth.
 - [x] Live indexing verifies parent hashes before applying new confirmed ranges.
