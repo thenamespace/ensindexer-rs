@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the raw replay snapshot-buffering slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the raw replay event-buffering and profiling slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -16,7 +16,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Each crate has a README describing its purpose, architecture, and responsibilities.
 - [x] Root docs describe the official ENS subgraph schema, projection logic, and Rust implementation plan.
 - [x] Repository files are split into modules rather than single large `lib.rs` files.
-- [x] Current touched implementation files are kept under the requested 300-400 line range.
+- [x] Current touched implementation files are kept under the requested 300-500 line range.
 
 ### Chain Contracts And Ingestion
 
@@ -31,6 +31,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Raw archive replay drops secondary query indexes before bulk replay and recreates them afterward.
 - [x] Raw archive replay attempts to restore dropped secondary indexes if replay fails.
 - [x] Raw archive replay buffers `entity_changes` and mutable-entity snapshot writes, flushing one deduplicated change set per block.
+- [x] Raw archive replay buffers append-only event rows and flushes them as chunked table-level batch inserts inside the replay transaction.
+- [x] Raw archive replay logs per-range timing for block writes, decode, sort, projection, event flush, checkpoint writes, and total apply time.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
@@ -142,8 +144,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.
-- [ ] Add deeper raw replay batching for high-density ranges: batched event inserts, batched current-state upserts, and reduced per-event read amplification.
-- [ ] Profile raw replay after snapshot buffering with dense resolver ranges and record logs/sec, SQL time, and top write queries.
+- [ ] Add deeper raw replay batching for high-density ranges: batched current-state upserts and reduced per-event read amplification.
+- [ ] Profile raw replay after event buffering with dense resolver ranges and record logs/sec, SQL time, and top write queries.
 
 ### Performance And API Quality
 

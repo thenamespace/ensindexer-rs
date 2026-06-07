@@ -4,6 +4,9 @@ use super::EventsRepo;
 
 impl EventsRepo<'_> {
     pub async fn insert_addr_changed(&self, event: AddrChangedEventInsert) -> StorageResult<()> {
+        if self.buffer_addr_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into addr_changed_events (id, resolver_id, block_number, transaction_id, addr_id)
@@ -25,6 +28,9 @@ impl EventsRepo<'_> {
         &self,
         event: MulticoinAddrChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_multicoin_addr_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into multicoin_addr_changed_events (
@@ -46,6 +52,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_name_changed(&self, event: NameChangedEventInsert) -> StorageResult<()> {
+        if self.buffer_name_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_changed_events (id, resolver_id, block_number, transaction_id, name)
@@ -64,6 +73,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_abi_changed(&self, event: AbiChangedEventInsert) -> StorageResult<()> {
+        if self.buffer_abi_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into abi_changed_events (
@@ -87,6 +99,9 @@ impl EventsRepo<'_> {
         &self,
         event: PubkeyChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_pubkey_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into pubkey_changed_events (id, resolver_id, block_number, transaction_id, x, y)
@@ -106,6 +121,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_text_changed(&self, event: TextChangedEventInsert) -> StorageResult<()> {
+        if self.buffer_text_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into text_changed_events (
@@ -130,6 +148,9 @@ impl EventsRepo<'_> {
         &self,
         event: ContenthashChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_contenthash_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into contenthash_changed_events (
@@ -153,6 +174,9 @@ impl EventsRepo<'_> {
         &self,
         event: InterfaceChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_interface_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into interface_changed_events (
@@ -177,6 +201,9 @@ impl EventsRepo<'_> {
         &self,
         event: AuthorisationChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_authorisation_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into authorisation_changed_events (
@@ -202,6 +229,9 @@ impl EventsRepo<'_> {
         &self,
         event: VersionChangedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_version_changed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into version_changed_events (

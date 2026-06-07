@@ -4,6 +4,9 @@ use super::EventsRepo;
 
 impl EventsRepo<'_> {
     pub async fn insert_transfer(&self, event: TransferEventInsert) -> StorageResult<()> {
+        if self.buffer_transfer(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into transfer_events (id, domain_id, block_number, transaction_id, owner_id)
@@ -22,6 +25,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_new_owner(&self, event: NewOwnerEventInsert) -> StorageResult<()> {
+        if self.buffer_new_owner(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into new_owner_events (
@@ -43,6 +49,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_new_resolver(&self, event: NewResolverEventInsert) -> StorageResult<()> {
+        if self.buffer_new_resolver(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into new_resolver_events (
@@ -63,6 +72,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_new_ttl(&self, event: NewTtlEventInsert) -> StorageResult<()> {
+        if self.buffer_new_ttl(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into new_ttl_events (
@@ -86,6 +98,9 @@ impl EventsRepo<'_> {
         &self,
         event: WrappedTransferEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_wrapped_transfer(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into wrapped_transfer_events (id, domain_id, block_number, transaction_id, owner_id)
@@ -104,6 +119,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_name_wrapped(&self, event: NameWrappedEventInsert) -> StorageResult<()> {
+        if self.buffer_name_wrapped(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_wrapped_events (
@@ -130,6 +148,9 @@ impl EventsRepo<'_> {
         &self,
         event: NameUnwrappedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_name_unwrapped(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_unwrapped_events (id, domain_id, block_number, transaction_id, owner_id)
@@ -148,6 +169,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_fuses_set(&self, event: FusesSetEventInsert) -> StorageResult<()> {
+        if self.buffer_fuses_set(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into fuses_set_events (id, domain_id, block_number, transaction_id, fuses)
@@ -169,6 +193,9 @@ impl EventsRepo<'_> {
         &self,
         event: ExpiryExtendedEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_expiry_extended(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into expiry_extended_events (id, domain_id, block_number, transaction_id, expiry_date)

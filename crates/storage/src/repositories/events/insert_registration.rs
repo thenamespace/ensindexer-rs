@@ -7,6 +7,9 @@ impl EventsRepo<'_> {
         &self,
         event: NameRegisteredEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_name_registered(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_registered_events (
@@ -28,6 +31,9 @@ impl EventsRepo<'_> {
     }
 
     pub async fn insert_name_renewed(&self, event: NameRenewedEventInsert) -> StorageResult<()> {
+        if self.buffer_name_renewed(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_renewed_events (
@@ -51,6 +57,9 @@ impl EventsRepo<'_> {
         &self,
         event: NameTransferredEventInsert,
     ) -> StorageResult<()> {
+        if self.buffer_name_transferred(event.clone())? {
+            return Ok(());
+        }
         sqlx::query(
             r#"
             insert into name_transferred_events (

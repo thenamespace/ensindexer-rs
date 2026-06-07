@@ -14,4 +14,10 @@ pub enum StorageError {
     ChangeBufferAlreadyActive,
     #[error("storage change buffer is not active")]
     ChangeBufferNotActive,
+    #[error("storage event buffer lock is poisoned")]
+    EventBufferPoisoned,
+    #[error("storage event buffer is already active")]
+    EventBufferAlreadyActive,
+    #[error("storage event buffer is not active")]
+    EventBufferNotActive,
 }

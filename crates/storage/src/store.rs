@@ -8,13 +8,14 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use crate::{
     AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
     MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo, StorageResult,
-    WrappedDomainsRepo, change_buffer::EntityChange,
+    WrappedDomainsRepo, change_buffer::EntityChange, event_buffer::EventBuffer,
 };
 
 #[derive(Clone)]
 pub struct Storage {
     pool: PgPool,
     pub(crate) change_buffer: Arc<Mutex<Option<BTreeSet<EntityChange>>>>,
+    pub(crate) event_buffer: Arc<Mutex<Option<EventBuffer>>>,
 }
 
 impl Storage {
@@ -38,6 +39,7 @@ impl Storage {
         Self {
             pool,
             change_buffer: Arc::new(Mutex::new(None)),
+            event_buffer: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -71,7 +73,10 @@ impl Storage {
     }
 
     pub fn events(&self) -> EventsRepo<'_> {
-        EventsRepo { pool: &self.pool }
+        EventsRepo {
+            pool: &self.pool,
+            event_buffer: Arc::clone(&self.event_buffer),
+        }
     }
 
     pub fn entity_changes(&self) -> EntityChangesRepo<'_> {

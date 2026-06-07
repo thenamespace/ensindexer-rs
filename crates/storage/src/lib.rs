@@ -1,5 +1,6 @@
 pub mod change_buffer;
 pub mod error;
+pub mod event_buffer;
 pub mod filters;
 pub mod inserts;
 pub mod maintenance;
@@ -10,6 +11,7 @@ pub mod store;
 
 pub use change_buffer::*;
 pub use error::*;
+pub use event_buffer::*;
 pub use filters::*;
 pub use inserts::*;
 pub use maintenance::*;

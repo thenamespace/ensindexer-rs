@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Instant};
 
 use alloy::rpc::types::Log;
 use storage::BlockInsert;
@@ -25,6 +25,16 @@ impl IngestService {
             }
             return Err(error.into());
         }
+        if let Err(error) = self.storage.begin_event_buffer() {
+            if let Err(clear_error) = self.storage.clear_change_buffer() {
+                tracing::error!(%clear_error, "failed to clear replay change buffer");
+            }
+            if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await
+            {
+                tracing::error!(%rollback_error, "failed to roll back raw replay range");
+            }
+            return Err(error.into());
+        }
 
         let result = self
             .apply_raw_range_buffered(range_end, raw_logs, block_meta, checkpoint_sources)
@@ -33,12 +43,21 @@ impl IngestService {
         match result {
             Ok(()) => {
                 self.storage.clear_change_buffer()?;
+                self.storage.clear_event_buffer()?;
+                let started = Instant::now();
                 sqlx::query("commit").execute(self.storage.pool()).await?;
+                tracing::debug!(
+                    elapsed_ms = started.elapsed().as_millis(),
+                    "committed raw replay transaction"
+                );
                 Ok(())
             }
             Err(error) => {
                 if let Err(clear_error) = self.storage.clear_change_buffer() {
                     tracing::error!(%clear_error, "failed to clear replay change buffer");
+                }
+                if let Err(clear_error) = self.storage.clear_event_buffer() {
+                    tracing::error!(%clear_error, "failed to clear replay event buffer");
                 }
                 if let Err(rollback_error) =
                     sqlx::query("rollback").execute(self.storage.pool()).await
@@ -80,6 +99,8 @@ impl IngestService {
         checkpoint_sources: Vec<String>,
         flush_changes_by_block: bool,
     ) -> anyhow::Result<()> {
+        let range_started = Instant::now();
+        let block_started = Instant::now();
         for meta in block_meta.values() {
             self.storage
                 .blocks()
@@ -91,15 +112,20 @@ impl IngestService {
                 })
                 .await?;
         }
+        let block_write_ms = block_started.elapsed().as_millis();
 
+        let decode_started = Instant::now();
         let mut decoded = Vec::new();
+        let raw_log_count = raw_logs.len();
         for (source, log) in raw_logs {
             match decode_log(source, log, &block_meta) {
                 Ok(indexed) => decoded.push(indexed),
                 Err(error) => tracing::warn!(?source, %error, "skipping undecodable log"),
             }
         }
+        let decode_ms = decode_started.elapsed().as_millis();
 
+        let sort_started = Instant::now();
         decoded.sort_by_key(|event| {
             (
                 event.ctx.block_number,
@@ -107,13 +133,17 @@ impl IngestService {
                 event.ctx.log_index,
             )
         });
+        let sort_ms = sort_started.elapsed().as_millis();
 
+        let projection_started = Instant::now();
         let mut current_block = None;
+        let mut changed_rows = 0;
         for event in decoded {
             if flush_changes_by_block
                 && current_block.is_some_and(|block| block != event.ctx.block_number)
             {
                 let flushed = self.storage.flush_change_buffer().await?;
+                changed_rows += flushed;
                 tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
             }
             current_block = Some(event.ctx.block_number);
@@ -121,9 +151,21 @@ impl IngestService {
         }
         if flush_changes_by_block {
             let flushed = self.storage.flush_change_buffer().await?;
+            changed_rows += flushed;
             tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
         }
+        let projection_ms = projection_started.elapsed().as_millis();
 
+        let event_flush_started = Instant::now();
+        let event_rows = if flush_changes_by_block {
+            let stats = self.storage.flush_event_buffer().await?;
+            stats.rows
+        } else {
+            0
+        };
+        let event_flush_ms = event_flush_started.elapsed().as_millis();
+
+        let checkpoint_started = Instant::now();
         if let Some(meta) = block_meta.get(&range_end) {
             for source in checkpoint_sources {
                 self.storage
@@ -132,6 +174,21 @@ impl IngestService {
                     .await?;
             }
         }
+        let checkpoint_ms = checkpoint_started.elapsed().as_millis();
+
+        tracing::info!(
+            raw_logs = raw_log_count,
+            event_rows,
+            changed_rows,
+            block_write_ms,
+            decode_ms,
+            sort_ms,
+            projection_ms,
+            event_flush_ms,
+            checkpoint_ms,
+            elapsed_ms = range_started.elapsed().as_millis(),
+            "applied raw replay range"
+        );
 
         Ok(())
     }

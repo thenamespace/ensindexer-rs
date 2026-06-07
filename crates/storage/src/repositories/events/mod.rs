@@ -1,4 +1,8 @@
+use std::sync::{Arc, Mutex};
+
 use sqlx::PgPool;
+
+use crate::event_buffer::EventBuffer;
 
 mod columns;
 mod common;
@@ -20,6 +24,7 @@ mod text_fields;
 
 pub struct EventsRepo<'a> {
     pub(crate) pool: &'a PgPool,
+    pub(crate) event_buffer: Arc<Mutex<Option<EventBuffer>>>,
 }
 
 pub(crate) use derived_filters::{
