@@ -109,6 +109,7 @@ pub(crate) async fn name_unwrapped(
     }
 
     storage.wrapped_domains().delete(&domain_id).await?;
+    mark_wrapped_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_name_unwrapped(NameUnwrappedEventInsert {

@@ -111,6 +111,10 @@ pub(crate) async fn mark_account_changed(
         .entity_changes()
         .record("Account", account_id, block_number)
         .await?;
+    storage
+        .snapshots()
+        .record_account(account_id, block_number)
+        .await?;
     Ok(())
 }
 
@@ -122,6 +126,10 @@ pub(crate) async fn mark_domain_changed(
     storage
         .entity_changes()
         .record("Domain", domain_id, block_number)
+        .await?;
+    storage
+        .snapshots()
+        .record_domain(domain_id, block_number)
         .await?;
     Ok(())
 }
@@ -135,6 +143,10 @@ pub(crate) async fn mark_registration_changed(
         .entity_changes()
         .record("Registration", registration_id, block_number)
         .await?;
+    storage
+        .snapshots()
+        .record_registration(registration_id, block_number)
+        .await?;
     Ok(())
 }
 
@@ -147,6 +159,10 @@ pub(crate) async fn mark_resolver_changed(
         .entity_changes()
         .record("Resolver", resolver_id, block_number)
         .await?;
+    storage
+        .snapshots()
+        .record_resolver(resolver_id, block_number)
+        .await?;
     Ok(())
 }
 
@@ -158,6 +174,10 @@ pub(crate) async fn mark_wrapped_domain_changed(
     storage
         .entity_changes()
         .record("WrappedDomain", wrapped_domain_id, block_number)
+        .await?;
+    storage
+        .snapshots()
+        .record_wrapped_domain(wrapped_domain_id, block_number)
         .await?;
     Ok(())
 }

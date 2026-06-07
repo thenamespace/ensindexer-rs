@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::ensure_current_block;
+use super::{resolve_historical_block, with_event_block};
 use crate::{
     filters::{
         DomainEventFilter, EventFilter, EventOrderBy, OrderDirection, RegistrationEventFilter,
@@ -28,17 +28,20 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<DomainEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_domain_event_refs(
                 1,
                 0,
-                storage::EventFilter {
-                    id: Some(id.to_string()),
-                    ..storage::EventFilter::default()
-                },
+                with_event_block(
+                    storage::EventFilter {
+                        id: Some(id.to_string()),
+                        ..storage::EventFilter::default()
+                    },
+                    block_number,
+                ),
                 storage::EventOrderField::Id,
                 storage::OrderDirection::Asc,
             )
@@ -60,14 +63,17 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<DomainEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_domain_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -88,17 +94,20 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<RegistrationEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_registration_event_refs(
                 1,
                 0,
-                storage::EventFilter {
-                    id: Some(id.to_string()),
-                    ..storage::EventFilter::default()
-                },
+                with_event_block(
+                    storage::EventFilter {
+                        id: Some(id.to_string()),
+                        ..storage::EventFilter::default()
+                    },
+                    block_number,
+                ),
                 storage::EventOrderField::Id,
                 storage::OrderDirection::Asc,
             )
@@ -120,14 +129,17 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<RegistrationEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_registration_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -148,17 +160,20 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<ResolverEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_resolver_event_refs(
                 1,
                 0,
-                storage::EventFilter {
-                    id: Some(id.to_string()),
-                    ..storage::EventFilter::default()
-                },
+                with_event_block(
+                    storage::EventFilter {
+                        id: Some(id.to_string()),
+                        ..storage::EventFilter::default()
+                    },
+                    block_number,
+                ),
                 storage::EventOrderField::Id,
                 storage::OrderDirection::Asc,
             )
@@ -180,14 +195,17 @@ impl InterfaceEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<ResolverEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         let refs = storage
             .events()
             .list_resolver_event_refs(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

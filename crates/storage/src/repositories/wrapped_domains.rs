@@ -5,7 +5,7 @@ pub(crate) use self::composition::{
     push_wrapped_domain_subquery_filters, wrapped_domain_filter_has_conditions,
 };
 use self::filtering::push_wrapped_domain_filters;
-use crate::{error::*, filters::*, models::*, query::wrapped_domain_order_column};
+use crate::{error::*, filters::*, models::*, query::*};
 
 mod composition;
 mod filtering;
@@ -82,6 +82,20 @@ impl WrappedDomainsRepo<'_> {
         .await?)
     }
 
+    pub async fn find_by_id_at_block(
+        &self,
+        id: &str,
+        block_number: i32,
+    ) -> StorageResult<Option<WrappedDomainRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        push_historical_entity_ctes(&mut query, block_number);
+        query
+            .push("select id, domain_id, expiry_date, fuses, owner_id, name from wrapped_domains")
+            .push(" where id = ")
+            .push_bind(id);
+        Ok(query.build_query_as().fetch_optional(self.pool).await?)
+    }
+
     pub async fn find_by_domain_id(
         &self,
         domain_id: &str,
@@ -106,9 +120,37 @@ impl WrappedDomainsRepo<'_> {
         order_by: WrappedDomainOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<WrappedDomainRow>> {
-        let mut query = QueryBuilder::<Postgres>::new(
-            "select id, domain_id, expiry_date, fuses, owner_id, name from wrapped_domains",
-        );
+        self.list_for_block(None, first, skip, filter, order_by, direction)
+            .await
+    }
+
+    pub async fn list_at_block(
+        &self,
+        block_number: i32,
+        first: i64,
+        skip: i64,
+        filter: WrappedDomainFilter,
+        order_by: WrappedDomainOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<WrappedDomainRow>> {
+        self.list_for_block(Some(block_number), first, skip, filter, order_by, direction)
+            .await
+    }
+
+    async fn list_for_block(
+        &self,
+        block_number: Option<i32>,
+        first: i64,
+        skip: i64,
+        filter: WrappedDomainFilter,
+        order_by: WrappedDomainOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<WrappedDomainRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        if let Some(block_number) = block_number {
+            push_historical_entity_ctes(&mut query, block_number);
+        }
+        query.push("select id, domain_id, expiry_date, fuses, owner_id, name from wrapped_domains");
         let mut separated = query.separated(" and ");
         let mut has_where = false;
         push_wrapped_domain_filters(&mut separated, &mut has_where, filter);

@@ -21,11 +21,41 @@ impl DomainsRepo<'_> {
         &self,
         first: i64,
         skip: i64,
+        filter: DomainFilter,
+        order_by: DomainOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<DomainRow>> {
+        self.list_filtered_for_block(None, first, skip, filter, order_by, direction)
+            .await
+    }
+
+    pub async fn list_filtered_at_block(
+        &self,
+        block_number: i32,
+        first: i64,
+        skip: i64,
+        filter: DomainFilter,
+        order_by: DomainOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<DomainRow>> {
+        self.list_filtered_for_block(Some(block_number), first, skip, filter, order_by, direction)
+            .await
+    }
+
+    async fn list_filtered_for_block(
+        &self,
+        block_number: Option<i32>,
+        first: i64,
+        skip: i64,
         mut filter: DomainFilter,
         order_by: DomainOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<DomainRow>> {
-        let mut query = QueryBuilder::<Postgres>::new(domain_select_sql());
+        let mut query = QueryBuilder::<Postgres>::new("");
+        if let Some(block_number) = block_number {
+            push_historical_entity_ctes(&mut query, block_number);
+        }
+        query.push(domain_select_sql());
         let mut separated = query.separated(" and ");
         let mut has_where = false;
 

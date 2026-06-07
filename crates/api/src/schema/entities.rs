@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::ensure_current_block;
+use super::resolve_historical_block;
 use crate::{
     filters::{
         AccountFilter, AccountOrderBy, DomainFilter, DomainOrderBy, OrderDirection,
@@ -26,13 +26,18 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<Domain>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .domains()
-            .find_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        let row = match block_number {
+            Some(block_number) => {
+                storage
+                    .domains()
+                    .find_by_id_at_block(id.as_ref(), block_number)
+                    .await?
+            }
+            None => storage.domains().find_by_id(id.as_ref()).await?,
+        };
+        Ok(row.map(Into::into))
     }
 
     async fn domains(
@@ -46,21 +51,37 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<Domain>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .domains()
-            .list_filtered(
-                normalize_first(first),
-                normalize_skip(skip),
-                filter.map(Into::into).unwrap_or_default(),
-                order_by.unwrap_or_default().into(),
-                order_direction.unwrap_or_default().into(),
-            )
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let block_number = resolve_historical_block(storage, block).await?;
+        let filter = filter.map(Into::into).unwrap_or_default();
+        let rows = match block_number {
+            Some(block_number) => {
+                storage
+                    .domains()
+                    .list_filtered_at_block(
+                        block_number,
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+            None => {
+                storage
+                    .domains()
+                    .list_filtered(
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+        };
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn account(
@@ -70,13 +91,18 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<Account>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .find_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        let row = match block_number {
+            Some(block_number) => {
+                storage
+                    .accounts()
+                    .find_by_id_at_block(id.as_ref(), block_number)
+                    .await?
+            }
+            None => storage.accounts().find_by_id(id.as_ref()).await?,
+        };
+        Ok(row.map(Into::into))
     }
 
     async fn accounts(
@@ -90,21 +116,37 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<Account>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .list(
-                normalize_first(first),
-                normalize_skip(skip),
-                filter.map(Into::into).unwrap_or_default(),
-                order_by.unwrap_or_default().into(),
-                order_direction.unwrap_or_default().into(),
-            )
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let block_number = resolve_historical_block(storage, block).await?;
+        let filter = filter.map(Into::into).unwrap_or_default();
+        let rows = match block_number {
+            Some(block_number) => {
+                storage
+                    .accounts()
+                    .list_at_block(
+                        block_number,
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+            None => {
+                storage
+                    .accounts()
+                    .list(
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+        };
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn registration(
@@ -114,13 +156,18 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<Registration>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .registrations()
-            .find_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        let row = match block_number {
+            Some(block_number) => {
+                storage
+                    .registrations()
+                    .find_by_id_at_block(id.as_ref(), block_number)
+                    .await?
+            }
+            None => storage.registrations().find_by_id(id.as_ref()).await?,
+        };
+        Ok(row.map(Into::into))
     }
 
     async fn registrations(
@@ -134,21 +181,37 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<Registration>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .registrations()
-            .list_filtered(
-                normalize_first(first),
-                normalize_skip(skip),
-                filter.map(Into::into).unwrap_or_default(),
-                order_by.unwrap_or_default().into(),
-                order_direction.unwrap_or_default().into(),
-            )
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let block_number = resolve_historical_block(storage, block).await?;
+        let filter = filter.map(Into::into).unwrap_or_default();
+        let rows = match block_number {
+            Some(block_number) => {
+                storage
+                    .registrations()
+                    .list_filtered_at_block(
+                        block_number,
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+            None => {
+                storage
+                    .registrations()
+                    .list_filtered(
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+        };
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn wrapped_domain(
@@ -158,13 +221,18 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<WrappedDomain>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .wrapped_domains()
-            .find_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        let row = match block_number {
+            Some(block_number) => {
+                storage
+                    .wrapped_domains()
+                    .find_by_id_at_block(id.as_ref(), block_number)
+                    .await?
+            }
+            None => storage.wrapped_domains().find_by_id(id.as_ref()).await?,
+        };
+        Ok(row.map(Into::into))
     }
 
     async fn wrapped_domains(
@@ -178,21 +246,37 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<WrappedDomain>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .wrapped_domains()
-            .list(
-                normalize_first(first),
-                normalize_skip(skip),
-                filter.map(Into::into).unwrap_or_default(),
-                order_by.unwrap_or_default().into(),
-                order_direction.unwrap_or_default().into(),
-            )
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let block_number = resolve_historical_block(storage, block).await?;
+        let filter = filter.map(Into::into).unwrap_or_default();
+        let rows = match block_number {
+            Some(block_number) => {
+                storage
+                    .wrapped_domains()
+                    .list_at_block(
+                        block_number,
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+            None => {
+                storage
+                    .wrapped_domains()
+                    .list(
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+        };
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn resolver(
@@ -202,13 +286,18 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<Resolver>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .resolvers()
-            .find_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        let row = match block_number {
+            Some(block_number) => {
+                storage
+                    .resolvers()
+                    .find_by_id_at_block(id.as_ref(), block_number)
+                    .await?
+            }
+            None => storage.resolvers().find_by_id(id.as_ref()).await?,
+        };
+        Ok(row.map(Into::into))
     }
 
     async fn resolvers(
@@ -222,20 +311,36 @@ impl EntityQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<Resolver>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .resolvers()
-            .list_filtered(
-                normalize_first(first),
-                normalize_skip(skip),
-                filter.map(Into::into).unwrap_or_default(),
-                order_by.unwrap_or_default().into(),
-                order_direction.unwrap_or_default().into(),
-            )
-            .await?
-            .into_iter()
-            .map(Into::into)
-            .collect())
+        let block_number = resolve_historical_block(storage, block).await?;
+        let filter = filter.map(Into::into).unwrap_or_default();
+        let rows = match block_number {
+            Some(block_number) => {
+                storage
+                    .resolvers()
+                    .list_filtered_at_block(
+                        block_number,
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+            None => {
+                storage
+                    .resolvers()
+                    .list_filtered(
+                        normalize_first(first),
+                        normalize_skip(skip),
+                        filter,
+                        order_by.unwrap_or_default().into(),
+                        order_direction.unwrap_or_default().into(),
+                    )
+                    .await?
+            }
+        };
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 }

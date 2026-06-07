@@ -26,6 +26,19 @@ impl AccountsRepo<'_> {
         )
     }
 
+    pub async fn find_by_id_at_block(
+        &self,
+        id: &str,
+        block_number: i32,
+    ) -> StorageResult<Option<AccountRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        push_historical_entity_ctes(&mut query, block_number);
+        query
+            .push("select id from accounts where id = ")
+            .push_bind(id);
+        Ok(query.build_query_as().fetch_optional(self.pool).await?)
+    }
+
     pub async fn list(
         &self,
         first: i64,
@@ -34,7 +47,37 @@ impl AccountsRepo<'_> {
         order_by: AccountOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<AccountRow>> {
-        let mut query = QueryBuilder::<Postgres>::new("select id from accounts");
+        self.list_for_block(None, first, skip, filter, order_by, direction)
+            .await
+    }
+
+    pub async fn list_at_block(
+        &self,
+        block_number: i32,
+        first: i64,
+        skip: i64,
+        filter: AccountFilter,
+        order_by: AccountOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<AccountRow>> {
+        self.list_for_block(Some(block_number), first, skip, filter, order_by, direction)
+            .await
+    }
+
+    async fn list_for_block(
+        &self,
+        block_number: Option<i32>,
+        first: i64,
+        skip: i64,
+        filter: AccountFilter,
+        order_by: AccountOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<AccountRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        if let Some(block_number) = block_number {
+            push_historical_entity_ctes(&mut query, block_number);
+        }
+        query.push("select id from accounts");
         let mut separated = query.separated(" and ");
         let mut has_where = false;
 

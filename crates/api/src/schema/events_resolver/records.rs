@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::super::ensure_current_block;
+use super::super::{resolve_historical_block, visible_at_block, with_event_block};
 use crate::{
     filters::{
         AddrChangedFilter, AddrChangedOrderBy, EventFilter, MulticoinAddrChangedFilter,
@@ -26,13 +26,16 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<AddrChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_addr_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_addr_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "addrChangeds")]
@@ -47,14 +50,17 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<AddrChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_addr_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -72,13 +78,16 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<MulticoinAddrChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_multicoin_addr_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_multicoin_addr_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "multicoinAddrChangeds")]
@@ -93,14 +102,17 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<MulticoinAddrChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_multicoin_addr_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -118,13 +130,16 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NameChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_name_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_name_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "nameChangeds")]
@@ -139,14 +154,17 @@ impl ResolverRecordEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NameChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_name_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

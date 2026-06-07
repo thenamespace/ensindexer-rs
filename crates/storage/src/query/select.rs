@@ -2,6 +2,33 @@ use crate::filters::{
     AccountOrderField, DomainOrderField, EventOrderField, RegistrationOrderField,
     ResolverOrderField, WrappedDomainOrderField,
 };
+use sqlx::{Postgres, QueryBuilder};
+
+pub(crate) fn push_historical_entity_ctes(query: &mut QueryBuilder<Postgres>, block: i32) {
+    query
+        .push("with accounts as (")
+        .push("select id from latest_account_snapshots(")
+        .push_bind(block)
+        .push(")), domains as (")
+        .push("select id, name, label_name, labelhash, parent_id, subdomain_count, ")
+        .push("resolved_address_id, resolver_id, ttl, is_migrated, created_at, ")
+        .push("owner_id, registrant_id, wrapped_owner_id, expiry_date ")
+        .push("from latest_domain_snapshots(")
+        .push_bind(block)
+        .push(")), registrations as (")
+        .push("select id, domain_id, registration_date, expiry_date, cost, registrant_id, label_name ")
+        .push("from latest_registration_snapshots(")
+        .push_bind(block)
+        .push(")), wrapped_domains as (")
+        .push("select id, domain_id, expiry_date, fuses, owner_id, name ")
+        .push("from latest_wrapped_domain_snapshots(")
+        .push_bind(block)
+        .push(")), resolvers as (")
+        .push("select id, domain_id, address, addr_id, content_hash, texts, coin_types ")
+        .push("from latest_resolver_snapshots(")
+        .push_bind(block)
+        .push(")) ");
+}
 
 pub(crate) fn domain_select_sql() -> &'static str {
     r#"

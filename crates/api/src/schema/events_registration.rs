@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::ensure_current_block;
+use super::{resolve_historical_block, visible_at_block, with_event_block};
 use crate::{
     filters::{
         EventFilter, NameRegisteredFilter, NameRegisteredOrderBy, NameRenewedFilter,
@@ -26,13 +26,16 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NameRegisteredEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_name_registered_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_name_registered_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "nameRegistereds")]
@@ -47,14 +50,17 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NameRegisteredEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_name_registered(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -72,13 +78,16 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NameRenewedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_name_renewed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_name_renewed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "nameReneweds")]
@@ -93,14 +102,17 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NameRenewedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_name_renewed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -118,13 +130,16 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NameTransferredEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_name_transferred_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_name_transferred_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "nameTransferreds")]
@@ -139,14 +154,17 @@ impl RegistrationEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NameTransferredEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_name_transferred(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_registration_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

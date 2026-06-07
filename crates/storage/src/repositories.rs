@@ -6,6 +6,7 @@ mod entity_changes;
 mod events;
 mod registrations;
 mod resolvers;
+mod snapshots;
 mod utils;
 mod wrapped_domains;
 
@@ -17,5 +18,6 @@ pub use entity_changes::EntityChangesRepo;
 pub use events::EventsRepo;
 pub use registrations::RegistrationsRepo;
 pub use resolvers::ResolversRepo;
+pub use snapshots::SnapshotsRepo;
 pub use utils::decimal_from_str;
 pub use wrapped_domains::WrappedDomainsRepo;

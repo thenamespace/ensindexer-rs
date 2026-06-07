@@ -2,7 +2,7 @@ use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
 use self::filtering::push_resolver_filters;
-use crate::{error::*, filters::*, models::*, query::resolver_order_column};
+use crate::{error::*, filters::*, models::*, query::*};
 
 mod composition;
 mod filtering;
@@ -118,6 +118,20 @@ impl ResolversRepo<'_> {
         .await?)
     }
 
+    pub async fn find_by_id_at_block(
+        &self,
+        id: &str,
+        block_number: i32,
+    ) -> StorageResult<Option<ResolverRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        push_historical_entity_ctes(&mut query, block_number);
+        query
+            .push("select id, domain_id, address, addr_id, content_hash, texts, coin_types from resolvers")
+            .push(" where id = ")
+            .push_bind(id);
+        Ok(query.build_query_as().fetch_optional(self.pool).await?)
+    }
+
     pub async fn list(&self, first: i64, skip: i64) -> StorageResult<Vec<ResolverRow>> {
         self.list_filtered(
             first,
@@ -137,7 +151,37 @@ impl ResolversRepo<'_> {
         order_by: ResolverOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<ResolverRow>> {
-        let mut query = QueryBuilder::<Postgres>::new(
+        self.list_filtered_for_block(None, first, skip, filter, order_by, direction)
+            .await
+    }
+
+    pub async fn list_filtered_at_block(
+        &self,
+        block_number: i32,
+        first: i64,
+        skip: i64,
+        filter: ResolverFilter,
+        order_by: ResolverOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<ResolverRow>> {
+        self.list_filtered_for_block(Some(block_number), first, skip, filter, order_by, direction)
+            .await
+    }
+
+    async fn list_filtered_for_block(
+        &self,
+        block_number: Option<i32>,
+        first: i64,
+        skip: i64,
+        filter: ResolverFilter,
+        order_by: ResolverOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<ResolverRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        if let Some(block_number) = block_number {
+            push_historical_entity_ctes(&mut query, block_number);
+        }
+        query.push(
             "select id, domain_id, address, addr_id, content_hash, texts, coin_types from resolvers",
         );
         let mut separated = query.separated(" and ");

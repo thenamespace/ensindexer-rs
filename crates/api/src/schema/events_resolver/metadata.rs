@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::super::ensure_current_block;
+use super::super::{resolve_historical_block, visible_at_block, with_event_block};
 use crate::{
     filters::{
         AbiChangedFilter, AbiChangedOrderBy, AuthorisationChangedFilter,
@@ -32,13 +32,13 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<AbiChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_abi_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage.events().find_abi_changed_by_id(id.as_ref()).await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "abiChangeds")]
@@ -53,14 +53,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<AbiChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_abi_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -78,13 +81,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<PubkeyChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_pubkey_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_pubkey_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "pubkeyChangeds")]
@@ -99,14 +105,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<PubkeyChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_pubkey_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -124,13 +133,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<TextChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_text_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_text_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "textChangeds")]
@@ -145,14 +157,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<TextChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_text_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -170,13 +185,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<ContenthashChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_contenthash_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_contenthash_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "contenthashChangeds")]
@@ -191,14 +209,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<ContenthashChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_contenthash_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -216,13 +237,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<InterfaceChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_interface_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_interface_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "interfaceChangeds")]
@@ -237,14 +261,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<InterfaceChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_interface_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -262,13 +289,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<AuthorisationChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_authorisation_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_authorisation_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "authorisationChangeds")]
@@ -283,14 +313,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<AuthorisationChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_authorisation_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -308,13 +341,16 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<VersionChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_version_changed_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_version_changed_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "versionChangeds")]
@@ -329,14 +365,17 @@ impl ResolverMetadataEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<VersionChangedEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_version_changed(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_resolver_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

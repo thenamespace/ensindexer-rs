@@ -5,7 +5,7 @@ pub(crate) use self::composition::{
     push_registration_subquery_filters, registration_filter_has_conditions,
 };
 pub(crate) use self::filtering::push_registration_filters;
-use crate::{error::*, filters::*, models::*, query::registration_order_column};
+use crate::{error::*, filters::*, models::*, query::*};
 
 mod composition;
 pub(super) mod filtering;
@@ -59,6 +59,20 @@ impl RegistrationsRepo<'_> {
         .await?)
     }
 
+    pub async fn find_by_id_at_block(
+        &self,
+        id: &str,
+        block_number: i32,
+    ) -> StorageResult<Option<RegistrationRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        push_historical_entity_ctes(&mut query, block_number);
+        query
+            .push("select id, domain_id, registration_date, expiry_date, cost, registrant_id, label_name from registrations")
+            .push(" where id = ")
+            .push_bind(id);
+        Ok(query.build_query_as().fetch_optional(self.pool).await?)
+    }
+
     pub async fn list(&self, first: i64, skip: i64) -> StorageResult<Vec<RegistrationRow>> {
         self.list_filtered(
             first,
@@ -78,7 +92,37 @@ impl RegistrationsRepo<'_> {
         order_by: RegistrationOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<RegistrationRow>> {
-        let mut query = QueryBuilder::<Postgres>::new(
+        self.list_filtered_for_block(None, first, skip, filter, order_by, direction)
+            .await
+    }
+
+    pub async fn list_filtered_at_block(
+        &self,
+        block_number: i32,
+        first: i64,
+        skip: i64,
+        filter: RegistrationFilter,
+        order_by: RegistrationOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<RegistrationRow>> {
+        self.list_filtered_for_block(Some(block_number), first, skip, filter, order_by, direction)
+            .await
+    }
+
+    async fn list_filtered_for_block(
+        &self,
+        block_number: Option<i32>,
+        first: i64,
+        skip: i64,
+        filter: RegistrationFilter,
+        order_by: RegistrationOrderField,
+        direction: OrderDirection,
+    ) -> StorageResult<Vec<RegistrationRow>> {
+        let mut query = QueryBuilder::<Postgres>::new("");
+        if let Some(block_number) = block_number {
+            push_historical_entity_ctes(&mut query, block_number);
+        }
+        query.push(
             "select id, domain_id, registration_date, expiry_date, cost, registrant_id, label_name from registrations",
         );
         let mut separated = query.separated(" and ");

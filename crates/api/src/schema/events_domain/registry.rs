@@ -1,7 +1,7 @@
 use async_graphql::{Context, ID, Object, Result};
 use storage::Storage;
 
-use super::super::ensure_current_block;
+use super::super::{resolve_historical_block, visible_at_block, with_event_block};
 use crate::{
     filters::{
         EventFilter, NewOwnerFilter, NewOwnerOrderBy, NewResolverFilter, NewResolverOrderBy,
@@ -26,13 +26,13 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<TransferEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_transfer_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage.events().find_transfer_by_id(id.as_ref()).await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "transfers")]
@@ -47,14 +47,17 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<TransferEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_transfers(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -72,13 +75,13 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NewOwnerEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_new_owner_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage.events().find_new_owner_by_id(id.as_ref()).await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "newOwners")]
@@ -93,14 +96,17 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NewOwnerEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_new_owners(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -118,13 +124,16 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NewResolverEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_new_resolver_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage
+                .events()
+                .find_new_resolver_by_id(id.as_ref())
+                .await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "newResolvers")]
@@ -139,14 +148,17 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NewResolverEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_new_resolvers(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )
@@ -164,13 +176,13 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Option<NewTtlEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .events()
-            .find_new_ttl_by_id(id.as_ref())
-            .await?
-            .map(Into::into))
+        let block_number = resolve_historical_block(storage, block).await?;
+        Ok(visible_at_block(
+            storage.events().find_new_ttl_by_id(id.as_ref()).await?,
+            block_number,
+        )
+        .map(Into::into))
     }
 
     #[graphql(name = "newTTLs")]
@@ -185,14 +197,17 @@ impl RegistryDomainEventQueries {
         block: Option<BlockHeight>,
         #[graphql(name = "subgraphError", default)] _subgraph_error: SubgraphErrorPolicy,
     ) -> Result<Vec<NewTtlEvent>> {
-        ensure_current_block(block)?;
         let storage = ctx.data::<Storage>()?;
+        let block_number = resolve_historical_block(storage, block).await?;
         Ok(storage
             .events()
             .list_new_ttls(
                 normalize_first(first),
                 normalize_skip(skip),
-                EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                with_event_block(
+                    EventFilter::from(filter.unwrap_or_default()).into_domain_filter(),
+                    block_number,
+                ),
                 order_by.unwrap_or_default().into(),
                 order_direction.unwrap_or_default().into(),
             )

@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the entity `events_` derived-collection filter slice.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the snapshot-backed historical `block` read slice. The updated initial migration also applied cleanly on a fresh temporary Postgres database.
 
 ## Completed
 
@@ -39,6 +39,9 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Namehash, labelhash, DNS name decoding, unknown label formatting, and batch event ID helpers have tests.
 - [x] Current-state projection supports registry ownership, resolver links, TTL, registrar registrations/renewals/transfers, wrapper fuses/expiry, and resolver record changes.
 - [x] Indexed block metadata is stored for `_meta` and live reorg checks.
+- [x] Entity snapshot tables exist for `Account`, `Domain`, `Registration`, `WrappedDomain`, and `Resolver`.
+- [x] Projection change markers write snapshot rows for mutable entities.
+- [x] Wrapped-domain deletions write historical tombstones so past `block` reads do not resurrect deleted current state.
 
 ### GraphQL Schema Surface
 
@@ -52,7 +55,10 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] `_meta(block: Block_height)` exists and returns stored indexed block metadata.
 - [x] Entity and event roots accept `block` and `subgraphError` compatibility arguments.
 - [x] Current-state `block` reads work when the requested block is current or omitted.
-- [x] Non-current `block` reads return an explicit compatibility error until historical snapshots are implemented.
+- [x] Event roots honor non-current `block` arguments by clamping event rows to `blockNumber <= requestedBlock`.
+- [x] Singular event roots return `null` when the requested block is before that event was emitted.
+- [x] Mutable entity roots use snapshot-backed historical reads for `block.number`, `block.hash`, and `block.number_gte`.
+- [x] Historical entity list roots reuse existing filters and order fields against latest snapshots at the requested block.
 
 ### GraphQL Relationships
 
@@ -99,7 +105,9 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 
 ### Full Subgraph Compatibility
 
-- [ ] Implement historical `block` reads for entity and event roots instead of returning compatibility errors for non-current blocks.
+- [ ] Audit nested relationship fields under historical entity results; root objects are snapshot-backed, but nested complex fields still need explicit historical context propagation checks.
+- [ ] Add regression tests for `block.number`, `block.hash`, and `block.number_gte` across all entity and event root categories with seeded Postgres fixtures.
+- [ ] Verify Graph Node edge semantics for `block.number_gte`; current implementation resolves to the latest indexed block at or after the requested minimum.
 - [ ] Finish any deeper recursive trailing-underscore filter gaps found during official/local query audits.
 - [ ] Audit and complete generated scalar operators for every remaining official scalar field, including less common `_not`, comparison, nocase, starts-with, and ends-with variants.
 - [ ] Audit list-field edge cases against Graph Node behavior.
@@ -112,7 +120,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Verify stored rows and GraphQL responses from that range against the official subgraph.
 - [ ] Add differential validation reports for domains, registrations, resolvers, wrapped domains, and events.
 - [ ] Replace coarse reorg reset with efficient common-ancestor rollback.
-- [ ] Add entity snapshots or reversible change payloads to support efficient rollback and historical reads.
+- [ ] Extend snapshot use to efficient common-ancestor rollback or add reversible change payloads for rollback without full replay.
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.

@@ -5,7 +5,7 @@ mod queries;
 
 use sqlx::PgPool;
 
-use crate::{error::*, models::DomainRow};
+use crate::{error::*, models::DomainRow, query::*};
 
 pub struct DomainsRepo<'a> {
     pub(crate) pool: &'a PgPool,
@@ -25,5 +25,19 @@ impl DomainsRepo<'_> {
         .bind(id)
         .fetch_optional(self.pool)
         .await?)
+    }
+
+    pub async fn find_by_id_at_block(
+        &self,
+        id: &str,
+        block_number: i32,
+    ) -> StorageResult<Option<DomainRow>> {
+        let mut query = sqlx::QueryBuilder::<sqlx::Postgres>::new("");
+        push_historical_entity_ctes(&mut query, block_number);
+        query
+            .push(domain_select_sql())
+            .push(" where id = ")
+            .push_bind(id);
+        Ok(query.build_query_as().fetch_optional(self.pool).await?)
     }
 }

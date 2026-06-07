@@ -1,5 +1,12 @@
 use async_graphql::{EmptyMutation, EmptySubscription, MergedObject, Result, Schema};
-use storage::Storage;
+use storage::{
+    AbiChangedEventRow, AddrChangedEventRow, AuthorisationChangedEventRow,
+    ContenthashChangedEventRow, ExpiryExtendedEventRow, FusesSetEventRow, InterfaceChangedEventRow,
+    MulticoinAddrChangedEventRow, NameChangedEventRow, NameRegisteredEventRow, NameRenewedEventRow,
+    NameTransferredEventRow, NameUnwrappedEventRow, NameWrappedEventRow, NewOwnerEventRow,
+    NewResolverEventRow, NewTtlEventRow, PubkeyChangedEventRow, Storage, TextChangedEventRow,
+    TransferEventRow, VersionChangedEventRow, WrappedTransferEventRow,
+};
 
 mod entities;
 mod events_domain;
@@ -44,21 +51,106 @@ pub struct QueryRoot(
     ResolverEventQueries,
 );
 
-fn ensure_current_block(block: Option<BlockHeight>) -> Result<()> {
-    if block.as_ref().is_none_or(BlockHeight::is_current) {
-        Ok(())
-    } else {
-        Err(async_graphql::Error::new(
-            "historical block queries are not implemented yet",
-        ))
+async fn resolve_historical_block(
+    storage: &Storage,
+    block: Option<BlockHeight>,
+) -> Result<Option<i32>> {
+    let Some(block) = block.filter(|block| !block.is_current()) else {
+        return Ok(None);
+    };
+
+    if let Some(number) = block.number {
+        return Ok(Some(number));
     }
+    if let Some(hash) = block.hash {
+        let Some(row) = storage.blocks().find_by_hash(&hash).await? else {
+            return Err(async_graphql::Error::new(format!(
+                "unknown block hash: {hash}"
+            )));
+        };
+        return Ok(Some(row.number.try_into()?));
+    }
+    if let Some(number_gte) = block.number_gte {
+        let Some(row) = storage
+            .blocks()
+            .find_latest_at_or_after(i64::from(number_gte))
+            .await?
+        else {
+            return Err(async_graphql::Error::new(format!(
+                "no indexed block at or after {number_gte}"
+            )));
+        };
+        return Ok(Some(row.number.try_into()?));
+    }
+
+    Ok(None)
+}
+
+fn with_event_block(
+    mut filter: storage::EventFilter,
+    block_number: Option<i32>,
+) -> storage::EventFilter {
+    if let Some(block_number) = block_number {
+        filter.block_number_lte = Some(
+            filter
+                .block_number_lte
+                .map_or(block_number, |existing| existing.min(block_number)),
+        );
+    }
+    filter
+}
+
+trait HasBlockNumber {
+    fn block_number(&self) -> i32;
+}
+
+macro_rules! impl_has_block_number {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl HasBlockNumber for $ty {
+                fn block_number(&self) -> i32 {
+                    self.block_number
+                }
+            }
+        )+
+    };
+}
+
+impl_has_block_number!(
+    TransferEventRow,
+    NewOwnerEventRow,
+    NewResolverEventRow,
+    NewTtlEventRow,
+    WrappedTransferEventRow,
+    NameWrappedEventRow,
+    NameUnwrappedEventRow,
+    FusesSetEventRow,
+    ExpiryExtendedEventRow,
+    NameRegisteredEventRow,
+    NameRenewedEventRow,
+    NameTransferredEventRow,
+    AddrChangedEventRow,
+    MulticoinAddrChangedEventRow,
+    NameChangedEventRow,
+    AbiChangedEventRow,
+    PubkeyChangedEventRow,
+    TextChangedEventRow,
+    ContenthashChangedEventRow,
+    InterfaceChangedEventRow,
+    AuthorisationChangedEventRow,
+    VersionChangedEventRow,
+);
+
+fn visible_at_block<T: HasBlockNumber>(row: Option<T>, block_number: Option<i32>) -> Option<T> {
+    row.filter(|row| block_number.is_none_or(|block_number| row.block_number() <= block_number))
 }
 
 #[cfg(test)]
 mod tests {
     use async_graphql::{EmptyMutation, EmptySubscription, Schema};
+    use storage::{EventFilter, TransferEventRow};
 
-    use super::QueryRoot;
+    use super::{QueryRoot, visible_at_block, with_event_block};
 
     #[test]
     fn core_queries_expose_graph_node_compatibility_arguments() {
@@ -91,5 +183,43 @@ mod tests {
         assert!(sdl.contains("resolver: String"));
         assert!(sdl.contains("owner: String"));
         assert!(sdl.contains("enum _SubgraphErrorPolicy_"));
+    }
+
+    #[test]
+    fn event_block_filter_clamps_existing_upper_bound() {
+        let filter = with_event_block(
+            EventFilter {
+                block_number_lte: Some(50),
+                ..Default::default()
+            },
+            Some(40),
+        );
+
+        assert_eq!(filter.block_number_lte, Some(40));
+
+        let filter = with_event_block(
+            EventFilter {
+                block_number_lte: Some(30),
+                ..Default::default()
+            },
+            Some(40),
+        );
+
+        assert_eq!(filter.block_number_lte, Some(30));
+    }
+
+    #[test]
+    fn singular_event_rows_are_hidden_after_requested_block() {
+        let row = TransferEventRow {
+            id: "event-id".to_string(),
+            domain_id: "domain-id".to_string(),
+            block_number: 20,
+            transaction_id: "tx".to_string(),
+            owner_id: "owner".to_string(),
+        };
+
+        assert!(visible_at_block(Some(row.clone()), Some(19)).is_none());
+        assert!(visible_at_block(Some(row.clone()), Some(20)).is_some());
+        assert!(visible_at_block(Some(row), None).is_some());
     }
 }
