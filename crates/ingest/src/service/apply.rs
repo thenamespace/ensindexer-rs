@@ -156,11 +156,14 @@ impl IngestService {
         let projection_started = Instant::now();
         let mut current_block = None;
         let mut changed_rows = 0;
+        let mut change_flush_ms = 0;
         for event in decoded {
             if flush_changes_by_block
                 && current_block.is_some_and(|block| block != event.ctx.block_number)
             {
+                let change_flush_started = Instant::now();
                 let flushed = self.storage.flush_change_buffer().await?;
+                change_flush_ms += change_flush_started.elapsed().as_millis();
                 changed_rows += flushed;
                 tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
             }
@@ -168,7 +171,9 @@ impl IngestService {
             projection::apply_event(&self.storage, event).await?;
         }
         if flush_changes_by_block {
+            let change_flush_started = Instant::now();
             let flushed = self.storage.flush_change_buffer().await?;
+            change_flush_ms += change_flush_started.elapsed().as_millis();
             changed_rows += flushed;
             tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
         }
@@ -202,6 +207,7 @@ impl IngestService {
             decode_ms,
             sort_ms,
             projection_ms,
+            change_flush_ms,
             event_flush_ms,
             checkpoint_ms,
             elapsed_ms = range_started.elapsed().as_millis(),
