@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the shared historical current-state projection cache slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the direct cache-backed historical snapshot flush slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -40,6 +40,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical RPC, HyperSync, and raw archive fills share the same transactional buffered apply path.
 - [x] Historical fills use a current-state projection cache for `Account`, `Domain`, `Registration`, `Resolver`, and `WrappedDomain`, flushing dirty rows in dependency order before block snapshots.
 - [x] Historical fill logs include `current_flush_rows` and `current_flush_ms`.
+- [x] Historical fills write mutable-entity block snapshots directly from the current-state projection cache instead of selecting the current tables at each block boundary.
+- [x] Historical fills flush dirty current-state rows once at the end of each range instead of once per indexed block.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
@@ -151,7 +153,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.
-- [ ] Profile historical fills after current-state projection caching with dense resolver ranges and record logs/sec, SQL time, and top write queries.
+- [ ] Profile historical fills after direct cache-backed snapshot flushing with dense resolver ranges and record logs/sec, SQL time, and top write queries.
+- [ ] Audit direct cache-backed historical snapshots against seeded fixtures for block-boundary correctness across repeated mutations in the same range.
 - [ ] Audit current-state cache behavior against official subgraph fixtures for representative registry, registrar, wrapper, and resolver ranges.
 
 ### Performance And API Quality

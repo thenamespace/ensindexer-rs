@@ -152,10 +152,6 @@ impl IngestService {
             if flush_changes_by_block
                 && current_block.is_some_and(|block| block != event.ctx.block_number)
             {
-                let current_flush_started = Instant::now();
-                let current_stats = self.storage.flush_entity_cache().await?;
-                current_flush_ms += current_flush_started.elapsed().as_millis();
-                current_flush_rows += current_stats.rows;
                 let change_flush_started = Instant::now();
                 let flushed = self.storage.flush_change_buffer().await?;
                 change_flush_ms += change_flush_started.elapsed().as_millis();
@@ -166,10 +162,6 @@ impl IngestService {
             projection::apply_event(&self.storage, event).await?;
         }
         if flush_changes_by_block {
-            let current_flush_started = Instant::now();
-            let current_stats = self.storage.flush_entity_cache().await?;
-            current_flush_ms += current_flush_started.elapsed().as_millis();
-            current_flush_rows += current_stats.rows;
             let change_flush_started = Instant::now();
             let flushed = self.storage.flush_change_buffer().await?;
             change_flush_ms += change_flush_started.elapsed().as_millis();
@@ -177,6 +169,13 @@ impl IngestService {
             tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
         }
         let projection_ms = projection_started.elapsed().as_millis();
+
+        if flush_changes_by_block {
+            let current_flush_started = Instant::now();
+            let current_stats = self.storage.flush_entity_cache().await?;
+            current_flush_ms += current_flush_started.elapsed().as_millis();
+            current_flush_rows += current_stats.rows;
+        }
 
         let event_flush_started = Instant::now();
         let event_rows = if flush_changes_by_block {
