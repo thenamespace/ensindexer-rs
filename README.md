@@ -52,10 +52,12 @@ BACKFILL_SOURCE=hypersync make archive-backfill BACKFILL_FROM=9380380 BACKFILL_T
 # Rebuild a fresh dev database without spending RPC/HyperSync credits again.
 make db-reset
 make migrate
+make archive-status BACKFILL_FROM=9380380 BACKFILL_TO=9381380
 BACKFILL_SOURCE=raw make raw-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
 ```
 
 `make db-reset` deletes the local Postgres compose volume. Use it only for disposable development databases.
+`make archive-status` verifies archive checksums and reports coverage gaps before replay.
 
 Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 

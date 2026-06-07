@@ -1,86 +1,16 @@
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
+mod coverage;
+mod manifest;
+mod model;
+
+use std::path::{Path, PathBuf};
+
+pub use coverage::{ArchiveGap, ArchiveStatus, inspect_archive};
+pub use manifest::ArchiveManifestRange;
+pub(crate) use model::ArchivedRange;
+
+use self::manifest::{
+    upsert_manifest_range, verify_manifest_checksum, verify_manifest_range_checksum,
 };
-
-use alloy::rpc::types::Log;
-use serde::{Deserialize, Serialize};
-
-use crate::{rpc::BlockMeta, sources::LogSource};
-
-const ARCHIVE_VERSION: u32 = 1;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ArchivedRange {
-    pub(crate) version: u32,
-    pub(crate) chain_id: u64,
-    pub(crate) from_block: u64,
-    pub(crate) to_block: u64,
-    pub(crate) logs: Vec<ArchivedLog>,
-    pub(crate) block_meta: BTreeMap<u64, BlockMeta>,
-    pub(crate) checkpoint_sources: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ArchivedLog {
-    pub(crate) source: LogSource,
-    pub(crate) log: Log,
-}
-
-impl ArchivedRange {
-    pub(crate) fn new(
-        chain_id: u64,
-        from_block: u64,
-        to_block: u64,
-        raw_logs: Vec<(LogSource, Log)>,
-        block_meta: BTreeMap<u64, BlockMeta>,
-        checkpoint_sources: Vec<String>,
-    ) -> Self {
-        Self {
-            version: ARCHIVE_VERSION,
-            chain_id,
-            from_block,
-            to_block,
-            logs: raw_logs
-                .into_iter()
-                .map(|(source, log)| ArchivedLog { source, log })
-                .collect(),
-            block_meta,
-            checkpoint_sources,
-        }
-    }
-
-    pub(crate) fn into_parts(self) -> (Vec<(LogSource, Log)>, BTreeMap<u64, BlockMeta>) {
-        (
-            self.logs
-                .into_iter()
-                .map(|entry| (entry.source, entry.log))
-                .collect(),
-            self.block_meta,
-        )
-    }
-
-    fn validate(&self, expected_chain_id: u64) -> anyhow::Result<()> {
-        anyhow::ensure!(
-            self.version == ARCHIVE_VERSION,
-            "unsupported raw archive version {}",
-            self.version
-        );
-        anyhow::ensure!(
-            self.chain_id == expected_chain_id,
-            "raw archive chain_id {} does not match configured chain_id {}",
-            self.chain_id,
-            expected_chain_id
-        );
-        anyhow::ensure!(
-            self.from_block <= self.to_block,
-            "raw archive has invalid range {}..{}",
-            self.from_block,
-            self.to_block
-        );
-        Ok(())
-    }
-}
 
 pub(crate) fn write_range(dir: &Path, range: &ArchivedRange) -> anyhow::Result<PathBuf> {
     let ranges_dir = dir.join("ranges");
@@ -89,8 +19,10 @@ pub(crate) fn write_range(dir: &Path, range: &ArchivedRange) -> anyhow::Result<P
     let path = range_path(dir, range.from_block, range.to_block);
     let tmp_path = path.with_extension("json.tmp");
     let bytes = serde_json::to_vec_pretty(range)?;
+    let checksum = manifest::sha256_hex(&bytes);
     std::fs::write(&tmp_path, bytes)?;
     std::fs::rename(&tmp_path, &path)?;
+    upsert_manifest_range(dir, range, &path, &checksum)?;
     Ok(path)
 }
 
@@ -113,6 +45,7 @@ pub(crate) fn read_ranges(
             }
 
             let bytes = std::fs::read(entry.path())?;
+            verify_manifest_checksum(dir, &entry.path(), &bytes)?;
             let range: ArchivedRange = serde_json::from_slice(&bytes)?;
             range.validate(expected_chain_id)?;
             if range.to_block < from_block || range.from_block > to_block {
@@ -141,6 +74,7 @@ pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Re
         }
 
         let bytes = std::fs::read(entry.path())?;
+        verify_manifest_checksum(dir, &entry.path(), &bytes)?;
         let range: ArchivedRange = serde_json::from_slice(&bytes)?;
         range.validate(expected_chain_id)?;
         from = Some(from.map_or(range.from_block, |current| current.min(range.from_block)));
@@ -153,7 +87,7 @@ pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Re
     }
 }
 
-fn range_path(dir: &Path, from_block: u64, to_block: u64) -> PathBuf {
+pub(crate) fn range_path(dir: &Path, from_block: u64, to_block: u64) -> PathBuf {
     dir.join("ranges")
         .join(format!("{from_block:020}-{to_block:020}.json"))
 }
@@ -185,4 +119,12 @@ fn validate_contiguous(
         to_block
     );
     Ok(())
+}
+
+pub(crate) fn verify_manifest_range(
+    dir: &Path,
+    expected_chain_id: u64,
+    entry: &ArchiveManifestRange,
+) -> anyhow::Result<()> {
+    verify_manifest_range_checksum(dir, expected_chain_id, entry)
 }

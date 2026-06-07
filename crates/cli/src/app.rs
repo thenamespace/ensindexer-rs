@@ -38,6 +38,14 @@ enum Command {
         #[arg(long)]
         archive_dir: Option<PathBuf>,
     },
+    ArchiveStatus {
+        #[arg(long)]
+        from: Option<u64>,
+        #[arg(long)]
+        to: Option<u64>,
+        #[arg(long)]
+        archive_dir: Option<PathBuf>,
+    },
     Index,
     Compare {
         #[arg(long, default_value = "http://127.0.0.1:8080/subgraph")]
@@ -123,6 +131,18 @@ pub async fn run() -> anyhow::Result<()> {
                 .replay_archive_range(from, to, archive_dir)
                 .await?;
         }
+        Command::ArchiveStatus {
+            from,
+            to,
+            archive_dir,
+        } => {
+            let config = AppConfig::from_env()?;
+            let archive_dir = archive_dir
+                .or(config.raw_archive_dir)
+                .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required"))?;
+            let status = ingest::inspect_archive(&archive_dir, config.chain_id, from, to)?;
+            print_archive_status(status);
+        }
         Command::Index => {
             let config = AppConfig::from_env()?;
             let storage = Storage::connect(&config.database_url).await?;
@@ -162,6 +182,27 @@ pub async fn run() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn print_archive_status(status: ingest::ArchiveStatus) {
+    println!("archive chain_id: {}", status.chain_id);
+    println!("archive ranges: {}", status.ranges.len());
+    if let (Some(first), Some(last)) = (status.ranges.first(), status.ranges.last()) {
+        println!("archive coverage: {}..{}", first.from_block, last.to_block);
+    }
+    let total_bytes: u64 = status.ranges.iter().map(|range| range.bytes).sum();
+    let total_logs: usize = status.ranges.iter().map(|range| range.logs).sum();
+    println!("archive bytes: {total_bytes}");
+    println!("archive logs: {total_logs}");
+
+    if status.is_contiguous() {
+        println!("archive gaps: none");
+    } else {
+        println!("archive gaps:");
+        for gap in status.gaps {
+            println!("  {}..{}", gap.from_block, gap.to_block);
+        }
+    }
 }
 
 async fn print_status(storage: &Storage) -> anyhow::Result<()> {

@@ -15,3 +15,12 @@ pub enum AggregationInterval {
     #[graphql(name = "day")]
     Day,
 }
+
+#[derive(Debug, Clone, Copy, Enum, Eq, PartialEq)]
+#[graphql(name = "Aggregation_current")]
+pub enum AggregationCurrent {
+    #[graphql(name = "include")]
+    Include,
+    #[graphql(name = "exclude")]
+    Exclude,
+}

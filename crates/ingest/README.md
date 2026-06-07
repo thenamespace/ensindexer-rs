@@ -19,7 +19,7 @@ Historical and live chain ingestion crate.
 
 Backfills fetch bounded ranges, merge logs from all active sources, sort by canonical chain order, and apply decoded events deterministically. `BACKFILL_SOURCE` is explicit and strict: `rpc` uses Alloy JSON-RPC, `hypersync` uses Envio HyperSync and requires `ENVIO_API_KEY`, and `raw` replays archive JSON files. There is no automatic source selection.
 
-When `ARCHIVE_BACKFILLS=true`, each fetched range is written to `RAW_ARCHIVE_DIR/ranges/{from}-{to}.json` after log and block metadata fetching. Replay reads those range files and runs the same decode/projection/checkpoint path as live backfill without touching RPC or HyperSync. This is intended for projection development: archive once, reset indexed state, change projection code, then replay until the output matches the official subgraph.
+When `ARCHIVE_BACKFILLS=true`, each fetched range is written to `RAW_ARCHIVE_DIR/ranges/{from}-{to}.json` after log and block metadata fetching. A manifest records file paths, byte lengths, log counts, and SHA-256 checksums. Replay reads those range files, verifies manifest checksums when present, and runs the same decode/projection/checkpoint path as live backfill without touching RPC or HyperSync. This is intended for projection development: archive once, reset indexed state, change projection code, then replay until the output matches the official subgraph.
 
 Live indexing runs behind a configurable confirmation depth and verifies parent hashes before applying new ranges. `INDEXING_SOURCE=http_rpc` uses `ETH_RPC_URL`; `INDEXING_SOURCE=wss` uses `ETH_WS_URL`. Current reorg repair uses a coarse indexed-state reset followed by canonical rebuild.
 

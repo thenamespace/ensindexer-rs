@@ -1,4 +1,4 @@
-.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-backfill raw-backfill test lint check
+.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-backfill raw-backfill archive-status test lint check
 
 BACKFILL_FROM ?= 9380380
 BACKFILL_TO ?= 9381380
@@ -51,6 +51,9 @@ archive-backfill:
 
 raw-backfill:
 	BACKFILL_SOURCE=raw RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- backfill --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
+
+archive-status:
+	RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- archive-status --from $(BACKFILL_FROM) --to $(BACKFILL_TO)
 
 test:
 	cargo test --workspace

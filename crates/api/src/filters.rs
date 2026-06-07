@@ -9,7 +9,7 @@ mod resolver;
 mod wrapped_domain;
 
 pub use account::AccountFilter;
-pub use compat::{AggregationInterval, BlockChangedFilter};
+pub use compat::{AggregationCurrent, AggregationInterval, BlockChangedFilter};
 pub use domain::DomainFilter;
 pub use event::{
     AbiChangedFilter, AddrChangedFilter, AuthorisationChangedFilter, ContenthashChangedFilter,
