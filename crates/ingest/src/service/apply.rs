@@ -7,6 +7,38 @@ use super::IngestService;
 use crate::{decode::decode_log, rpc::BlockMeta, sources::LogSource};
 
 impl IngestService {
+    pub(super) async fn apply_raw_range_transactional(
+        &self,
+        range_end: u64,
+        raw_logs: Vec<(LogSource, Log)>,
+        block_meta: BTreeMap<u64, BlockMeta>,
+        checkpoint_sources: Vec<String>,
+    ) -> anyhow::Result<()> {
+        sqlx::query("begin").execute(self.storage.pool()).await?;
+        sqlx::query("set local synchronous_commit = off")
+            .execute(self.storage.pool())
+            .await?;
+
+        let result = self
+            .apply_raw_range(range_end, raw_logs, block_meta, checkpoint_sources)
+            .await;
+
+        match result {
+            Ok(()) => {
+                sqlx::query("commit").execute(self.storage.pool()).await?;
+                Ok(())
+            }
+            Err(error) => {
+                if let Err(rollback_error) =
+                    sqlx::query("rollback").execute(self.storage.pool()).await
+                {
+                    tracing::error!(%rollback_error, "failed to roll back raw replay range");
+                }
+                Err(error)
+            }
+        }
+    }
+
     pub(super) async fn apply_raw_range(
         &self,
         range_end: u64,

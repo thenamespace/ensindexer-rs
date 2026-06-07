@@ -131,7 +131,7 @@ pub async fn run() -> anyhow::Result<()> {
         }
         Command::Backfill { from, to } => {
             let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
+            let storage = replay_storage(&config).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .run_configured_backfill(from, to)
@@ -155,7 +155,7 @@ pub async fn run() -> anyhow::Result<()> {
             archive_dir,
         } => {
             let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
+            let storage = Storage::connect_with_max_connections(&config.database_url, 1).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage)
                 .replay_archive_range(from, to, archive_dir)
@@ -286,4 +286,12 @@ async fn print_status(storage: &Storage) -> anyhow::Result<()> {
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     fmt().with_env_filter(filter).init();
+}
+
+async fn replay_storage(config: &AppConfig) -> anyhow::Result<Storage> {
+    if config.backfill_source.is_raw() {
+        Ok(Storage::connect_with_max_connections(&config.database_url, 1).await?)
+    } else {
+        Ok(Storage::connect(&config.database_url).await?)
+    }
 }

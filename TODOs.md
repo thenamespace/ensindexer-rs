@@ -27,6 +27,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Archive-only fetching is supported through `cli archive`, allowing raw range files to be stored without projection writes.
 - [x] Archive-only resume persists discovered resolver addresses in `resolvers.json` and can rebuild that cache from existing archive files.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
+- [x] Raw archive replay streams one range file at a time and wraps each range in a single Postgres transaction.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
@@ -138,6 +139,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.
+- [ ] Add deeper raw replay batching for high-density ranges: batched event inserts, batched upserts, and reduced per-event read amplification.
 
 ### Performance And API Quality
 

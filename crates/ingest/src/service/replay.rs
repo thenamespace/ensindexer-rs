@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Instant};
 
 use super::IngestService;
 use crate::archive::{range_entries, read_range_entry};
@@ -27,6 +27,7 @@ impl IngestService {
         let entries = range_entries(&archive_dir, self.config.chain_id, from_block, to_block)?;
         let total_ranges = entries.len();
         for (index, entry) in entries.iter().enumerate() {
+            let started_at = Instant::now();
             tracing::info!(
                 archive_file = %entry.file,
                 from_block = entry.from_block,
@@ -44,15 +45,17 @@ impl IngestService {
             let checkpoint_sources = range.checkpoint_sources.clone();
             let (raw_logs, block_meta) = range.into_parts();
 
-            self.apply_raw_range(range_end, raw_logs, block_meta, checkpoint_sources)
+            self.apply_raw_range_transactional(range_end, raw_logs, block_meta, checkpoint_sources)
                 .await?;
 
+            let elapsed = started_at.elapsed();
             tracing::info!(
                 archive_file = %entry.file,
                 from_block = range_start,
                 to_block = range_end,
                 range_index = index + 1,
                 total_ranges,
+                elapsed_ms = elapsed.as_millis(),
                 "replayed raw archive range"
             );
         }

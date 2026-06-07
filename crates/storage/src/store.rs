@@ -13,8 +13,15 @@ pub struct Storage {
 
 impl Storage {
     pub async fn connect(database_url: &str) -> StorageResult<Self> {
+        Self::connect_with_max_connections(database_url, 10).await
+    }
+
+    pub async fn connect_with_max_connections(
+        database_url: &str,
+        max_connections: u32,
+    ) -> StorageResult<Self> {
         let pool = PgPoolOptions::new()
-            .max_connections(10)
+            .max_connections(max_connections)
             .connect(database_url)
             .await?;
 
