@@ -17,7 +17,7 @@ use crate::{
 use self::{
     account::{push_account_filter_conditions, push_account_filter_group},
     conditions::{
-        account_filter_has_conditions, domain_filter_has_scalar_conditions,
+        account_filter_has_conditions, domain_filter_has_conditions,
         resolver_filter_has_scalar_conditions,
     },
     domain::push_domain_scalar_filter_conditions,
@@ -79,7 +79,7 @@ pub(crate) fn push_domain_relation_filter<'qb>(
     let Some(filter) = filter else {
         return;
     };
-    if !domain_filter_has_scalar_conditions(&filter) {
+    if !domain_filter_has_conditions(&filter) {
         return;
     }
 

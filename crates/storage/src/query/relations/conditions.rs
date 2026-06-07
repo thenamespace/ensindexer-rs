@@ -92,6 +92,42 @@ pub(super) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool
             .is_some_and(|filters| filters.iter().any(domain_filter_has_scalar_conditions))
 }
 
+pub(super) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
+    domain_filter_has_scalar_conditions(filter)
+        || filter
+            .parent_filter
+            .as_ref()
+            .is_some_and(|filter| domain_filter_has_conditions(filter))
+        || filter
+            .resolved_address_filter
+            .as_ref()
+            .is_some_and(|filter| account_filter_has_conditions(filter))
+        || filter
+            .owner_filter
+            .as_ref()
+            .is_some_and(|filter| account_filter_has_conditions(filter))
+        || filter
+            .resolver_filter
+            .as_ref()
+            .is_some_and(|filter| resolver_filter_has_scalar_conditions(filter))
+        || filter
+            .registrant_filter
+            .as_ref()
+            .is_some_and(|filter| account_filter_has_conditions(filter))
+        || filter
+            .wrapped_owner_filter
+            .as_ref()
+            .is_some_and(|filter| account_filter_has_conditions(filter))
+        || filter
+            .and
+            .as_ref()
+            .is_some_and(|filters| filters.iter().any(domain_filter_has_conditions))
+        || filter
+            .or
+            .as_ref()
+            .is_some_and(|filters| filters.iter().any(domain_filter_has_conditions))
+}
+
 pub(super) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()

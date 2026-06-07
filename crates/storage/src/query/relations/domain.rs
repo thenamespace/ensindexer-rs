@@ -1,9 +1,9 @@
 use sqlx::{Postgres, query_builder::Separated};
 
 use crate::{
-    filters::DomainFilter,
-    query::relations::subquery::*,
-    query::{push_where_prefix, relations::conditions::domain_filter_has_scalar_conditions},
+    filters::{AccountFilter, DomainFilter, ResolverFilter},
+    query::push_where_prefix,
+    query::relations::{conditions::*, subquery::*},
 };
 
 pub(super) fn push_domain_scalar_filter_conditions<'qb>(
@@ -209,6 +209,27 @@ pub(super) fn push_domain_scalar_filter_conditions<'qb>(
     push_sub_numeric_text_filter(separated, has_where, "ttl", "<", filter.ttl_lt);
     push_sub_numeric_text_filter(separated, has_where, "ttl", ">=", filter.ttl_gte);
     push_sub_numeric_text_filter(separated, has_where, "ttl", "<=", filter.ttl_lte);
+    push_sub_domain_relation_filter(separated, has_where, "parent_id", filter.parent_filter);
+    push_sub_account_relation_filter(
+        separated,
+        has_where,
+        "resolved_address_id",
+        filter.resolved_address_filter,
+    );
+    push_sub_account_relation_filter(separated, has_where, "owner_id", filter.owner_filter);
+    push_sub_resolver_relation_filter(separated, has_where, "resolver_id", filter.resolver_filter);
+    push_sub_account_relation_filter(
+        separated,
+        has_where,
+        "registrant_id",
+        filter.registrant_filter,
+    );
+    push_sub_account_relation_filter(
+        separated,
+        has_where,
+        "wrapped_owner_id",
+        filter.wrapped_owner_filter,
+    );
     push_sub_domain_filter_group(separated, has_where, " and ", filter.and);
     push_sub_domain_filter_group(separated, has_where, " or ", filter.or);
 }
@@ -224,7 +245,7 @@ pub(crate) fn push_domain_filter_group<'qb>(
     };
     let filters: Vec<_> = filters
         .into_iter()
-        .filter(domain_filter_has_scalar_conditions)
+        .filter(domain_filter_has_conditions)
         .collect();
     if filters.is_empty() {
         return;
@@ -247,7 +268,7 @@ fn push_sub_domain_filter_group<'qb>(
     };
     let filters: Vec<_> = filters
         .into_iter()
-        .filter(domain_filter_has_scalar_conditions)
+        .filter(domain_filter_has_conditions)
         .collect();
     if filters.is_empty() {
         return;
@@ -273,4 +294,70 @@ fn append_domain_filter_subqueries<'qb>(
         push_domain_scalar_filter_conditions(separated, &mut sub_has_where, filter);
         separated.push_unseparated(")");
     }
+}
+
+fn push_sub_domain_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: Option<Box<DomainFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !domain_filter_has_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated(column)
+        .push_unseparated(" in (select id from domains");
+    let mut sub_has_where = false;
+    push_domain_scalar_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
+}
+
+fn push_sub_account_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: Option<Box<AccountFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !account_filter_has_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated(column)
+        .push_unseparated(" in (select id from accounts");
+    let mut sub_has_where = false;
+    super::account::push_account_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
+}
+
+fn push_sub_resolver_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: Option<Box<ResolverFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !resolver_filter_has_scalar_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated(column)
+        .push_unseparated(" in (select id from resolvers");
+    let mut sub_has_where = false;
+    super::resolver::push_resolver_scalar_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
 }

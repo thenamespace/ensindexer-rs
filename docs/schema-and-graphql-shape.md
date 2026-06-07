@@ -363,7 +363,7 @@ Current implementation supports shallow trailing-underscore filters on mutable e
 - `WrappedDomain_filter`: `domain_`, `owner_`;
 - `Resolver_filter`: `domain_`, `addr_`.
 
-Those relationship filters apply scalar predicates on the directly related entity. Fully recursive relationship filtering, including recursive boolean composition across relationship-filter boundaries, remains compatibility-expansion work.
+Those relationship filters apply scalar predicates on the directly related entity. `Domain_filter` also recurses through nested domain/account/resolver relationship predicates, including relation-only `and`/`or` branches. Fully recursive relationship filtering across the remaining entity and event filter families remains compatibility-expansion work.
 
 Current scalar filter coverage includes the main stored mutable-entity fields:
 
