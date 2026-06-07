@@ -6,7 +6,7 @@ use crate::{Storage, StorageError, StorageResult};
 
 mod snapshot_flush;
 
-const CHANGE_FLUSH_CHUNK_ROWS: usize = 10_000;
+const CHANGE_FLUSH_CHUNK_ROWS: usize = 3_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EntityKind {

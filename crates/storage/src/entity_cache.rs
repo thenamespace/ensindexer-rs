@@ -7,7 +7,7 @@ use crate::{
     WrappedDomainRow,
 };
 
-const CURRENT_FLUSH_CHUNK_ROWS: usize = 5_000;
+const CURRENT_FLUSH_CHUNK_ROWS: usize = 3_000;
 
 #[derive(Debug, Default)]
 pub struct EntityCache {

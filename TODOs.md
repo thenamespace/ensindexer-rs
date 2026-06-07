@@ -42,6 +42,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical fill logs include `current_flush_rows` and `current_flush_ms`.
 - [x] Historical fills write mutable-entity block snapshots directly from the current-state projection cache instead of selecting the current tables at each block boundary.
 - [x] Historical fills flush dirty current-state rows once at the end of each range instead of once per indexed block.
+- [x] Historical fill batch sizes are capped below Postgres' bind-parameter limit for wide current-state and snapshot inserts.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
