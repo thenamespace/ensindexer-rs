@@ -1,10 +1,14 @@
 use bigdecimal::BigDecimal;
 
 use super::DomainsRepo;
-use crate::{error::*, inserts::DomainUpsert};
+use crate::{entity_cache::CachedEntityKind, error::*, inserts::DomainUpsert};
 
 impl DomainsRepo<'_> {
     pub async fn create_if_missing(&self, input: DomainUpsert) -> StorageResult<bool> {
+        if self.is_cached(CachedEntityKind::Domain, &input.id)? {
+            return Ok(false);
+        }
+        let id = input.id.clone();
         let inserted = sqlx::query_scalar::<_, String>(
             r#"
         insert into domains (id, created_at, owner_id, is_migrated)
@@ -20,7 +24,29 @@ impl DomainsRepo<'_> {
         .fetch_optional(self.pool)
         .await?;
 
+        self.cache(CachedEntityKind::Domain, &id)?;
         Ok(inserted.is_some())
+    }
+
+    fn is_cached(&self, kind: CachedEntityKind, id: &str) -> StorageResult<bool> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache
+            .as_ref()
+            .is_some_and(|active| active.contains(kind, id)))
+    }
+
+    fn cache(&self, kind: CachedEntityKind, id: &str) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.insert(kind, id.to_owned());
+        }
+        Ok(())
     }
 
     pub async fn set_owner(&self, id: &str, owner_id: &str) -> StorageResult<()> {

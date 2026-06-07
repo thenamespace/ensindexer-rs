@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 mod derived_filters;
 mod filter_fields;
 mod mutations;
@@ -5,10 +7,11 @@ mod queries;
 
 use sqlx::PgPool;
 
-use crate::{error::*, models::DomainRow, query::*};
+use crate::{entity_cache::EntityCache, error::*, models::DomainRow, query::*};
 
 pub struct DomainsRepo<'a> {
     pub(crate) pool: &'a PgPool,
+    pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
 }
 
 impl DomainsRepo<'_> {

@@ -35,6 +35,19 @@ impl IngestService {
             }
             return Err(error.into());
         }
+        if let Err(error) = self.storage.begin_entity_cache() {
+            if let Err(clear_error) = self.storage.clear_change_buffer() {
+                tracing::error!(%clear_error, "failed to clear replay change buffer");
+            }
+            if let Err(clear_error) = self.storage.clear_event_buffer() {
+                tracing::error!(%clear_error, "failed to clear replay event buffer");
+            }
+            if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await
+            {
+                tracing::error!(%rollback_error, "failed to roll back raw replay range");
+            }
+            return Err(error.into());
+        }
 
         let result = self
             .apply_raw_range_buffered(range_end, raw_logs, block_meta, checkpoint_sources)
@@ -44,6 +57,7 @@ impl IngestService {
             Ok(()) => {
                 self.storage.clear_change_buffer()?;
                 self.storage.clear_event_buffer()?;
+                self.storage.clear_entity_cache()?;
                 let started = Instant::now();
                 sqlx::query("commit").execute(self.storage.pool()).await?;
                 tracing::debug!(
@@ -58,6 +72,9 @@ impl IngestService {
                 }
                 if let Err(clear_error) = self.storage.clear_event_buffer() {
                     tracing::error!(%clear_error, "failed to clear replay event buffer");
+                }
+                if let Err(clear_error) = self.storage.clear_entity_cache() {
+                    tracing::error!(%clear_error, "failed to clear replay entity cache");
                 }
                 if let Err(rollback_error) =
                     sqlx::query("rollback").execute(self.storage.pool()).await
@@ -101,17 +118,18 @@ impl IngestService {
     ) -> anyhow::Result<()> {
         let range_started = Instant::now();
         let block_started = Instant::now();
-        for meta in block_meta.values() {
-            self.storage
-                .blocks()
-                .upsert(BlockInsert {
+        let blocks = block_meta
+            .values()
+            .map(|meta| {
+                Ok(BlockInsert {
                     number: meta.number_i64()?,
                     hash: types::hex_b256(meta.hash),
                     parent_hash: Some(types::hex_b256(meta.parent_hash)),
                     timestamp: meta.timestamp_i64()?,
                 })
-                .await?;
-        }
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        self.storage.blocks().upsert_many(blocks).await?;
         let block_write_ms = block_started.elapsed().as_millis();
 
         let decode_started = Instant::now();

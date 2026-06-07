@@ -1,20 +1,48 @@
+use std::sync::{Arc, Mutex};
+
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
-use crate::{error::*, filters::*, models::*, query::*};
+use crate::{entity_cache::*, error::*, filters::*, models::*, query::*};
 
 pub struct AccountsRepo<'a> {
     pub(crate) pool: &'a PgPool,
+    pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
 }
 
 impl AccountsRepo<'_> {
     pub async fn create_if_missing(&self, id: &str) -> StorageResult<bool> {
+        if self.is_cached(CachedEntityKind::Account, id)? {
+            return Ok(false);
+        }
         let inserted = sqlx::query_scalar::<_, String>(
             "insert into accounts (id) values ($1) on conflict (id) do nothing returning id",
         )
         .bind(id)
         .fetch_optional(self.pool)
         .await?;
+        self.cache(CachedEntityKind::Account, id)?;
         Ok(inserted.is_some())
+    }
+
+    fn is_cached(&self, kind: CachedEntityKind, id: &str) -> StorageResult<bool> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache
+            .as_ref()
+            .is_some_and(|active| active.contains(kind, id)))
+    }
+
+    fn cache(&self, kind: CachedEntityKind, id: &str) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.insert(kind, id.to_owned());
+        }
+        Ok(())
     }
 
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<AccountRow>> {

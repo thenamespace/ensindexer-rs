@@ -8,7 +8,8 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use crate::{
     AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
     MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo, StorageResult,
-    WrappedDomainsRepo, change_buffer::EntityChange, event_buffer::EventBuffer,
+    WrappedDomainsRepo, change_buffer::EntityChange, entity_cache::EntityCache,
+    event_buffer::EventBuffer,
 };
 
 #[derive(Clone)]
@@ -16,6 +17,7 @@ pub struct Storage {
     pool: PgPool,
     pub(crate) change_buffer: Arc<Mutex<Option<BTreeSet<EntityChange>>>>,
     pub(crate) event_buffer: Arc<Mutex<Option<EventBuffer>>>,
+    pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
 }
 
 impl Storage {
@@ -40,6 +42,7 @@ impl Storage {
             pool,
             change_buffer: Arc::new(Mutex::new(None)),
             event_buffer: Arc::new(Mutex::new(None)),
+            entity_cache: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -53,11 +56,17 @@ impl Storage {
     }
 
     pub fn accounts(&self) -> AccountsRepo<'_> {
-        AccountsRepo { pool: &self.pool }
+        AccountsRepo {
+            pool: &self.pool,
+            entity_cache: Arc::clone(&self.entity_cache),
+        }
     }
 
     pub fn domains(&self) -> DomainsRepo<'_> {
-        DomainsRepo { pool: &self.pool }
+        DomainsRepo {
+            pool: &self.pool,
+            entity_cache: Arc::clone(&self.entity_cache),
+        }
     }
 
     pub fn registrations(&self) -> RegistrationsRepo<'_> {
@@ -65,7 +74,10 @@ impl Storage {
     }
 
     pub fn resolvers(&self) -> ResolversRepo<'_> {
-        ResolversRepo { pool: &self.pool }
+        ResolversRepo {
+            pool: &self.pool,
+            entity_cache: Arc::clone(&self.entity_cache),
+        }
     }
 
     pub fn wrapped_domains(&self) -> WrappedDomainsRepo<'_> {

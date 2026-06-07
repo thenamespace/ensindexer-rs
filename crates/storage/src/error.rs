@@ -20,4 +20,8 @@ pub enum StorageError {
     EventBufferAlreadyActive,
     #[error("storage event buffer is not active")]
     EventBufferNotActive,
+    #[error("storage entity cache lock is poisoned")]
+    EntityCachePoisoned,
+    #[error("storage entity cache is already active")]
+    EntityCacheAlreadyActive,
 }

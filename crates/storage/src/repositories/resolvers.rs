@@ -1,14 +1,17 @@
+use std::sync::{Arc, Mutex};
+
 use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
 use self::filtering::push_resolver_filters;
-use crate::{error::*, filters::*, models::*, query::*};
+use crate::{entity_cache::*, error::*, filters::*, models::*, query::*};
 
 mod composition;
 mod filtering;
 
 pub struct ResolversRepo<'a> {
     pub(crate) pool: &'a PgPool,
+    pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
 }
 
 impl ResolversRepo<'_> {
@@ -18,6 +21,9 @@ impl ResolversRepo<'_> {
         domain_id: &str,
         address: &str,
     ) -> StorageResult<bool> {
+        if self.is_cached(CachedEntityKind::Resolver, id)? {
+            return Ok(false);
+        }
         let inserted = sqlx::query_scalar::<_, String>(
             r#"
             insert into resolvers (id, domain_id, address)
@@ -31,7 +37,29 @@ impl ResolversRepo<'_> {
         .bind(address)
         .fetch_optional(self.pool)
         .await?;
+        self.cache(CachedEntityKind::Resolver, id)?;
         Ok(inserted.is_some())
+    }
+
+    fn is_cached(&self, kind: CachedEntityKind, id: &str) -> StorageResult<bool> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache
+            .as_ref()
+            .is_some_and(|active| active.contains(kind, id)))
+    }
+
+    fn cache(&self, kind: CachedEntityKind, id: &str) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.insert(kind, id.to_owned());
+        }
+        Ok(())
     }
 
     pub async fn set_addr(&self, id: &str, addr_id: &str) -> StorageResult<()> {

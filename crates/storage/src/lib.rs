@@ -1,4 +1,5 @@
 pub mod change_buffer;
+pub mod entity_cache;
 pub mod error;
 pub mod event_buffer;
 pub mod filters;
@@ -10,6 +11,7 @@ pub mod repositories;
 pub mod store;
 
 pub use change_buffer::*;
+pub use entity_cache::*;
 pub use error::*;
 pub use event_buffer::*;
 pub use filters::*;
