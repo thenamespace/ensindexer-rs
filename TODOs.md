@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the raw replay batched snapshot/entity-change flush slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the shared historical current-state projection cache slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -37,6 +37,9 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Raw archive replay caches `Account`, `Domain`, and `Resolver` existence checks for repeated `create_if_missing` calls inside the range transaction.
 - [x] Raw archive replay batch-flushes `entity_changes` and mutable-entity snapshots per entity type and block instead of writing one snapshot row per SQL roundtrip.
 - [x] Raw archive replay logs `change_flush_ms` separately so snapshot/change flush time can be separated from event handler projection time.
+- [x] Historical RPC, HyperSync, and raw archive fills share the same transactional buffered apply path.
+- [x] Historical fills use a current-state projection cache for `Account`, `Domain`, `Registration`, `Resolver`, and `WrappedDomain`, flushing dirty rows in dependency order before block snapshots.
+- [x] Historical fill logs include `current_flush_rows` and `current_flush_ms`.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
@@ -148,8 +151,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [ ] Add database indexes tuned from real query plans after representative backfills.
-- [ ] Add deeper raw replay batching for high-density ranges: batched current-state mutation flushes and reduced per-event read amplification.
-- [ ] Profile raw replay after batched snapshot flushing with dense resolver ranges and record logs/sec, SQL time, and top write queries.
+- [ ] Profile historical fills after current-state projection caching with dense resolver ranges and record logs/sec, SQL time, and top write queries.
+- [ ] Audit current-state cache behavior against official subgraph fixtures for representative registry, registrar, wrapper, and resolver ranges.
 
 ### Performance And API Quality
 

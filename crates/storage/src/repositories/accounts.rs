@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
-use crate::{entity_cache::*, error::*, filters::*, models::*, query::*};
+use crate::{entity_cache::EntityCache, error::*, filters::*, models::*, query::*};
 
 pub struct AccountsRepo<'a> {
     pub(crate) pool: &'a PgPool,
@@ -11,8 +11,16 @@ pub struct AccountsRepo<'a> {
 
 impl AccountsRepo<'_> {
     pub async fn create_if_missing(&self, id: &str) -> StorageResult<bool> {
-        if self.is_cached(CachedEntityKind::Account, id)? {
-            return Ok(false);
+        if self.cache_active()? {
+            if self.cached_account(id)? {
+                return Ok(false);
+            }
+            if self.find_by_id_uncached(id).await?.is_some() {
+                self.remember_account(id)?;
+                return Ok(false);
+            }
+            self.insert_cached_account(id)?;
+            return Ok(true);
         }
         let inserted = sqlx::query_scalar::<_, String>(
             "insert into accounts (id) values ($1) on conflict (id) do nothing returning id",
@@ -20,38 +28,58 @@ impl AccountsRepo<'_> {
         .bind(id)
         .fetch_optional(self.pool)
         .await?;
-        self.cache(CachedEntityKind::Account, id)?;
         Ok(inserted.is_some())
     }
 
-    fn is_cached(&self, kind: CachedEntityKind, id: &str) -> StorageResult<bool> {
+    fn cache_active(&self) -> StorageResult<bool> {
         let cache = self
             .entity_cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
-        Ok(cache
-            .as_ref()
-            .is_some_and(|active| active.contains(kind, id)))
+        Ok(cache.is_some())
     }
 
-    fn cache(&self, kind: CachedEntityKind, id: &str) -> StorageResult<()> {
+    fn cached_account(&self, id: &str) -> StorageResult<bool> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache.as_ref().is_some_and(|active| active.has_account(id)))
+    }
+
+    fn remember_account(&self, id: &str) -> StorageResult<()> {
         let mut cache = self
             .entity_cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
         if let Some(active) = cache.as_mut() {
-            active.insert(kind, id.to_owned());
+            active.remember_account(id.to_owned());
         }
         Ok(())
     }
 
-    pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<AccountRow>> {
+    fn insert_cached_account(&self, id: &str) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.insert_account(id.to_owned());
+        }
+        Ok(())
+    }
+
+    async fn find_by_id_uncached(&self, id: &str) -> StorageResult<Option<AccountRow>> {
         Ok(
             sqlx::query_as::<_, AccountRow>("select id from accounts where id = $1")
                 .bind(id)
                 .fetch_optional(self.pool)
                 .await?,
         )
+    }
+
+    pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<AccountRow>> {
+        self.find_by_id_uncached(id).await
     }
 
     pub async fn find_by_id_at_block(

@@ -1,10 +1,12 @@
+#![allow(clippy::collapsible_if)]
+
 use std::sync::{Arc, Mutex};
 
 use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
 use self::filtering::push_resolver_filters;
-use crate::{entity_cache::*, error::*, filters::*, models::*, query::*};
+use crate::{entity_cache::EntityCache, error::*, filters::*, models::*, query::*};
 
 mod composition;
 mod filtering;
@@ -21,8 +23,28 @@ impl ResolversRepo<'_> {
         domain_id: &str,
         address: &str,
     ) -> StorageResult<bool> {
-        if self.is_cached(CachedEntityKind::Resolver, id)? {
-            return Ok(false);
+        if self.cache_active()? {
+            if let Some(row) = self.cached_resolver(id)? {
+                if row.is_some() {
+                    return Ok(false);
+                }
+            }
+            if self.cached_resolver(id)?.is_none()
+                && let Some(row) = self.find_by_id_uncached(id).await?
+            {
+                self.remember_resolver(id, Some(row))?;
+                return Ok(false);
+            }
+            self.put_cached_resolver(ResolverRow {
+                id: id.to_owned(),
+                domain_id: Some(domain_id.to_owned()),
+                address: address.to_owned(),
+                addr_id: None,
+                content_hash: None,
+                texts: Vec::new(),
+                coin_types: Vec::new(),
+            })?;
+            return Ok(true);
         }
         let inserted = sqlx::query_scalar::<_, String>(
             r#"
@@ -37,32 +59,54 @@ impl ResolversRepo<'_> {
         .bind(address)
         .fetch_optional(self.pool)
         .await?;
-        self.cache(CachedEntityKind::Resolver, id)?;
         Ok(inserted.is_some())
     }
 
-    fn is_cached(&self, kind: CachedEntityKind, id: &str) -> StorageResult<bool> {
+    fn cache_active(&self) -> StorageResult<bool> {
         let cache = self
             .entity_cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
-        Ok(cache
-            .as_ref()
-            .is_some_and(|active| active.contains(kind, id)))
+        Ok(cache.is_some())
     }
 
-    fn cache(&self, kind: CachedEntityKind, id: &str) -> StorageResult<()> {
+    fn cached_resolver(&self, id: &str) -> StorageResult<Option<Option<ResolverRow>>> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache.as_ref().and_then(|active| active.get_resolver(id)))
+    }
+
+    fn remember_resolver(&self, id: &str, row: Option<ResolverRow>) -> StorageResult<()> {
         let mut cache = self
             .entity_cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
         if let Some(active) = cache.as_mut() {
-            active.insert(kind, id.to_owned());
+            active.resolvers.insert(id.to_owned(), row);
+        }
+        Ok(())
+    }
+
+    fn put_cached_resolver(&self, row: ResolverRow) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.put_resolver(row);
         }
         Ok(())
     }
 
     pub async fn set_addr(&self, id: &str, addr_id: &str) -> StorageResult<()> {
+        if let Some(mut row) = self.find_by_id(id).await? {
+            if self.cache_active()? {
+                row.addr_id = Some(addr_id.to_owned());
+                return self.put_cached_resolver(row);
+            }
+        }
         sqlx::query("update resolvers set addr_id = $2 where id = $1")
             .bind(id)
             .bind(addr_id)
@@ -72,6 +116,14 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn add_coin_type(&self, id: &str, coin_type: BigDecimal) -> StorageResult<()> {
+        if let Some(mut row) = self.find_by_id(id).await? {
+            if self.cache_active()? {
+                if !row.coin_types.contains(&coin_type) {
+                    row.coin_types.push(coin_type);
+                }
+                return self.put_cached_resolver(row);
+            }
+        }
         sqlx::query(
             r#"
             update resolvers
@@ -90,6 +142,14 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn add_text(&self, id: &str, key: &str) -> StorageResult<()> {
+        if let Some(mut row) = self.find_by_id(id).await? {
+            if self.cache_active()? {
+                if !row.texts.iter().any(|text| text == key) {
+                    row.texts.push(key.to_owned());
+                }
+                return self.put_cached_resolver(row);
+            }
+        }
         sqlx::query(
             r#"
             update resolvers
@@ -108,6 +168,12 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn set_content_hash(&self, id: &str, content_hash: &str) -> StorageResult<()> {
+        if let Some(mut row) = self.find_by_id(id).await? {
+            if self.cache_active()? {
+                row.content_hash = Some(content_hash.to_owned());
+                return self.put_cached_resolver(row);
+            }
+        }
         sqlx::query("update resolvers set content_hash = $2 where id = $1")
             .bind(id)
             .bind(content_hash)
@@ -117,6 +183,15 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn reset_records(&self, id: &str) -> StorageResult<()> {
+        if let Some(mut row) = self.find_by_id(id).await? {
+            if self.cache_active()? {
+                row.addr_id = None;
+                row.content_hash = None;
+                row.texts.clear();
+                row.coin_types.clear();
+                return self.put_cached_resolver(row);
+            }
+        }
         sqlx::query(
             r#"
             update resolvers
@@ -134,6 +209,15 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<ResolverRow>> {
+        if let Some(row) = self.cached_resolver(id)? {
+            return Ok(row);
+        }
+        let row = self.find_by_id_uncached(id).await?;
+        self.remember_resolver(id, row.clone())?;
+        Ok(row)
+    }
+
+    async fn find_by_id_uncached(&self, id: &str) -> StorageResult<Option<ResolverRow>> {
         Ok(sqlx::query_as::<_, ResolverRow>(
             r#"
             select id, domain_id, address, addr_id, content_hash, texts, coin_types

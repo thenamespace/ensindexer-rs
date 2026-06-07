@@ -16,6 +16,15 @@ pub struct DomainsRepo<'a> {
 
 impl DomainsRepo<'_> {
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<DomainRow>> {
+        if let Some(row) = self.cached_domain(id)? {
+            return Ok(row);
+        }
+        let row = self.find_by_id_uncached(id).await?;
+        self.remember_domain(id, row.clone())?;
+        Ok(row)
+    }
+
+    pub(crate) async fn find_by_id_uncached(&self, id: &str) -> StorageResult<Option<DomainRow>> {
         Ok(sqlx::query_as::<_, DomainRow>(
             r#"
             select id, name, label_name, labelhash, parent_id, subdomain_count,
@@ -28,6 +37,44 @@ impl DomainsRepo<'_> {
         .bind(id)
         .fetch_optional(self.pool)
         .await?)
+    }
+
+    pub(crate) fn cache_active(&self) -> StorageResult<bool> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache.is_some())
+    }
+
+    pub(crate) fn cached_domain(&self, id: &str) -> StorageResult<Option<Option<DomainRow>>> {
+        let cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        Ok(cache.as_ref().and_then(|active| active.get_domain(id)))
+    }
+
+    pub(crate) fn remember_domain(&self, id: &str, row: Option<DomainRow>) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.domains.insert(id.to_owned(), row);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn put_cached_domain(&self, row: DomainRow) -> StorageResult<()> {
+        let mut cache = self
+            .entity_cache
+            .lock()
+            .map_err(|_| StorageError::EntityCachePoisoned)?;
+        if let Some(active) = cache.as_mut() {
+            active.put_domain(row);
+        }
+        Ok(())
     }
 
     pub async fn find_by_id_at_block(

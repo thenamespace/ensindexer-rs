@@ -97,17 +97,6 @@ impl IngestService {
             .await
     }
 
-    pub(super) async fn apply_raw_range(
-        &self,
-        range_end: u64,
-        raw_logs: Vec<(LogSource, Log)>,
-        block_meta: BTreeMap<u64, BlockMeta>,
-        checkpoint_sources: Vec<String>,
-    ) -> anyhow::Result<()> {
-        self.apply_raw_range_inner(range_end, raw_logs, block_meta, checkpoint_sources, false)
-            .await
-    }
-
     async fn apply_raw_range_inner(
         &self,
         range_end: u64,
@@ -156,11 +145,17 @@ impl IngestService {
         let projection_started = Instant::now();
         let mut current_block = None;
         let mut changed_rows = 0;
+        let mut current_flush_rows = 0;
+        let mut current_flush_ms = 0;
         let mut change_flush_ms = 0;
         for event in decoded {
             if flush_changes_by_block
                 && current_block.is_some_and(|block| block != event.ctx.block_number)
             {
+                let current_flush_started = Instant::now();
+                let current_stats = self.storage.flush_entity_cache().await?;
+                current_flush_ms += current_flush_started.elapsed().as_millis();
+                current_flush_rows += current_stats.rows;
                 let change_flush_started = Instant::now();
                 let flushed = self.storage.flush_change_buffer().await?;
                 change_flush_ms += change_flush_started.elapsed().as_millis();
@@ -171,6 +166,10 @@ impl IngestService {
             projection::apply_event(&self.storage, event).await?;
         }
         if flush_changes_by_block {
+            let current_flush_started = Instant::now();
+            let current_stats = self.storage.flush_entity_cache().await?;
+            current_flush_ms += current_flush_started.elapsed().as_millis();
+            current_flush_rows += current_stats.rows;
             let change_flush_started = Instant::now();
             let flushed = self.storage.flush_change_buffer().await?;
             change_flush_ms += change_flush_started.elapsed().as_millis();
@@ -202,11 +201,13 @@ impl IngestService {
         tracing::info!(
             raw_logs = raw_log_count,
             event_rows,
+            current_flush_rows,
             changed_rows,
             block_write_ms,
             decode_ms,
             sort_ms,
             projection_ms,
+            current_flush_ms,
             change_flush_ms,
             event_flush_ms,
             checkpoint_ms,

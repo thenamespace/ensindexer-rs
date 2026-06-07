@@ -70,7 +70,10 @@ impl Storage {
     }
 
     pub fn registrations(&self) -> RegistrationsRepo<'_> {
-        RegistrationsRepo { pool: &self.pool }
+        RegistrationsRepo {
+            pool: &self.pool,
+            entity_cache: Arc::clone(&self.entity_cache),
+        }
     }
 
     pub fn resolvers(&self) -> ResolversRepo<'_> {
@@ -81,7 +84,10 @@ impl Storage {
     }
 
     pub fn wrapped_domains(&self) -> WrappedDomainsRepo<'_> {
-        WrappedDomainsRepo { pool: &self.pool }
+        WrappedDomainsRepo {
+            pool: &self.pool,
+            entity_cache: Arc::clone(&self.entity_cache),
+        }
     }
 
     pub fn events(&self) -> EventsRepo<'_> {

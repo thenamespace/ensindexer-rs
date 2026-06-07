@@ -292,8 +292,13 @@ impl IngestService {
                 tracing::info!(path = %path.display(), "wrote raw archive range");
             }
 
-            self.apply_raw_range(range_end, batch.raw_logs, block_meta, checkpoint_sources)
-                .await?;
+            self.apply_raw_range_transactional(
+                range_end,
+                batch.raw_logs,
+                block_meta,
+                checkpoint_sources,
+            )
+            .await?;
 
             tracing::info!(
                 from_block = range_start,
