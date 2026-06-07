@@ -56,7 +56,7 @@ fn push_domain_event_filters<'qb>(
     push_numeric_event_filter(separated, has_where, "ttl", filter, NumericEventField::Ttl);
     push_text_event_field(separated, has_where, "name", text_field_name(filter));
     push_i32_event_filter(separated, has_where, "fuses", filter);
-    push_account_event_filter(separated, has_where, "owner_id", filter.owner_id.clone());
+    push_text_event_field(separated, has_where, "owner_id", text_field_owner(filter));
     push_numeric_event_filter(
         separated,
         has_where,
@@ -97,7 +97,7 @@ fn push_resolver_event_filters<'qb>(
     has_where: &mut bool,
     filter: &EventFilter,
 ) {
-    push_account_event_filter(separated, has_where, "addr_id", filter.addr_id.clone());
+    push_text_event_field(separated, has_where, "addr_id", text_field_addr(filter));
     push_numeric_event_filter(
         separated,
         has_where,

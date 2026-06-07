@@ -20,7 +20,7 @@ pub(super) fn push_event_specific_filters<'qb>(
 
     match table {
         "transfer_events" | "wrapped_transfer_events" | "name_unwrapped_events" => {
-            push_account_event_filter(separated, has_where, "owner_id", filter.owner_id.clone());
+            push_text_event_field(separated, has_where, "owner_id", text_field_owner(filter));
         }
         "new_owner_events" => {
             push_text_filter(
@@ -29,7 +29,7 @@ pub(super) fn push_event_specific_filters<'qb>(
                 "parent_domain_id",
                 filter.parent_domain_id.clone(),
             );
-            push_account_event_filter(separated, has_where, "owner_id", filter.owner_id.clone());
+            push_text_event_field(separated, has_where, "owner_id", text_field_owner(filter));
         }
         "new_resolver_events" => {
             push_text_filter(
@@ -45,7 +45,7 @@ pub(super) fn push_event_specific_filters<'qb>(
         "name_wrapped_events" => {
             push_text_event_field(separated, has_where, "name", text_field_name(filter));
             push_i32_event_filter(separated, has_where, "fuses", filter);
-            push_account_event_filter(separated, has_where, "owner_id", filter.owner_id.clone());
+            push_text_event_field(separated, has_where, "owner_id", text_field_owner(filter));
             push_numeric_event_filter(
                 separated,
                 has_where,
@@ -90,7 +90,7 @@ pub(super) fn push_event_specific_filters<'qb>(
             );
         }
         "addr_changed_events" => {
-            push_account_event_filter(separated, has_where, "addr_id", filter.addr_id.clone());
+            push_text_event_field(separated, has_where, "addr_id", text_field_addr(filter));
         }
         "multicoin_addr_changed_events" => {
             push_numeric_event_filter(
