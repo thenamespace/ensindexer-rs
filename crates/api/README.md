@@ -1,40 +1,75 @@
 # api
 
-GraphQL schema crate for the ENS indexer.
+The `api` crate exposes the ENS subgraph-compatible GraphQL schema with `async-graphql`. It is the read side of the indexer: resolvers translate official subgraph query shapes into storage filters, load rows from Postgres, and return DTOs whose field names, relationship names, filters, ordering enums, `block` arguments, and `_meta` behavior match the hosted ENS subgraph as closely as possible.
 
-## Responsibility
+## Flow
 
-`api` owns the async-graphql public API shape. It converts storage rows into GraphQL DTOs, exposes root query methods, maps Graph Node-style filter/order inputs into typed storage filters, and defines current compatibility behavior for `_meta`, `block`, and `subgraphError`.
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Axum as server crate
+    participant Schema as api Schema
+    participant Resolver as GraphQL resolver
+    participant Storage as storage repositories
+    participant Pg as Postgres
 
-## Modules
+    Client->>Axum: POST /subgraph GraphQL query
+    Axum->>Schema: execute request with Storage in context
+    Schema->>Resolver: resolve root field
+    Resolver->>Resolver: normalize first/skip/order/filter/block args
+    Resolver->>Storage: query entity, event, or _meta repository
+    Storage->>Pg: SQL with filters, ordering, snapshots
+    Pg-->>Storage: rows
+    Storage-->>Resolver: models
+    Resolver-->>Schema: DTOs and relationships
+    Schema-->>Axum: GraphQL response
+    Axum-->>Client: JSON result
+```
 
-- `schema`: root query object, schema construction, root entity/event query wiring.
-- `objects`: GraphQL entity DTOs and relationship resolvers.
-- `objects/events`: concrete event DTOs and event interfaces.
-- `filters`: GraphQL input objects and order enums mapped to storage filters.
-- `meta`: `_meta`, `Block_height`, `_Block_`, and `_SubgraphErrorPolicy_` compatibility types.
-- `pagination`: shared `first`/`skip` normalization.
+## Projection Awareness
 
-## Architecture Notes
+This crate does not project chain events. It consumes the projection results produced by `projection` and persisted by `storage`. For current reads, resolvers query current-state tables such as `domains`, `registrations`, `wrapped_domains`, `resolvers`, and `accounts`. For historical `block` reads, mutable entity roots query snapshot tables and event roots clamp rows by `block_number`.
 
-The API returns Graph-compatible scalar values as strings where The Graph would expose `Bytes` or `BigInt`. Storage remains the source of truth; GraphQL resolvers do not project or mutate chain data. Historical `block` arguments are accepted for schema compatibility, but non-current block reads currently return an explicit compatibility error until snapshot support is implemented.
+Relationship fields are intentionally implemented as read-time joins or follow-up repository calls. Examples include `Domain.owner`, `Domain.parent`, `Domain.resolver`, `Registration.domain`, `WrappedDomain.owner`, `Resolver.domain`, and event parent links. Derived collections such as `Domain.events`, `Registration.events`, `Resolver.events`, and account-derived domains/registrations/wrapped domains are also resolved from storage.
 
-## Boundary Rules
+## Storage Shape Used
 
-- This crate may depend on `storage` row/query APIs, but it should not know SQL strings.
-- This crate may define GraphQL DTOs that mirror official subgraph entity names and field names.
-- This crate should not decode logs, call Ethereum RPC, run migrations, or mutate indexed state.
-- Relationship resolvers should remain thin: normalize pagination/filter inputs, call storage, and map rows to DTOs.
+The API reads these storage families:
 
-## Compatibility Targets
+- Current entities: `accounts`, `domains`, `registrations`, `wrapped_domains`, `resolvers`.
+- Historical snapshots: `account_snapshots`, `domain_snapshots`, `registration_snapshots`, `wrapped_domain_snapshots`, `resolver_snapshots`.
+- Event tables: registry, registrar, wrapper, and resolver event tables.
+- Chain metadata: `blocks` for `_meta` and block-hash lookup.
+- Change metadata: `entity_changes` for `_change_block` filters.
 
-The public schema should stay a drop-in replacement for the official ENS subgraph where practical:
+The API should never mutate indexed data. Mutations belong to ingestion/projection/storage apply paths.
 
-- Root entity queries expose singular and plural fields such as `domain`, `domains`, `registration`, `registrations`, `resolver`, `resolvers`, `wrappedDomain`, `wrappedDomains`, `account`, and event collections.
-- Root query arguments should keep The Graph conventions: `id`, `first`, `skip`, `orderBy`, `orderDirection`, `where`, `block`, and `subgraphError`.
-- Filter input names and enum names should match Graph Node naming, including nested relation filters where supported.
-- `_meta` should expose deployment, block number/hash, and a `hasIndexingErrors` boolean.
+## Main Files
 
-## Testing Approach
+- `src/schema.rs` and `src/schema/*`: root query objects and official subgraph field wiring.
+- `src/objects.rs` and `src/objects/*`: GraphQL DTOs and relationship resolvers.
+- `src/filters.rs` and `src/filters/*`: official filter inputs, conversion to storage filters, `and`/`or`, relation predicates, and ordering enums.
+- `src/meta.rs`: `_meta(block:)` response mapping.
+- `src/pagination.rs`: shared `first`/`skip` handling.
 
-Use resolver-level tests for argument normalization and DTO mapping, and integration tests for GraphQL query shapes against a seeded Postgres database. The high-value regression tests are official-subgraph compatibility snapshots: execute the same query against this server and the hosted ENS subgraph, normalize ordering where needed, and compare JSON response shape before comparing exact values.
+## Summary
+
+`api` is the compatibility boundary. Its job is to make the local Rust indexer look like the ENS subgraph to GraphQL clients while keeping all database-specific details behind `storage`.
+
+## Implemented
+
+- Official root fields for entities, concrete events, event interfaces, and `_meta`.
+- Singular and plural reads for domains, accounts, registrations, wrapped domains, resolvers, and event rows.
+- `block` arguments for current and historical reads.
+- Snapshot-backed historical mutable entity queries.
+- Event clamping for historical event reads.
+- Relationship filters, `_change_block`, scalar operators, list operators, and ordering fields.
+- GraphQL schema diff support through the CLI.
+
+## Future Improvements
+
+- Add DataLoader-style batching for nested relationship-heavy queries.
+- Expand official/local differential tests with real mainnet fixtures.
+- Add query complexity and depth controls before public deployment.
+- Profile expensive derived relationships and add targeted storage indexes.
+- Audit deeper historical context propagation for nested relationship fields.

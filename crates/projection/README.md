@@ -1,43 +1,75 @@
 # projection
 
-Deterministic ENS projection crate.
+The `projection` crate turns typed ENS events into official-subgraph-shaped entity changes and event rows. It is intentionally storage-facing but transport-agnostic: RPC, HyperSync, raw replay, and live indexing all call the same handlers through `ingest`.
 
-## Responsibility
+## Flow
 
-`projection` converts decoded ENS events into storage mutations for mutable entities and immutable event tables.
+```mermaid
+sequenceDiagram
+    participant Ingest as ingest apply loop
+    participant Dispatch as projection dispatcher
+    participant Handler as event handler
+    participant Storage as storage transaction/cache
 
-## Modules
+    Ingest->>Dispatch: EnsEvent + LogContext
+    Dispatch->>Handler: route by event family
+    Handler->>Storage: create accounts/domains/resolvers as needed
+    Handler->>Storage: mutate current entity state
+    Handler->>Storage: append event row
+    Handler->>Storage: mark entity changes for snapshots
+    Storage-->>Ingest: buffered writes
+```
 
-- `handlers/dispatcher`: top-level event dispatch.
-- `handlers/registry`: current and old registry ownership, resolver, TTL, and subdomain behavior.
-- `handlers/registrar`: base registrar and controller registration behavior.
-- `handlers/wrapper`: name wrapper ownership, fuses, expiry, and transfer behavior.
-- `handlers/resolver`: resolver record mutation and resolver event history.
-- `support`: shared name, expiry, fuse, and ID helpers.
-- `error`: projection error type.
+## Projection Rules
 
-## Architecture Notes
+Projection follows the official ENS subgraph model:
 
-Projection handlers do not fetch RPC data and do not serve HTTP. They receive decoded events and write through storage repositories. This keeps projection deterministic and testable with synthetic events. Event IDs and entity IDs are shaped to match the official subgraph.
+- Registry events create/update `Domain` ownership, parent links, resolver links, TTL, migration flags, and domain event rows.
+- Registrar events create/update `Registration` state, registrant links, expiry, costs, and registration event rows.
+- Wrapper events create/update `WrappedDomain` ownership, fuses, expiry, tombstones, and wrapper event rows.
+- Resolver events create/update `Resolver` records: address, multicoin addresses, name, ABI, pubkey, text keys, contenthash, interface implementers, authorisations, and version.
+- Account rows are created for every address referenced by projected relationships.
+- Entity changes are emitted whenever mutable current state changes so historical snapshots and `_change_block` filters work.
 
-## Boundary Rules
+Event IDs and entity IDs are generated using helper functions that mirror documented subgraph-compatible shapes.
 
-- This crate owns ENS event semantics: how each decoded event mutates current entities and event history.
-- This crate should not perform RPC, parse `.env`, expose HTTP, or build GraphQL objects.
-- Every handler should be deterministic from `(event, previous storage state)` to storage mutations.
-- If a handler needs derived names or IDs, add reusable helpers under `support` instead of duplicating formatting logic.
+## Storage Shape Used
 
-## Projection Strategy
+Projection writes through storage abstractions rather than SQL directly:
 
-Handlers mirror the official subgraph mappings:
+- Current entities: `accounts`, `domains`, `registrations`, `wrapped_domains`, `resolvers`.
+- Append-only event tables for every decoded event type.
+- `entity_changes` markers.
+- Snapshot writes are performed by the storage change buffer from dirty projected entities.
 
-- Registry events create/update domains, ownership, resolver links, TTL, and subdomain relationships.
-- Registrar/controller events update registrations and preserve registration lifecycle history.
-- Wrapper events update wrapped ownership, fuses, expiry, and wrapped-domain history.
-- Resolver events update resolver records and append resolver event history.
+## Main Files
 
-The dispatcher is the only public event application entrypoint. That keeps event ordering and future transaction-level behavior centralized.
+- `src/handlers/dispatcher.rs`: routes `EnsEvent` variants to specific handlers.
+- `src/handlers/registry.rs`: registry/domain ownership, resolver, TTL, and transfer projections.
+- `src/handlers/registrar.rs`: registration, renewal, and registrar transfer projections.
+- `src/handlers/wrapper.rs`: name wrapper projections.
+- `src/handlers/resolver.rs`: resolver record projections.
+- `src/support.rs`: common ID, account/domain creation, and helper logic.
+- `src/error.rs`: projection error type.
+- `src/lib.rs`: public projection API.
 
-## Testing Approach
+## Summary
 
-Projection tests should use synthetic decoded events and an isolated Postgres database. For each event family, assert both immutable event rows and current entity rows. Regression tests should include official-subgraph fixtures for edge cases such as unknown labels, wrapped expiries, resolver multicoin records, and ownership transfers.
+`projection` contains the domain rules of the indexer. If official-subgraph behavior changes or a compatibility gap appears in projected data, this is the first crate to inspect.
+
+## Implemented
+
+- Registry, registrar, wrapper, and resolver event handlers.
+- Current-state updates for all main ENS entities.
+- Append-only event row construction.
+- Account/domain/resolver create-if-missing behavior.
+- Entity change markers for snapshot-backed historical reads.
+- Tombstones for wrapped-domain deletion semantics.
+- ID and name helper tests through shared utilities.
+
+## Future Improvements
+
+- Add dense fixture tests per event family using known mainnet receipts.
+- Add official/local differential projection tests for representative domains.
+- Audit edge cases around unknown labels, resolver replacement, wrapper unwrap/re-wrap, and same-block repeated mutations.
+- Add structured projection trace output for debugging one entity across a range.

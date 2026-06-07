@@ -7,10 +7,7 @@ use alloy_primitives::Address;
 use contracts::{EnsEvent, decode_fixed_source_log};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    archive::{manifest::load_manifest, read_range_entry},
-    sources::LogSource,
-};
+use crate::sources::LogSource;
 
 const RESOLVER_CACHE_VERSION: u32 = 1;
 const RESOLVER_CACHE_FILE: &str = "resolvers.json";
@@ -21,14 +18,6 @@ struct ResolverCache {
     chain_id: u64,
     updated_to_block: u64,
     addresses: Vec<Address>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ResolverCacheStatus {
-    pub chain_id: u64,
-    pub updated_to_block: u64,
-    pub addresses: usize,
-    pub path: PathBuf,
 }
 
 pub(crate) fn load_resolver_cache(
@@ -68,43 +57,6 @@ pub(crate) fn write_resolver_cache(
     std::fs::write(&tmp_path, bytes)?;
     std::fs::rename(&tmp_path, &path)?;
     Ok(())
-}
-
-pub fn rebuild_resolver_cache(
-    dir: &Path,
-    expected_chain_id: u64,
-    from_block: Option<u64>,
-    to_block: Option<u64>,
-) -> anyhow::Result<ResolverCacheStatus> {
-    let mut addresses = BTreeSet::new();
-    let mut updated_to_block = None;
-    let mut ranges = load_manifest(dir)?
-        .ranges
-        .into_iter()
-        .filter(|range| {
-            from_block.is_none_or(|from| range.to_block >= from)
-                && to_block.is_none_or(|to| range.from_block <= to)
-        })
-        .collect::<Vec<_>>();
-
-    ranges.sort_by_key(|range| range.from_block);
-    for range in ranges {
-        let archived = read_range_entry(dir, expected_chain_id, &range)?;
-        for (source, log) in archived.into_parts().0 {
-            add_resolver_from_log(&mut addresses, source, &log)?;
-        }
-        updated_to_block = Some(range.to_block);
-    }
-
-    let updated_to_block =
-        updated_to_block.ok_or_else(|| anyhow::anyhow!("archive contains no matching ranges"))?;
-    write_resolver_cache(dir, expected_chain_id, updated_to_block, &addresses)?;
-    Ok(ResolverCacheStatus {
-        chain_id: expected_chain_id,
-        updated_to_block,
-        addresses: addresses.len(),
-        path: resolver_cache_path(dir),
-    })
 }
 
 pub(crate) fn add_resolver_from_log(

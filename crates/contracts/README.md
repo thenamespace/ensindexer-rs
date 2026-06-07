@@ -1,32 +1,65 @@
 # contracts
 
-Alloy ABI and event decoding crate.
+The `contracts` crate owns Ethereum ABI knowledge for the ENS indexer. It defines the indexed contract/event surface and converts Alloy logs into strongly typed ENS events used by projection.
 
-## Responsibility
+## Flow
 
-`contracts` defines ENS event bindings and decodes raw Alloy logs into a unified `EnsEvent` enum consumed by the projection layer.
+```mermaid
+sequenceDiagram
+    participant Ingest as ingest decode
+    participant Contracts as contracts crate
+    participant ABI as ABI/topic matchers
+    participant Projection as projection crate
 
-## Modules
+    Ingest->>Contracts: decode source + raw log
+    Contracts->>ABI: match address family and topic0
+    ABI-->>Contracts: typed event payload
+    Contracts-->>Ingest: EnsEvent
+    Ingest->>Projection: dispatch event with block metadata
+```
 
-- `abi`: `alloy::sol!` event declarations for registry, registrar, wrapper, controller, and resolver events.
-- `events`: fixed-source and resolver wildcard log decoding.
-- `model`: decoded event enum, source identifiers, and decode errors.
+## Indexed Event Families
 
-## Architecture Notes
+- ENS registry: ownership, resolver, TTL, and transfer-style domain events.
+- ETH registrar controller/base registrar: registrations, renewals, and transfers.
+- Name wrapper: wrap, unwrap, fuse, expiry, and owner transfer events.
+- Public resolver and resolver-compatible contracts: address records, multicoin records, names, ABI, pubkey, text, contenthash, interface, authorisation, and version events.
 
-This crate intentionally contains event-only ABI snippets instead of full contract wrappers. That keeps decoding explicit and lightweight while still using production Alloy event types and topic signatures. Resolver logs are decoded by topic without a fixed address filter, matching the official subgraph wildcard resolver source.
+## Projection Awareness
 
-## Boundary Rules
+This crate stops at decoding. It preserves enough typed data for `projection` to build official subgraph entities and event rows. It also separates fixed-source logs from dynamically discovered resolver logs so `ingest` can keep resolver discovery complete during archive and live indexing.
 
-- This crate owns ABI declarations, topic matching, and raw-log-to-event decoding.
-- This crate should not project events into database state.
-- This crate should not fetch logs from RPC; ingestion provides raw logs and metadata.
-- Decoded event structs should preserve enough raw values for projection to reproduce official subgraph IDs and entity fields.
+## Storage Shape Used
 
-## Indexed Sources
+No database access is performed here. Event types map one-to-one or many-to-one into storage inserts later:
 
-Fixed-source decoding covers ENS registry, old registry, base registrar, ETH registrar controllers, name wrapper, and reverse registrar style contracts as the project adds them. Resolver event decoding is wildcard-style: any log with a supported resolver topic can be decoded even when the resolver address is dynamic.
+- Registry events feed domain event tables and current `domains`.
+- Registrar events feed registration event tables and `registrations`.
+- Wrapper events feed wrapper event tables and `wrapped_domains`.
+- Resolver events feed resolver event tables and current `resolvers`.
 
-## Testing Approach
+## Main Files
 
-Use topic-level unit tests for every ABI event signature and decode tests with captured mainnet logs. When adding a new event, add tests for both successful decode and ignored-topic behavior so unsupported logs do not accidentally become projection inputs.
+- `src/abi.rs`: ABI bindings and common decode helpers.
+- `src/events.rs` and `src/events/*`: event enum definitions, fixed-source decoding, resolver decoding, shared event helpers, and topic mapping.
+- `src/model.rs`: shared decoded model types.
+- `src/lib.rs`: public exports.
+
+## Summary
+
+`contracts` is the typed boundary between raw EVM logs and the rest of the Rust indexer. Keeping ABI logic here prevents projection and ingestion code from depending on topic literals directly.
+
+## Implemented
+
+- Alloy-based log decoding.
+- Typed ENS event enum covering registry, registrar, wrapper, and resolver events.
+- Topic-based event identification.
+- Fixed-source and resolver-source decode paths.
+- Tests for important helper behavior through downstream projection/ingest paths.
+
+## Future Improvements
+
+- Add ABI conformance tests against known transaction receipts from mainnet.
+- Add generated ABI metadata documentation for every event signature.
+- Add decode metrics by event type and unknown topic.
+- Add explicit support for any additional resolver-compatible contracts found during mainnet audits.

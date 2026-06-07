@@ -368,7 +368,7 @@ impl IngestService {
         else {
             anyhow::ensure!(
                 from_block <= first_source_block,
-                "resolver cache is missing for archive resume; run scripts/rebuild_resolver_cache_from_archive.sh before resuming from block {}",
+                "resolver cache is missing for archive resume at block {}; resume requires the resolvers.json created by archive-only, or start a fresh archive from the first ENS deployment block",
                 from_block
             );
             return Ok(BTreeSet::new());
@@ -376,7 +376,7 @@ impl IngestService {
 
         anyhow::ensure!(
             updated_to_block.saturating_add(1) >= from_block,
-            "resolver cache only covers through block {}; run scripts/rebuild_resolver_cache_from_archive.sh before resuming from block {}",
+            "resolver cache only covers through block {}; archive resume from block {} requires a resolvers.json written through the previous archived range",
             updated_to_block,
             from_block
         );

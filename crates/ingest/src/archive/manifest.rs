@@ -94,7 +94,12 @@ pub(crate) fn verify_manifest_range_checksum(
         entry.bytes,
         bytes.len()
     );
-    let range = super::decode_range_entry(entry, &bytes)?;
+    anyhow::ensure!(
+        entry.file.ends_with(".bin"),
+        "archive range {} is not a binary range file",
+        entry.file
+    );
+    let range = super::decode_range_binary(&bytes)?;
     range.validate(expected_chain_id)?;
     anyhow::ensure!(
         range.from_block == entry.from_block && range.to_block == entry.to_block,
@@ -138,7 +143,7 @@ fn build_manifest_from_ranges(dir: &Path) -> anyhow::Result<ArchiveManifest> {
         let entry = entry?;
         let path = entry.path();
         let extension = path.extension().and_then(|ext| ext.to_str());
-        if !matches!(extension, Some("bin" | "json")) {
+        if !matches!(extension, Some("bin")) {
             continue;
         }
         let bytes = std::fs::read(&path)?;
@@ -151,7 +156,7 @@ fn build_manifest_from_ranges(dir: &Path) -> anyhow::Result<ArchiveManifest> {
             bytes: bytes.len().try_into()?,
             logs: 0,
         };
-        let range = super::decode_range_entry(&entry, &bytes)?;
+        let range = super::decode_range_binary(&bytes)?;
         chain_id = Some(chain_id.unwrap_or(range.chain_id));
         ranges.push(ArchiveManifestRange {
             from_block: range.from_block,
@@ -163,17 +168,6 @@ fn build_manifest_from_ranges(dir: &Path) -> anyhow::Result<ArchiveManifest> {
         });
     }
     ranges.sort_by_key(|range| range.from_block);
-    ranges.dedup_by(|left, right| {
-        if left.from_block == right.from_block && left.to_block == right.to_block {
-            let keep_left = left.file.ends_with(".bin");
-            if !keep_left {
-                *left = right.clone();
-            }
-            true
-        } else {
-            false
-        }
-    });
     Ok(ArchiveManifest {
         version: MANIFEST_VERSION,
         chain_id: chain_id.unwrap_or_default(),

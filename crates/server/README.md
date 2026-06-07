@@ -1,29 +1,70 @@
 # server
 
-HTTP server crate for the ENS indexer API.
+The `server` crate runs the HTTP service and optional indexing tasks in one process. It uses Axum for routes, Tower middleware, `async-graphql-axum` for GraphQL execution, and the workspace crates for storage, API schema, and ingestion runtime.
 
-## Responsibility
+## Flow
 
-`server` exposes the GraphQL endpoint and operational health checks through Axum and Tower middleware. It can also run the ingest service in the same process when configured.
+```mermaid
+sequenceDiagram
+    participant CLI as cli serve
+    participant Server as server crate
+    participant API as api schema
+    participant Ingest as ingest tasks
+    participant Client
 
-## Modules
+    CLI->>Server: serve(AppConfig, Storage)
+    Server->>API: build GraphQL schema
+    alt ENABLE_BACKFILL=true
+        Server->>Ingest: spawn configured backfill
+    end
+    alt ENABLE_LIVE_INDEXING=true
+        Server->>Ingest: spawn live indexing
+    end
+    Client->>Server: /health, /status, /graphql, /subgraph
+    Server-->>Client: health/status/playground/GraphQL JSON
+```
 
-- `http`: router construction, GraphQL request handling, Apollo Sandbox HTML, health checks, and middleware stack.
-- `runtime`: process orchestration for HTTP-only and unified HTTP+indexer modes.
+## Runtime Behavior
 
-## Architecture Notes
+`serve` always starts:
 
-The server receives a preconfigured `Storage` handle and builds the `api` schema from it. `/graphql` accepts POST GraphQL requests and always serves Apollo Sandbox on GET in both dev and prod. `/healthz` is a lightweight liveness check, and `/readyz` verifies database connectivity. Tower layers provide compression, permissive CORS for local/API clients, timeout handling, and request tracing.
+- Health/status routes.
+- GraphQL API endpoint.
+- Apollo Sandbox playground in both dev and production.
 
-`ENABLE_BACKFILL=true` starts a startup backfill beside the HTTP server, and `ENABLE_LIVE_INDEXING=true` starts the live confirmed-block loop. If both toggles are enabled, the process runs the configured backfill first and then enters live indexing. `BACKFILL_SOURCE=rpc|hypersync|raw` controls startup backfill and CLI backfill behavior. `INDEXING_SOURCE=http_rpc|wss` controls live provider selection. If the background indexer returns an error, the unified service exits instead of continuing to serve stale data silently.
+Backfill and live indexing are optional and controlled only by `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING`. The transport choices come from `BACKFILL_SOURCE` and `INDEXING_SOURCE`; there is no automatic source selection.
 
-## Boundary Rules
+## Projection Awareness
 
-- This crate owns HTTP transport, middleware, and process-level task orchestration.
-- This crate should not contain GraphQL entity definitions, SQL, projection handlers, or RPC ingestion logic.
-- Operational endpoints should stay cheap and predictable so they can be used by containers and load balancers.
-- Apollo Sandbox is always available on `GET /graphql`.
+The server does not project events directly. It spawns `ingest` tasks with cloned config/storage handles. The GraphQL API remains available while indexing catches up, which lets operators inspect partial state and `_meta` during backfill.
 
-## Testing Approach
+## Storage Shape Used
 
-Use router tests for health endpoints, GraphQL POST routing, Sandbox HTML behavior, and readiness failures. End-to-end API tests should live at the workspace level when they need seeded database state.
+The server owns a shared `Storage` handle for request resolvers and indexing tasks. API routes read from storage, while optional ingest tasks write current entities, events, snapshots, blocks, and checkpoints.
+
+## Main Files
+
+- `src/http.rs`: Axum router, GraphQL handlers, health/status routes, and Apollo Sandbox.
+- `src/runtime.rs`: optional backfill/live task startup and task supervision.
+- `src/lib.rs`: public serve entrypoint.
+
+## Summary
+
+`server` is the production process wrapper: one binary can serve GraphQL, show the playground, catch up historical data, and continue live indexing.
+
+## Implemented
+
+- Axum HTTP server.
+- `/subgraph` GraphQL endpoint.
+- Always-on `/graphql` Apollo Sandbox.
+- Health/status routes.
+- Optional serve-time backfill.
+- Optional serve-time live indexing.
+- Shared storage wiring for API and ingest.
+
+## Future Improvements
+
+- Add graceful shutdown that drains in-flight GraphQL requests and commits/aborts indexing ranges cleanly.
+- Add Prometheus/OpenTelemetry metrics.
+- Add readiness checks based on DB connectivity and indexing lag.
+- Add task failure reporting to `/status`.

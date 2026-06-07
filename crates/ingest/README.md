@@ -1,59 +1,113 @@
 # ingest
 
-Historical and live chain ingestion crate.
+The `ingest` crate moves chain data into the projection pipeline. It fetches logs and block metadata from RPC, HyperSync, WebSocket/live RPC, or binary raw archives; decodes events; applies projection handlers; writes storage batches; checkpoints progress; and maintains raw archive metadata for repeatable backfills.
 
-## Responsibility
+## Flow
 
-`ingest` fetches historical logs and block metadata from HyperSync or Ethereum RPC, decodes logs with `contracts`, applies ordered events through `projection`, and updates storage checkpoints. Live indexing still uses Ethereum RPC for head tracking and canonical parent checks.
+```mermaid
+sequenceDiagram
+    participant CLI as cli/server runtime
+    participant Ingest as IngestService
+    participant Source as RPC/HyperSync/WSS/raw .bin
+    participant Contracts as contracts
+    participant Projection as projection
+    participant Storage as storage
+    participant Archive as binary archive
 
-## Modules
+    CLI->>Ingest: backfill, archive, replay, or live
+    Ingest->>Source: fetch canonical logs and blocks
+    Source-->>Ingest: raw logs + block metadata
+    opt ARCHIVE_BACKFILLS or archive-only
+        Ingest->>Archive: write ranges/*.bin, manifest.json, resolvers.json
+    end
+    Ingest->>Contracts: decode logs by source
+    Contracts-->>Ingest: typed ENS events
+    Ingest->>Projection: apply sorted events
+    Projection->>Storage: buffered current rows, snapshots, events
+    Storage-->>Ingest: committed transaction
+    Ingest->>Storage: update source checkpoints
+```
 
-- `service`: backfill and live indexing orchestration.
-- `sources`: fixed source definitions, start blocks, and topic sets.
-- `rpc`: Alloy provider helpers for logs and block metadata.
-- `hypersync`: Envio HyperSync historical log and block metadata adapter.
-- `archive`: filesystem binary archives for replaying fetched ranges.
-- `decode`: conversion from raw logs plus metadata into projection-ready events.
+## Projection Path
 
-## Architecture Notes
+All historical fill modes share the same buffered apply path:
 
-Backfills resume from database source checkpoints, merge logs from all active sources, sort by canonical chain order, and apply decoded events deterministically. `BACKFILL_SOURCE` is explicit and strict: `rpc` uses Alloy JSON-RPC, `hypersync` uses Envio HyperSync and requires `ENVIO_API_KEY`, and `raw` replays archive files. There is no automatic source selection.
+1. Fetch or read one block range.
+2. Merge all active fixed sources and dynamic resolver sources.
+3. Sort logs by block number, transaction index, and log index.
+4. Decode each log into a typed ENS event.
+5. Dispatch the event to `projection`.
+6. Buffer current-state mutations, append-only event rows, entity changes, snapshots, and block rows.
+7. Flush current rows in dependency order, including parent-first domain writes.
+8. Flush snapshots and event rows in chunks below Postgres bind limits.
+9. Commit the range transaction and write checkpoints.
 
-When `ARCHIVE_BACKFILLS=true`, each fetched range is written to `RAW_ARCHIVE_DIR/ranges/{from}-{to}.bin` after log and block metadata fetching. A manifest records file paths, byte lengths, log counts, and SHA-256 checksums. Replay reads those range files, verifies manifest checksums when present, and runs the same decode/projection/checkpoint path as live backfill without touching RPC or HyperSync. Existing `.json` range files remain readable for migration; `archive-convert-binary` converts them to `.bin` and updates the manifest. This is intended for projection development: archive once, reset indexed state, change projection code, then replay until the output matches the official subgraph.
+Raw replay reads one `.bin` file at a time, prefetches the next file, keeps a replay-level projection cache across files, and can temporarily drop secondary query indexes before bulk replay.
 
-Raw replay prefetches one manifest range file while applying the current range and applies each range inside a single Postgres transaction with local `synchronous_commit=off`. The CLI uses a single-connection pool for raw replay so all projection statements in a range share that transaction. This keeps memory bounded by two archive files and reduces per-statement commit/fsync overhead during production replays.
+## Binary Archive Format
 
-Before raw replay starts, secondary query indexes are dropped and recreated after replay finishes. Primary keys, unique constraints, and foreign-key enforcement remain intact. This makes bulk replay substantially cheaper because Postgres does not maintain every API query index for each inserted event and snapshot row.
+Range payloads are binary-only files under `RAW_ARCHIVE_DIR/ranges/{from}-{to}.bin`. They are MessagePack-encoded `ArchivedRange` values containing:
 
-If replay fails after dropping indexes, the replay service attempts to recreate them before returning the original error. A failed process can also be recovered by rerunning migrations, because the migration index statements use `create index if not exists`.
+- chain id
+- from/to block bounds
+- ordered `(LogSource, Log)` raw logs
+- block metadata needed by `_meta`, snapshots, and reorg checks
+- source checkpoints represented by the archived range
 
-`cli archive` uses the same RPC/HyperSync fetch path but writes raw archive ranges without applying projection writes. During a continuous archive-only run it keeps resolver addresses discovered from registry events in memory, so resolver log fetching remains complete even though the database is not being projected yet. For complete historical archives, run archive-only from the first ENS source block before replaying from raw files.
+The archive root also contains:
 
-Archive-only also persists discovered resolver addresses in `resolvers.json` beside `manifest.json`. Resume loads this cache and refuses to continue if it is missing or stale for the computed resume block, because resolver log completeness depends on all previously discovered resolver addresses. `archive-resolvers` rebuilds that cache from existing range files when older archives were created before cache persistence existed.
+- `manifest.json`: range list, byte lengths, log counts, and SHA-256 checksums.
+- `resolvers.json`: discovered resolver address set through the last archived range, used to resume archive-only safely.
 
-Live indexing runs behind a configurable confirmation depth and verifies parent hashes before applying new ranges. `INDEXING_SOURCE=http_rpc` uses `ETH_RPC_URL`; `INDEXING_SOURCE=wss` uses `ETH_WS_URL`. Current reorg repair uses a coarse indexed-state reset followed by canonical rebuild.
+JSON range payloads are no longer supported. Metadata files remain JSON because they are small, human-inspectable control files.
 
-## Boundary Rules
+## Storage Shape Used
 
-- This crate owns chain IO, batching, canonical ordering, checkpoints, and live polling.
-- This crate should not expose GraphQL or know API DTOs.
-- This crate should not contain projection business logic beyond invoking the dispatcher in block/log order.
-- Chain IO should stay behind small helpers so provider behavior can be replaced or mocked in tests.
+Ingestion writes:
 
-## Indexing Flow
+- `blocks` for indexed block metadata.
+- `source_checkpoints` per fixed source and resolver source.
+- Current entities through projection: `accounts`, `domains`, `registrations`, `wrapped_domains`, `resolvers`.
+- Snapshot tables for historical `block` reads.
+- Event tables for all registry, registrar, wrapper, and resolver events.
+- `entity_changes` for `_change_block` filters and snapshot flushing.
 
-Backfill and live indexing use the same core path:
+## Main Files
 
-1. Resolve the inclusive block range to index.
-2. Build active fixed sources for that range.
-3. Fetch logs in bounded batches from HyperSync or Alloy RPC.
-4. Attach block metadata needed by projection and `_meta`.
-5. Optionally archive raw logs and block metadata for local replay.
-6. Decode logs into `contracts::EnsEvent`.
-7. Sort by block number, transaction index, log index.
-8. Apply events through `projection`.
-9. Persist block/checkpoint progress only after successful projection.
+- `src/service.rs`: `IngestService` facade.
+- `src/service/backfill.rs`: RPC/HyperSync/raw source selection, resume logic, archive-only logic, and range orchestration.
+- `src/service/apply.rs`: shared transactional buffered apply path.
+- `src/service/replay.rs`: binary archive replay, prefetch, and replay index maintenance.
+- `src/service/live.rs`: live indexing, confirmation depth, parent-hash checks, and reorg repair.
+- `src/archive.rs` and `src/archive/*`: binary range IO, manifest/checksum coverage, resolver cache, and archive models.
+- `src/rpc.rs`: Alloy RPC log and block fetching.
+- `src/hypersync.rs`: Envio HyperSync historical fetching.
+- `src/decode.rs`: source-aware decode bridge.
+- `src/sources.rs`: ENS fixed source definitions and deployment blocks.
 
-## Testing Approach
+## Summary
 
-Unit-test source selection and ordering with synthetic logs. Integration-test the 1000-block backfill path against a real RPC endpoint and local Postgres, then compare a small set of resulting GraphQL reads against the official ENS subgraph.
+`ingest` is the write-side runtime. It is designed so expensive data acquisition can be archived once, then projection logic can be changed and replayed from local binary files without spending RPC or HyperSync credits.
+
+## Implemented
+
+- Historical RPC backfill.
+- Historical HyperSync backfill.
+- Binary raw archive writing and archive-only mode.
+- Binary raw archive replay.
+- Manifest coverage inspection and checksum verification.
+- Resolver discovery cache for archive resume.
+- Shared batched projection apply path for RPC, HyperSync, and raw replay.
+- Live indexing through HTTP polling or WSS source selection.
+- Confirmation-depth handling and parent-hash reorg detection.
+- Coarse reorg repair by reset and rebuild.
+- Replay performance features: prefetch, replay-level cache, batched current/entity/event writes, block batch writes, and temporary secondary-index drop/recreate.
+
+## Future Improvements
+
+- Replace coarse reorg reset with efficient common-ancestor rollback.
+- Add reversible change payloads or snapshot-assisted rollback.
+- Add source-level retry/backoff policies and dead-letter diagnostics.
+- Add ingest metrics for logs/sec, rows/sec, lag, SQL time, archive IO, and source errors.
+- Add adaptive range sizing for dense resolver eras.
+- Add binary archive format versioning tests and migration planning before public releases.

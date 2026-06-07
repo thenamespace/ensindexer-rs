@@ -1,26 +1,72 @@
 # config
 
-Runtime configuration crate.
+The `config` crate loads runtime configuration from environment variables and converts them into typed values used by every other crate. It intentionally uses strict enums for indexing modes so production behavior is explicit.
 
-## Responsibility
+## Flow
 
-`config` loads `.env` values and exposes a typed `AppConfig` shared by the CLI, server, and ingest service.
+```mermaid
+sequenceDiagram
+    participant Runtime as cli/server
+    participant Env as .env/process env
+    participant Config as AppConfig
+    participant Crates as ingest/server/storage
 
-## Modules
+    Runtime->>Config: AppConfig::from_env()
+    Config->>Env: read required and optional keys
+    Config->>Config: parse URLs, bools, enums, paths
+    Config-->>Runtime: typed AppConfig
+    Runtime-->>Crates: pass cloned config
+```
 
-- `env`: `.env` loading, required and optional environment parsing, and config errors.
+## Key Environment Variables
 
-## Architecture Notes
+- `DATABASE_URL`: Postgres connection string.
+- `ETH_RPC_URL`: HTTP JSON-RPC endpoint.
+- `ETH_WS_URL`: WebSocket endpoint for `INDEXING_SOURCE=wss`.
+- `ENVIO_API_KEY`: HyperSync API key for `BACKFILL_SOURCE=hypersync`.
+- `HYPERSYNC_URL`: HyperSync endpoint, defaulting to Ethereum mainnet HyperSync.
+- `ENABLE_BACKFILL`: serve-time historical indexing toggle.
+- `ENABLE_LIVE_INDEXING`: serve-time live indexing toggle.
+- `BACKFILL_SOURCE`: strict enum `rpc|hypersync|raw`.
+- `INDEXING_SOURCE`: strict enum `http_rpc|wss`.
+- `ARCHIVE_BACKFILLS`: write fetched historical ranges into the raw archive.
+- `RAW_ARCHIVE_DIR`: archive root containing `manifest.json`, `resolvers.json`, and `ranges/*.bin`.
+- `CHAIN_ID`: expected chain id, default `1`.
+- `BIND_ADDRESS`: HTTP bind address.
+- `INDEXER_CONFIRMATION_DEPTH`: live indexing confirmation buffer.
+- `BACKFILL_BATCH_BLOCKS`: historical range size.
+- `LIVE_POLL_SECONDS`: HTTP polling interval for live indexing.
 
-Configuration is parsed once at command startup and then passed into dependent crates. `DATABASE_URL` and `ETH_RPC_URL` are required. `ETH_WS_URL` is required only when `INDEXING_SOURCE=wss`. Historical backfill transport is controlled by strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no automatic HyperSync fallback. `HYPERSYNC_URL` defaults to the Ethereum mainnet endpoint and `ENVIO_API_KEY` is required only for HyperSync. Serve-time work is controlled by `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING`. Historical backfill ranges are resume-only: RPC/HyperSync/raw replay start from database source checkpoints, while archive-only fetching starts after the last archived range. `ARCHIVE_BACKFILLS=true` plus `RAW_ARCHIVE_DIR` writes filesystem raw-log archives for replaying projection changes without chain IO. Apollo Sandbox is always served by the HTTP server.
+There are no `BACKFILL_FROM` or `BACKFILL_TO` variables. Historical backfill resumes from database checkpoints, raw replay resumes from archive/database state, and archive-only resumes from the last archived range.
 
-## Boundary Rules
+## Projection Awareness
 
-- This crate owns environment parsing and default values only.
-- This crate should not create database pools, providers, routers, or indexer services.
-- Configuration values should be typed before leaving this crate.
-- New required variables must be added to `.env.example` and documented in the root README.
+Configuration controls how projection is reached but does not project data. `BACKFILL_SOURCE` selects the historical transport, `ARCHIVE_BACKFILLS` decides whether fetched data is persisted as raw binary ranges, and `ENABLE_*` toggles decide which services `serve` starts.
 
-## Testing Approach
+## Storage Shape Used
 
-Use environment-isolated unit tests for required variables, defaults, invalid numeric values, and backward-compatible aliases. Avoid tests that rely on the developer's real `.env`.
+This crate does not access storage. It supplies the database URL and operational knobs that storage and ingest use.
+
+## Main Files
+
+- `src/env.rs`: `AppConfig`, strict enums, env parsing, URL parsing, and error types.
+- `src/lib.rs`: public exports.
+
+## Summary
+
+`config` is the contract for running the indexer. It keeps production behavior descriptive, strict, and easy to audit from `.env`.
+
+## Implemented
+
+- Required database and RPC config.
+- Optional WebSocket, HyperSync, archive, and bind settings.
+- Strict backfill and live indexing source enums.
+- Serve-time backfill/live toggles.
+- Default values for mainnet, confirmation depth, batch size, and polling.
+
+## Future Improvements
+
+- Add config validation for incompatible combinations, such as `BACKFILL_SOURCE=raw` without `RAW_ARCHIVE_DIR`.
+- Add redacted config diagnostics for startup logs.
+- Add per-source timeout/retry settings.
+- Add environment profiles for dev, staging, and production.

@@ -1,26 +1,47 @@
 # types
 
-Shared ENS primitive and helper crate.
+The `types` crate contains small shared domain helpers that are useful across contracts, projection, ingest, API, and storage without pulling those crates into each other.
 
-## Responsibility
+## Flow
 
-`types` contains cross-crate primitives for IDs, log context, ENS name handling, scalar formatting, and shared chain constants.
+```mermaid
+sequenceDiagram
+    participant Contracts as contracts
+    participant Projection as projection
+    participant Ingest as ingest
+    participant API as api
+    participant Types as types
 
-## Modules
+    Contracts->>Types: shared byte/address/name helpers
+    Projection->>Types: entity id and scalar helpers
+    Ingest->>Types: block/log helper types
+    API->>Types: output normalization helpers
+```
 
-- `core`: constants, `LogContext`, namehash/labelhash helpers, event ID helpers, resolver ID formatting, DNS name decoding, and label validation.
+## Projection Awareness
 
-## Architecture Notes
+Shared helpers here support projection ID and value normalization, but this crate does not decide how ENS events mutate entities. It stays dependency-light to avoid cycles.
 
-This crate stays dependency-light and is safe for all other crates to depend on. It centralizes compatibility-sensitive formatting such as lowercase `0x` hex IDs, official event ID shapes, wrapped batch event IDs, and bracketed unknown labels.
+## Storage Shape Used
 
-## Boundary Rules
+No storage access occurs here. Values produced by this crate may become entity IDs, event IDs, or normalized strings stored by `storage`.
 
-- This crate should contain pure helpers and small value types only.
-- This crate should not depend on storage, API, server, ingest, projection, or config.
-- Public helpers should be deterministic and easy to test without external services.
-- Formatting helpers should document whether they match Ethereum, ENS, or Graph Node conventions.
+## Main Files
 
-## Testing Approach
+- `src/core.rs`: shared primitives and helper functions.
+- `src/lib.rs`: public exports.
 
-Unit-test every compatibility-sensitive helper: namehash, labelhash, DNS wire-name decoding, unknown label formatting, hex casing, event IDs, and resolver IDs. These tests protect downstream crates from subtle schema drift.
+## Summary
+
+`types` is the low-level shared vocabulary for the workspace. It should stay small and stable.
+
+## Implemented
+
+- Shared core helper module.
+- Workspace-level exports for cross-crate use.
+
+## Future Improvements
+
+- Move additional duplicated primitive helpers here only when multiple crates genuinely need them.
+- Add property tests for encoding/normalization helpers as the shared surface grows.
+- Keep this crate free of storage, API, and transport dependencies.

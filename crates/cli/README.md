@@ -1,58 +1,76 @@
 # cli
 
-Operational command-line entrypoint for the ENS indexer.
+The `cli` crate is the operator entrypoint for the indexer. It wires configuration, migrations, server startup, backfills, archive replay, live indexing, schema checks, and reference-subgraph comparisons into explicit commands.
 
-## Responsibility
+## Flow
 
-`cli` wires configuration, storage, migrations, ingest jobs, and the HTTP server into commands suitable for local development and production jobs.
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as cli command
+    participant Config as config crate
+    participant Storage as storage crate
+    participant Ingest as ingest crate
+    participant Server as server crate
+
+    User->>CLI: cargo run -p cli -- serve
+    CLI->>Config: load .env and strict enums
+    CLI->>Storage: connect and run migrations
+    CLI->>Server: start HTTP API and playground
+    Server->>Ingest: optional backfill/live tasks from env toggles
+```
 
 ## Commands
 
-- `serve`: run migrations and start the Axum GraphQL API.
-- `migrate`: apply SQLx migrations.
-- `backfill`: resume historical indexing from database source checkpoints to latest.
-- `archive [--archive-dir <dir>]`: resume archive-only fetching from the last archived block to latest.
-- `archive-resolvers [--archive-dir <dir>]`: rebuild `resolvers.json` from existing raw archive range files.
-- `archive-convert-binary [--archive-dir <dir>]`: convert existing JSON archive ranges to the binary archive format and update the manifest.
-- `replay [--archive-dir <dir>]`: replay archive ranges from database source checkpoints to the last archived block without chain IO.
-- `archive-status [--archive-dir <dir>] [--verify]`: report archive coverage gaps from the manifest, optionally verifying range checksums.
-- `index`: run the confirmation-depth live indexing loop.
-- `status`: print latest stored block and source checkpoints.
-- `reset --yes`: clear indexed projection/event/checkpoint state for rebuilds.
-- `compare --query-file <file>`: run one GraphQL query against the local API and a reference subgraph, then diff the JSON response.
-- `schema-local [--output <file>]`: print or write the local `async-graphql` SDL.
-- `schema-diff [--output <file>]`: fetch the official subgraph introspection schema and fail if local query fields, query args, input fields, enum values, or their owning types are missing.
+- `serve`: always starts health routes, GraphQL API, and Apollo Sandbox. Optional backfill/live indexing are controlled by env toggles.
+- `migrate`: runs SQLx migrations.
+- `status`: prints source checkpoints and indexed block state.
+- `reset --yes`: deletes indexed tables for dev rebuilds.
+- `backfill`: runs the configured historical source: `BACKFILL_SOURCE=rpc|hypersync|raw`.
+- `archive [--archive-dir <dir>]`: archive-only mode. It fetches raw logs/blocks to `.bin` range files without projecting to Postgres.
+- `replay [--archive-dir <dir>]`: replays binary archive ranges into Postgres.
+- `archive-status [--archive-dir <dir>] [--verify]`: reports binary archive coverage and optionally verifies checksums.
+- `index`: runs live indexing only.
+- `compare`: runs one GraphQL query against local and official subgraph endpoints and diffs JSON responses.
+- `schema-local`: prints local GraphQL SDL.
+- `schema-diff`: introspects the official subgraph and checks root fields, args, inputs, and enums.
 
-## Architecture Notes
+## Projection Awareness
 
-The binary keeps `main.rs` small and delegates command execution to `app.rs`. Commands share the same `.env` configuration path as the server and ingest crates, so operational behavior does not diverge between local and production runs.
+The CLI does not project events itself. It chooses which runtime path to invoke:
 
-The CLI builds Tokio explicitly instead of using `#[tokio::main]` so worker threads have enough stack for the large async-graphql ENS compatibility schema. This avoids request-time stack overflows during GraphQL validation/execution while keeping runtime behavior uniform for `serve`, `backfill`, and live indexing commands.
+- `backfill` uses `ingest` to fetch, decode, project, batch-flush, and checkpoint.
+- `archive` uses `ingest` to fetch raw data and write binary archive ranges plus metadata.
+- `replay` uses `ingest` to read binary archive ranges and run the same projection apply path without RPC or HyperSync credits.
+- `serve` delegates the always-on API to `server` and optional indexing to `server::runtime`.
 
-Raw archive replay uses a single-connection storage pool. That allows `ingest` to wrap each range file in one Postgres transaction while preserving the existing repository APIs.
+## Storage Shape Used
 
-`compare` is intentionally network-only and does not open the database. It reads `SUBGRAPH_URL` and optional `SUBGRAPH_AUTH_TOKEN` from `.env` or CLI flags, posts the same query and optional variables JSON to both endpoints, and fails with both pretty-printed responses when they differ. Use `--operation-name` for named query documents; the request body and user agent intentionally match the official Graph gateway's documented curl shape.
+The CLI opens Postgres through `storage`, runs migrations, and then delegates table reads/writes to the selected subsystem. It directly prints checkpoint and archive status but does not own SQL table definitions.
 
-`schema-local` and `schema-diff` are schema-contract checks. `schema-diff` uses the same `.env` gateway configuration as `compare`, writes the official introspection JSON when `--output` is provided, and compares Graph Node compatibility names before any data is indexed. It intentionally exits non-zero while required official query fields, arguments, filter fields, or order enum values are missing.
+## Main Files
 
-Example against the official ENS subgraph gateway:
+- `src/app.rs`: Clap command definitions and command dispatch.
+- `src/compare.rs`: local-vs-official GraphQL comparison helper.
+- `src/schema.rs` and `src/schema/*`: local SDL generation, official introspection, and schema compatibility diffing.
+- `src/main.rs`: Tokio entrypoint.
 
-```bash
-cargo run -p cli -- compare \
-  --query-file fixtures/domains.graphql \
-  --operation-name Subgraphs
+## Summary
 
-cargo run -p cli -- schema-diff \
-  --output target/official-subgraph-schema.json
-```
+`cli` is the operational shell around the workspace. It keeps source selection explicit, makes destructive actions opt-in, and provides compatibility tooling for subgraph parity work.
 
-## Boundary Rules
+## Implemented
 
-- This crate owns process-level orchestration and command UX.
-- This crate should not duplicate repository SQL, GraphQL schema definitions, or projection event semantics.
-- Long-running commands should emit useful tracing spans and return structured errors.
-- Destructive commands must require an explicit confirmation flag.
+- Unified `serve` command with fixed API/playground and optional indexing toggles.
+- Strict historical source selection: `rpc`, `hypersync`, or `raw`.
+- Strict live source selection: `http_rpc` or `wss`.
+- Binary archive-only, archive replay, and archive inspection commands.
+- Schema diff and data compare commands for official subgraph compatibility.
+- Dev helpers for migrations, status, reset, and live indexing.
 
-## Testing Approach
+## Future Improvements
 
-Prefer integration-style command tests for argument parsing and command wiring. For commands that require Postgres or Ethereum RPC, test the inner service crates directly and keep CLI tests focused on selecting the correct operation.
+- Add structured progress output formats for automation.
+- Add richer status output for lag, ranges, archive coverage, and source health.
+- Add safety prompts for reset in interactive terminals while keeping `--yes` for scripts.
+- Add benchmark commands for replay throughput and GraphQL query latency.

@@ -9,26 +9,6 @@ pub struct BlocksRepo<'a> {
 }
 
 impl BlocksRepo<'_> {
-    pub async fn upsert(&self, block: BlockInsert) -> StorageResult<()> {
-        sqlx::query(
-            r#"
-            insert into blocks (number, hash, parent_hash, timestamp)
-            values ($1, $2, $3, $4)
-            on conflict (number) do update
-            set hash = excluded.hash,
-                parent_hash = excluded.parent_hash,
-                timestamp = excluded.timestamp
-            "#,
-        )
-        .bind(block.number)
-        .bind(block.hash)
-        .bind(block.parent_hash)
-        .bind(block.timestamp)
-        .execute(self.pool)
-        .await?;
-        Ok(())
-    }
-
     pub async fn upsert_many(&self, blocks: Vec<BlockInsert>) -> StorageResult<()> {
         for chunk in blocks.chunks(BLOCK_UPSERT_CHUNK_ROWS) {
             let mut query = QueryBuilder::<Postgres>::new(

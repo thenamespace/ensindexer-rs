@@ -39,14 +39,6 @@ enum Command {
         #[arg(long)]
         verify: bool,
     },
-    ArchiveResolvers {
-        #[arg(long)]
-        archive_dir: Option<PathBuf>,
-    },
-    ArchiveConvertBinary {
-        #[arg(long)]
-        archive_dir: Option<PathBuf>,
-    },
     Index,
     Compare {
         #[arg(long, default_value = "http://127.0.0.1:8080/subgraph")]
@@ -147,28 +139,6 @@ pub async fn run() -> anyhow::Result<()> {
             let status =
                 ingest::inspect_archive(&archive_dir, config.chain_id, None, None, verify)?;
             print_archive_status(status);
-        }
-        Command::ArchiveResolvers { archive_dir } => {
-            let config = AppConfig::from_env()?;
-            let archive_dir = archive_dir
-                .or(config.raw_archive_dir)
-                .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required"))?;
-            let status = ingest::rebuild_resolver_cache(&archive_dir, config.chain_id, None, None)?;
-            println!("resolver cache path: {}", status.path.display());
-            println!("resolver cache chain_id: {}", status.chain_id);
-            println!(
-                "resolver cache updated_to_block: {}",
-                status.updated_to_block
-            );
-            println!("resolver cache addresses: {}", status.addresses);
-        }
-        Command::ArchiveConvertBinary { archive_dir } => {
-            let config = AppConfig::from_env()?;
-            let archive_dir = archive_dir
-                .or(config.raw_archive_dir)
-                .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required"))?;
-            let converted = ingest::convert_json_archive_to_binary(&archive_dir, config.chain_id)?;
-            println!("converted archive ranges: {converted}");
         }
         Command::Index => {
             let config = AppConfig::from_env()?;

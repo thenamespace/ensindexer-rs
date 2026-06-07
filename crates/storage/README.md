@@ -1,39 +1,117 @@
 # storage
 
-Postgres persistence and query crate.
+The `storage` crate owns Postgres persistence, SQL query building, repositories, batch write buffers, migrations, maintenance operations, and snapshot support. It is the only crate that should know table names and SQL details.
 
-## Responsibility
+## Flow
 
-`storage` owns database connectivity, migrations, row models, insert DTOs, repository methods, query filters, and maintenance operations.
+```mermaid
+sequenceDiagram
+    participant API as api resolvers
+    participant Ingest as ingest/projection
+    participant Storage as storage repos
+    participant Buffers as entity/event/change buffers
+    participant Pg as Postgres
 
-## Modules
+    API->>Storage: read entities/events with filters/block args
+    Storage->>Pg: SELECT with joins/subqueries/snapshots
+    Pg-->>Storage: rows
+    Storage-->>API: models
 
-- `store`: SQLx pool wrapper and repository factories.
-- `models`: SQL row DTOs.
-- `inserts`: typed projection insert/update DTOs.
-- `filters`: storage-level filter and order types.
-- `query`: shared SQL query-builder helpers and order mappings.
-- `repositories`: entity-specific repositories for accounts, domains, registrations, wrapped domains, resolvers, events, blocks, and checkpoints.
-- `maintenance`: destructive operational maintenance helpers such as indexed-state reset.
-- `error`: storage error type.
+    Ingest->>Buffers: buffer projected current rows/events/changes
+    Buffers->>Storage: flush batches in transaction
+    Storage->>Pg: INSERT/UPSERT chunks
+    Pg-->>Storage: committed range
+```
 
-## Architecture Notes
+## Tables And Relationships
 
-Projection code should call repository methods instead of hand-writing SQL. Query construction uses typed enum-to-SQL mappings and parameterized `sqlx::QueryBuilder` fragments. Event history is stored in concrete event tables, while mutable entity tables hold current ENS state. Migrations are embedded with SQLx and applied by the CLI/server startup path.
+Current entities:
 
-## Boundary Rules
+- `accounts(id)`.
+- `domains(id, name, label_name, labelhash, parent_id, owner_id, registrant_id, wrapped_owner_id, resolver_id, resolved_address_id, expiry_date, ttl, subdomain_count, is_migrated, created_at)`.
+- `registrations(id, domain_id, registrant_id, registration_date, expiry_date, cost)`.
+- `wrapped_domains(id, domain_id, owner_id, expiry_date, fuses, deleted)`.
+- `resolvers(id, domain_id, address, addr_id, content_hash, texts, coin_types, record fields)`.
 
-- This crate owns every table shape, migration, query DTO, and persistence-side filter type.
-- This crate should not depend on GraphQL crates, Axum, Ethereum RPC clients, or contract ABI bindings.
-- Repositories expose intent-level methods such as upserting domains, inserting events, reading relation pages, and updating checkpoints.
-- SQL should remain parameterized through SQLx. Dynamic query builders must map enums to static column names instead of accepting raw client strings.
+Operational tables:
 
-## Data Model Strategy
+- `blocks(number, hash, parent_hash, timestamp)`.
+- `source_checkpoints(source, block_number, block_hash)`.
+- `entity_changes(entity_type, entity_id, block_number)`.
 
-Mutable ENS state lives in current-state entity tables. Immutable history lives in event tables with IDs shaped like the official subgraph. This mirrors Graph Node projections: handlers update current rows as events arrive, while also preserving event records for chronological queries and relationship fields.
+Snapshot tables:
 
-The current implementation intentionally starts with current-state reads. `_change_block` predicates use projection-maintained `entity_changes` plus event `block_number` columns. Historical block reads still require snapshot tables or versioned rows, and should be added as an explicit storage milestone rather than hidden inside API code.
+- `account_snapshots`.
+- `domain_snapshots`.
+- `registration_snapshots`.
+- `wrapped_domain_snapshots`.
+- `resolver_snapshots`.
 
-## Testing Approach
+Event tables:
 
-Use migration smoke tests against Postgres, repository tests with small seeded fixtures, and SQL-shape tests for every filter/order branch that can be reached from GraphQL. Backfill tests should verify both event table inserts and current entity projections for a bounded block range.
+- Registry/domain: `transfer_events`, `new_owner_events`, `new_resolver_events`, `new_ttl_events`.
+- Registrar/registration: `name_registered_events`, `name_renewed_events`, `name_transferred_events`.
+- Wrapper: `wrapped_transfer_events`, `name_wrapped_events`, `name_unwrapped_events`, `fuses_set_events`, `expiry_extended_events`.
+- Resolver: `addr_changed_events`, `multicoin_addr_changed_events`, `name_changed_events`, `abi_changed_events`, `pubkey_changed_events`, `text_changed_events`, `contenthash_changed_events`, `interface_changed_events`, `authorisation_changed_events`, `version_changed_events`.
+
+Important relationships include domain parent self-reference, domain owner/registrant/wrapped owner account links, domain resolver link, resolver address account link, registration domain/registrant links, and wrapped-domain domain/owner links.
+
+## Projection Support
+
+Storage receives projected writes from `projection` through an ingest transaction. It supports high-throughput replay by batching:
+
+- current-state upserts through `EntityCache`
+- append-only events through `EventBuffer`
+- block metadata through `BlocksRepo::upsert_many`
+- entity changes and snapshots through `ChangeBuffer`
+
+Dirty current rows are flushed before snapshots, with domains flushed parent-first to satisfy the `domains.parent_id` foreign key. Replay maintenance can drop and recreate secondary query indexes around bulk raw archive replay.
+
+## Query Support
+
+Storage query builders map official GraphQL filters into SQL:
+
+- scalar predicates
+- `and`/`or` composition
+- relation predicates with trailing-underscore filters
+- derived collection subqueries
+- `_change_block`
+- ordering by scalar and relationship fields
+- historical snapshot reads for `block` arguments
+- event-interface filtering across concrete event tables
+
+## Main Files
+
+- `src/store.rs`: `Storage` connection and repository accessors.
+- `src/repositories/*`: entity, event, block, checkpoint, snapshot, and maintenance repositories.
+- `src/query/*`: SQL predicate, relation, scalar, array, and select builders.
+- `src/filters/*`: storage-level filter models consumed by API conversions.
+- `src/entity_cache.rs`: current-state projection cache and dirty flushes.
+- `src/event_buffer.rs`: append-only event batch buffer.
+- `src/change_buffer.rs`: entity change and snapshot buffer.
+- `src/maintenance.rs` and `src/maintenance/*`: reset and replay index maintenance.
+- `src/models.rs` and `src/inserts.rs`: row and insert DTOs.
+
+## Summary
+
+`storage` is both the persistence layer and the SQL compatibility layer. Its responsibilities are correctness of table shape, historical reads, official filter semantics, and write throughput.
+
+## Implemented
+
+- SQLx Postgres migrations and repositories.
+- Current entity, event, block, checkpoint, change, and snapshot tables.
+- Batched current-state, event, block, and snapshot writes.
+- Historical snapshot reads for mutable entities.
+- Event clamping by historical block.
+- Official filter/order SQL generation for entities and events.
+- Derived relationship filters and event-interface filters.
+- Replay index drop/recreate maintenance.
+- Query-builder tests for scalar, relation, order, and event predicates.
+
+## Future Improvements
+
+- Add query plan regression tests for expensive GraphQL filters.
+- Add more indexes based on full mainnet workload profiling.
+- Add partitioning or hypertable-style strategies for very large event tables if Postgres plans degrade.
+- Add common-ancestor rollback primitives.
+- Add migration checks that compare DB schema against generated documentation.

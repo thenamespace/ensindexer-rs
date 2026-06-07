@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the binary archive, resumable range, replay prefetch, and replay-level cache slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the binary-only archive cleanup and crate README refresh. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -25,10 +25,11 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical ingestion can fetch from HyperSync when configured.
 - [x] Raw log archive writing is supported.
 - [x] Archive-only fetching is supported through `cli archive`, allowing raw range files to be stored without projection writes.
-- [x] Archive-only resume persists discovered resolver addresses in `resolvers.json` and can rebuild that cache from existing archive files.
+- [x] Archive-only resume persists discovered resolver addresses in `resolvers.json`.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
-- [x] New raw archives are written in binary `.bin` format; legacy `.json` ranges remain readable for migration.
-- [x] CLI includes `archive-convert-binary` to convert existing JSON archive ranges to binary and update the manifest.
+- [x] Raw archive ranges are binary-only `.bin` files; legacy archive JSON range parsing and conversion helpers were removed after migration.
+- [x] `.raw-archive-full/ranges` contains only binary range files after deleting migrated JSON range payloads.
+- [x] Removed temporary archive conversion and resolver-cache rebuild CLI/Make/script helpers.
 - [x] Raw replay prefetches the next archive range while applying the current range.
 - [x] Raw replay keeps a replay-level current-state projection cache across range files.
 - [x] Backfill and replay ranges are resume-only; RPC/HyperSync/raw replay start from source checkpoints and archive-only starts after the last archived range.

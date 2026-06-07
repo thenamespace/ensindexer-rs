@@ -11,7 +11,7 @@ The implementation plan and official-subgraph research live in [docs/README.md](
 - `crates/config`: `.env` based runtime configuration.
 - `crates/storage`: SQLx pool, migrations, repository/query foundations.
 - `crates/projection`: deterministic projection dispatcher and handler modules.
-- `crates/ingest`: backfill/live indexing service skeleton.
+- `crates/ingest`: backfill, archive, replay, and live indexing service.
 - `crates/api`: async-graphql schema and resolvers.
 - `crates/server`: Axum HTTP server.
 - `crates/cli`: operational CLI entrypoint.
@@ -29,16 +29,16 @@ Configuration is loaded from `.env` via `config`.
 Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox. The Sandbox is always available in dev and prod.
 `make serve` starts the GraphQL API. Set `ENABLE_BACKFILL=true` to run a startup catchup backfill in the same process, and set `ENABLE_LIVE_INDEXING=true` to keep indexing confirmed live ranges after startup. If both toggles are enabled, startup backfill runs before live indexing.
 
-`BACKFILL_SOURCE` is strict: `rpc`, `hypersync`, or `raw`. There is no automatic transport selection. `BACKFILL_FROM` and `BACKFILL_TO` are optional for serve-time backfills and `cargo run -p cli -- backfill`; omitted `BACKFILL_FROM` defaults to the earliest ENS indexed source block, omitted `BACKFILL_TO` defaults to the latest RPC block for `rpc`/`hypersync`, and raw replay can infer archive bounds.
-Set `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as JSON range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `INDEXING_SOURCE` controls live indexing and must be `http_rpc` or `wss`; `wss` requires `ETH_WS_URL`.
+`BACKFILL_SOURCE` is strict: `rpc`, `hypersync`, or `raw`. There is no automatic transport selection and there are no `BACKFILL_FROM` or `BACKFILL_TO` controls. RPC and HyperSync backfills resume from database checkpoints, archive-only resumes after the last archived range, and raw replay uses the archive bounds plus database checkpoints.
+Set `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as binary `.bin` range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `INDEXING_SOURCE` controls live indexing and must be `http_rpc` or `wss`; `wss` requires `ETH_WS_URL`.
 
 Indexer commands:
 
 ```bash
 make status
-cargo run -p cli -- backfill --from 9380380 --to 9381380
-cargo run -p cli -- archive --from 9380380 --to 9381380
-cargo run -p cli -- replay --from 9380380 --to 9381380
+cargo run -p cli -- backfill
+cargo run -p cli -- archive
+cargo run -p cli -- replay
 cargo run -p cli -- index
 make reset
 make check
@@ -47,29 +47,23 @@ make check
 Archive workflow for repeatable projection testing:
 
 ```bash
-# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save raw JSON
+# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save binary archive ranges
 # without applying projection writes to Postgres.
-BACKFILL_SOURCE=hypersync make archive-only BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+BACKFILL_SOURCE=hypersync RAW_ARCHIVE_DIR=.raw-archive-full make archive-only
 
 # Or fetch and apply in one pass when you want both archive and database state.
-BACKFILL_SOURCE=hypersync make archive-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+BACKFILL_SOURCE=hypersync RAW_ARCHIVE_DIR=.raw-archive-full make archive-backfill
 
 # Rebuild a fresh dev database without spending RPC/HyperSync credits again.
 make db-reset
 make migrate
-make archive-status BACKFILL_FROM=9380380 BACKFILL_TO=9381380
-BACKFILL_SOURCE=raw make raw-backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+RAW_ARCHIVE_DIR=.raw-archive-full make archive-status
+BACKFILL_SOURCE=raw RAW_ARCHIVE_DIR=.raw-archive-full make raw-backfill
 ```
 
 `make db-reset` deletes the local Postgres compose volume. Use it only for disposable development databases.
 `make archive-status` reads the manifest only, so it stays fast for large archives. Use `make archive-status-verify` when you explicitly want the slower checksum pass across range files.
-For a complete archive-only run, start from `3327417` so resolver discovery is complete. Archive-only writes `resolvers.json` next to `manifest.json` and updates it after each completed range, so a later resume can reload discovered resolver addresses. If you created archive files before `resolvers.json` existed, rebuild it once before resuming:
-
-```bash
-RAW_ARCHIVE_DIR=.raw-archive-full BACKFILL_FROM=3327417 scripts/rebuild_resolver_cache_from_archive.sh
-```
-
-After the archive is complete, use `BACKFILL_SOURCE=raw` or `make raw-backfill` to project from those files.
+For a complete archive-only run, start with an empty archive directory. The service starts at the first ENS source deployment block, writes `resolvers.json` next to `manifest.json`, and updates it after each completed range so later archive-only resumes can reload discovered resolver addresses. After the archive is complete, use `BACKFILL_SOURCE=raw` or `make raw-backfill` to project from those `.bin` files.
 
 Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
 
