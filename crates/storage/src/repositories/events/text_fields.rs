@@ -1,6 +1,9 @@
 use sqlx::Postgres;
 
-use crate::{filters::EventFilter, query::*};
+use crate::{
+    filters::{EventFilter, TextOperatorFilter},
+    query::*,
+};
 
 pub(super) fn push_text_event_field<'qb>(
     separated: &mut sqlx::query_builder::Separated<'qb, Postgres, &'static str>,
@@ -146,6 +149,25 @@ pub(super) fn text_field_owner(filter: &EventFilter) -> TextFieldFilter {
     )
 }
 
+pub(super) fn text_field_parent_domain(filter: &EventFilter) -> TextFieldFilter {
+    operator_text_field(
+        filter.parent_domain_id.clone(),
+        &filter.parent_domain_id_ops,
+    )
+}
+
+pub(super) fn text_field_resolver(filter: &EventFilter) -> TextFieldFilter {
+    operator_text_field(filter.resolver_id.clone(), &filter.resolver_id_ops)
+}
+
+pub(super) fn text_field_registrant(filter: &EventFilter) -> TextFieldFilter {
+    operator_text_field(filter.registrant_id.clone(), &filter.registrant_id_ops)
+}
+
+pub(super) fn text_field_new_owner(filter: &EventFilter) -> TextFieldFilter {
+    operator_text_field(filter.new_owner_id.clone(), &filter.new_owner_id_ops)
+}
+
 pub(super) fn text_field_addr(filter: &EventFilter) -> TextFieldFilter {
     limited_text_field(
         filter.addr_id.clone(),
@@ -204,6 +226,31 @@ pub(super) fn text_field_target(filter: &EventFilter) -> TextFieldFilter {
         filter.target_contains.clone(),
         filter.target_not_contains.clone(),
     )
+}
+
+fn operator_text_field(exact: Option<String>, ops: &TextOperatorFilter) -> TextFieldFilter {
+    TextFieldFilter {
+        exact,
+        not: ops.not.clone(),
+        gt: ops.gt.clone(),
+        lt: ops.lt.clone(),
+        gte: ops.gte.clone(),
+        lte: ops.lte.clone(),
+        in_values: ops.in_values.clone(),
+        not_in: ops.not_in.clone(),
+        contains: ops.contains.clone(),
+        contains_nocase: ops.contains_nocase.clone(),
+        not_contains: ops.not_contains.clone(),
+        not_contains_nocase: ops.not_contains_nocase.clone(),
+        starts_with: ops.starts_with.clone(),
+        starts_with_nocase: ops.starts_with_nocase.clone(),
+        not_starts_with: ops.not_starts_with.clone(),
+        not_starts_with_nocase: ops.not_starts_with_nocase.clone(),
+        ends_with: ops.ends_with.clone(),
+        ends_with_nocase: ops.ends_with_nocase.clone(),
+        not_ends_with: ops.not_ends_with.clone(),
+        not_ends_with_nocase: ops.not_ends_with_nocase.clone(),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

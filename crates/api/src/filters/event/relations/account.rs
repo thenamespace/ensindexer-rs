@@ -114,6 +114,25 @@ pub(crate) struct RegistrantRelationFilter {
 impl ApplyEventFilter for RegistrantRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.registrant_id = self.registrant;
+        filter.registrant_id_ops.not = self.registrant_not;
+        filter.registrant_id_ops.gt = self.registrant_gt;
+        filter.registrant_id_ops.lt = self.registrant_lt;
+        filter.registrant_id_ops.gte = self.registrant_gte;
+        filter.registrant_id_ops.lte = self.registrant_lte;
+        filter.registrant_id_ops.in_values = self.registrant_in;
+        filter.registrant_id_ops.not_in = self.registrant_not_in;
+        filter.registrant_id_ops.contains = self.registrant_contains;
+        filter.registrant_id_ops.contains_nocase = self.registrant_contains_nocase;
+        filter.registrant_id_ops.not_contains = self.registrant_not_contains;
+        filter.registrant_id_ops.not_contains_nocase = self.registrant_not_contains_nocase;
+        filter.registrant_id_ops.starts_with = self.registrant_starts_with;
+        filter.registrant_id_ops.starts_with_nocase = self.registrant_starts_with_nocase;
+        filter.registrant_id_ops.not_starts_with = self.registrant_not_starts_with;
+        filter.registrant_id_ops.not_starts_with_nocase = self.registrant_not_starts_with_nocase;
+        filter.registrant_id_ops.ends_with = self.registrant_ends_with;
+        filter.registrant_id_ops.ends_with_nocase = self.registrant_ends_with_nocase;
+        filter.registrant_id_ops.not_ends_with = self.registrant_not_ends_with;
+        filter.registrant_id_ops.not_ends_with_nocase = self.registrant_not_ends_with_nocase;
         filter.registrant_filter = self.registrant_filter;
     }
 }
@@ -167,6 +186,25 @@ pub(crate) struct NewOwnerRelationFilter {
 impl ApplyEventFilter for NewOwnerRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.new_owner_id = self.new_owner;
+        filter.new_owner_id_ops.not = self.new_owner_not;
+        filter.new_owner_id_ops.gt = self.new_owner_gt;
+        filter.new_owner_id_ops.lt = self.new_owner_lt;
+        filter.new_owner_id_ops.gte = self.new_owner_gte;
+        filter.new_owner_id_ops.lte = self.new_owner_lte;
+        filter.new_owner_id_ops.in_values = self.new_owner_in;
+        filter.new_owner_id_ops.not_in = self.new_owner_not_in;
+        filter.new_owner_id_ops.contains = self.new_owner_contains;
+        filter.new_owner_id_ops.contains_nocase = self.new_owner_contains_nocase;
+        filter.new_owner_id_ops.not_contains = self.new_owner_not_contains;
+        filter.new_owner_id_ops.not_contains_nocase = self.new_owner_not_contains_nocase;
+        filter.new_owner_id_ops.starts_with = self.new_owner_starts_with;
+        filter.new_owner_id_ops.starts_with_nocase = self.new_owner_starts_with_nocase;
+        filter.new_owner_id_ops.not_starts_with = self.new_owner_not_starts_with;
+        filter.new_owner_id_ops.not_starts_with_nocase = self.new_owner_not_starts_with_nocase;
+        filter.new_owner_id_ops.ends_with = self.new_owner_ends_with;
+        filter.new_owner_id_ops.ends_with_nocase = self.new_owner_ends_with_nocase;
+        filter.new_owner_id_ops.not_ends_with = self.new_owner_not_ends_with;
+        filter.new_owner_id_ops.not_ends_with_nocase = self.new_owner_not_ends_with_nocase;
         filter.new_owner_filter = self.new_owner_filter;
     }
 }
@@ -284,5 +322,40 @@ mod tests {
                 .and_then(|filter| filter.id.as_deref()),
             Some("0xaddr")
         );
+    }
+
+    #[test]
+    fn registration_account_relation_filters_map_event_column_operator_fields() {
+        let mut filter = EventFilter::default();
+        RegistrantRelationFilter {
+            registrant_not: Some("0xold".into()),
+            registrant_contains_nocase: Some("abcd".into()),
+            registrant_not_ends_with: Some("ffff".into()),
+            ..RegistrantRelationFilter::default()
+        }
+        .apply(&mut filter);
+        NewOwnerRelationFilter {
+            new_owner_gt: Some("0x1000".into()),
+            new_owner_starts_with_nocase: Some("0xabc".into()),
+            new_owner_not_in: Some(vec!["0xdead".into()]),
+            ..NewOwnerRelationFilter::default()
+        }
+        .apply(&mut filter);
+
+        assert_eq!(filter.registrant_id_ops.not.as_deref(), Some("0xold"));
+        assert_eq!(
+            filter.registrant_id_ops.contains_nocase.as_deref(),
+            Some("abcd")
+        );
+        assert_eq!(
+            filter.registrant_id_ops.not_ends_with.as_deref(),
+            Some("ffff")
+        );
+        assert_eq!(filter.new_owner_id_ops.gt.as_deref(), Some("0x1000"));
+        assert_eq!(
+            filter.new_owner_id_ops.starts_with_nocase.as_deref(),
+            Some("0xabc")
+        );
+        assert_eq!(filter.new_owner_id_ops.not_in, Some(vec!["0xdead".into()]));
     }
 }

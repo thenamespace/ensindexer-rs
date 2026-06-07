@@ -1,4 +1,4 @@
-use super::{AccountFilter, DomainFilter, RegistrationFilter, ResolverFilter};
+use super::{AccountFilter, DomainFilter, RegistrationFilter, ResolverFilter, TextOperatorFilter};
 
 #[derive(Debug, Clone, Default)]
 pub struct EventFilter {
@@ -60,12 +60,16 @@ pub struct EventFilter {
     pub owner_id_contains: Option<String>,
     pub owner_id_not_contains: Option<String>,
     pub parent_domain_id: Option<String>,
+    pub parent_domain_id_ops: TextOperatorFilter,
     pub parent_domain_filter: Option<Box<DomainFilter>>,
     pub resolver_id: Option<String>,
+    pub resolver_id_ops: TextOperatorFilter,
     pub resolver_filter: Option<Box<ResolverFilter>>,
     pub registrant_id: Option<String>,
+    pub registrant_id_ops: TextOperatorFilter,
     pub registrant_filter: Option<Box<AccountFilter>>,
     pub new_owner_id: Option<String>,
+    pub new_owner_id_ops: TextOperatorFilter,
     pub new_owner_filter: Option<Box<AccountFilter>>,
     pub addr_id: Option<String>,
     pub addr_id_not: Option<String>,

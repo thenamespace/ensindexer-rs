@@ -333,7 +333,7 @@ or: [T_filter]
 _change_block: BlockChangedFilter
 ```
 
-Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, `WrappedDomain_filter`, concrete event filters, and event-interface filters. Mutable-entity relation-only composition is supported for domain, registration, wrapped-domain, and resolver relationship predicates. Event relation predicates are wired for domain/account/resolver/registration-backed columns.
+Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, `WrappedDomain_filter`, concrete event filters, and event-interface filters. Mutable-entity relation-only composition is supported for domain, registration, wrapped-domain, and resolver relationship predicates. Event relation predicates are wired for domain/account/resolver/registration-backed columns, including scalar operator predicates on event-specific `parentDomain`, new-resolver `resolver`, `registrant`, and `newOwner` columns.
 
 Relationship filters use Graph Node's trailing underscore convention. Examples:
 
@@ -394,7 +394,7 @@ Graph Node allows ordering by local scalar fields and selected fields from direc
 | event interfaces | `id`, parent relation, parent relation fields, `blockNumber`, `transactionID` |
 | concrete events | shared event fields plus event-specific fields such as `owner__id`, `expiryDate`, `key`, `value`, `fuses` |
 
-Current implementation maps scalar, FK, relationship, and derived-count order fields to explicit SQL expressions. Concrete event lists order relationship fields through their actual table columns (`domain_id`, `registration_id`, `resolver_id`, `parent_domain_id`, etc.); event-interface reference queries order through the normalized union `parent_id`. Event filters apply parent/owner/addr scalar operator predicates and domain/account/resolver/registration relation predicates on both concrete event tables and event-interface unions. Do not build order SQL from raw client strings.
+Current implementation maps scalar, FK, relationship, and derived-count order fields to explicit SQL expressions. Concrete event lists order relationship fields through their actual table columns (`domain_id`, `registration_id`, `resolver_id`, `parent_domain_id`, etc.); event-interface reference queries order through the normalized union `parent_id`. Event filters apply parent/owner/addr scalar operator predicates, event-specific relation scalar operator predicates, and domain/account/resolver/registration relation predicates on both concrete event tables and event-interface unions. Do not build order SQL from raw client strings.
 
 ### Derived Joins
 

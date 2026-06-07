@@ -124,6 +124,26 @@ pub(crate) struct ParentDomainRelationFilter {
 impl ApplyEventFilter for ParentDomainRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.parent_domain_id = self.parent_domain;
+        filter.parent_domain_id_ops.not = self.parent_domain_not;
+        filter.parent_domain_id_ops.gt = self.parent_domain_gt;
+        filter.parent_domain_id_ops.lt = self.parent_domain_lt;
+        filter.parent_domain_id_ops.gte = self.parent_domain_gte;
+        filter.parent_domain_id_ops.lte = self.parent_domain_lte;
+        filter.parent_domain_id_ops.in_values = self.parent_domain_in;
+        filter.parent_domain_id_ops.not_in = self.parent_domain_not_in;
+        filter.parent_domain_id_ops.contains = self.parent_domain_contains;
+        filter.parent_domain_id_ops.contains_nocase = self.parent_domain_contains_nocase;
+        filter.parent_domain_id_ops.not_contains = self.parent_domain_not_contains;
+        filter.parent_domain_id_ops.not_contains_nocase = self.parent_domain_not_contains_nocase;
+        filter.parent_domain_id_ops.starts_with = self.parent_domain_starts_with;
+        filter.parent_domain_id_ops.starts_with_nocase = self.parent_domain_starts_with_nocase;
+        filter.parent_domain_id_ops.not_starts_with = self.parent_domain_not_starts_with;
+        filter.parent_domain_id_ops.not_starts_with_nocase =
+            self.parent_domain_not_starts_with_nocase;
+        filter.parent_domain_id_ops.ends_with = self.parent_domain_ends_with;
+        filter.parent_domain_id_ops.ends_with_nocase = self.parent_domain_ends_with_nocase;
+        filter.parent_domain_id_ops.not_ends_with = self.parent_domain_not_ends_with;
+        filter.parent_domain_id_ops.not_ends_with_nocase = self.parent_domain_not_ends_with_nocase;
         filter.parent_domain_filter = self.parent_domain_filter;
     }
 }
@@ -144,5 +164,27 @@ mod tests {
 
         assert_eq!(filter.parent_id_not.as_deref(), Some("0xold"));
         assert_eq!(filter.parent_id_contains_nocase.as_deref(), Some("abcd"));
+    }
+
+    #[test]
+    fn parent_domain_relation_filter_maps_event_column_operator_fields() {
+        let mut filter = EventFilter::default();
+        ParentDomainRelationFilter {
+            parent_domain_not: Some("0xold".into()),
+            parent_domain_contains_nocase: Some("abcd".into()),
+            parent_domain_not_ends_with: Some("ffff".into()),
+            ..ParentDomainRelationFilter::default()
+        }
+        .apply(&mut filter);
+
+        assert_eq!(filter.parent_domain_id_ops.not.as_deref(), Some("0xold"));
+        assert_eq!(
+            filter.parent_domain_id_ops.contains_nocase.as_deref(),
+            Some("abcd")
+        );
+        assert_eq!(
+            filter.parent_domain_id_ops.not_ends_with.as_deref(),
+            Some("ffff")
+        );
     }
 }

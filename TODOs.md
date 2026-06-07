@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after commit `f484c3e`.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the event relation operator slice.
 
 ## Completed
 
@@ -79,6 +79,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] `RegistrationFilter`, `WrappedDomainFilter`, and `ResolverFilter` composition preserves nested relation-only predicates.
 - [x] Event owner/addr scalar operators are mapped through API conversion and SQL predicates.
 - [x] Event parent relation scalar operators are mapped for `domain_*`, `registration_*`, and `resolver_*` predicates.
+- [x] Event-specific relation scalar operators are mapped for `parentDomain_*`, new-resolver `resolver_*`, `registrant_*`, and `newOwner_*` predicates.
 - [x] Event relation predicates are wired for domain/account/resolver/registration-backed columns such as `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_`.
 - [x] Relationship order fields map to explicit static SQL expressions for entity queries, concrete event queries, and event-interface queries.
 - [x] Query-builder SQL-shape tests cover scalar filters, relationship filters, ordering, and event filter composition.
@@ -96,7 +97,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Implement historical `block` reads for entity and event roots instead of returning compatibility errors for non-current blocks.
 - [ ] Implement `_change_block` filters for all official filter inputs.
 - [ ] Finish deeper recursive trailing-underscore filters beyond the mutable-entity relation composition currently covered.
-- [ ] Audit and complete generated scalar operators for every official scalar field, including less common `_not`, comparison, nocase, starts-with, and ends-with variants.
+- [ ] Audit and complete generated scalar operators for every remaining official scalar field, including less common `_not`, comparison, nocase, starts-with, and ends-with variants.
 - [ ] Audit list-field edge cases against Graph Node behavior.
 - [ ] Add compatibility tests that execute the same representative GraphQL queries against the local API and the official hosted ENS subgraph.
 - [ ] Compare local and official JSON response shapes and values after real mainnet backfill ranges.

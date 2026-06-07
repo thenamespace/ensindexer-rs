@@ -8,6 +8,7 @@ use super::*;
 use crate::filters::{AccountFilter, DomainFilter, ResolverFilter};
 
 mod registration_relations;
+mod relation_operator_fields;
 
 #[test]
 fn base_event_filters_include_generated_operator_variants() {

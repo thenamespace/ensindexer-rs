@@ -1,13 +1,11 @@
 use sqlx::Postgres;
 
 use super::{
-    specific_filters::{
-        NumericEventField, push_account_event_filter, push_i32_event_filter,
-        push_numeric_event_filter,
-    },
+    specific_filters::{NumericEventField, push_i32_event_filter, push_numeric_event_filter},
     text_fields::{
         push_text_event_field, text_field_addr, text_field_hash, text_field_implementer,
-        text_field_interface_id, text_field_key, text_field_name, text_field_owner,
+        text_field_interface_id, text_field_key, text_field_name, text_field_new_owner,
+        text_field_owner, text_field_parent_domain, text_field_registrant, text_field_resolver,
         text_field_target, text_field_value, text_field_x, text_field_y,
     },
 };
@@ -41,17 +39,17 @@ fn push_domain_event_filters<'qb>(
     has_where: &mut bool,
     filter: &EventFilter,
 ) {
-    push_text_filter(
+    push_text_event_field(
         separated,
         has_where,
         "parent_domain_id",
-        filter.parent_domain_id.clone(),
+        text_field_parent_domain(filter),
     );
-    push_text_filter(
+    push_text_event_field(
         separated,
         has_where,
         "resolver_id",
-        filter.resolver_id.clone(),
+        text_field_resolver(filter),
     );
     push_numeric_event_filter(separated, has_where, "ttl", filter, NumericEventField::Ttl);
     push_text_event_field(separated, has_where, "name", text_field_name(filter));
@@ -71,17 +69,17 @@ fn push_registration_event_filters<'qb>(
     has_where: &mut bool,
     filter: &EventFilter,
 ) {
-    push_account_event_filter(
+    push_text_event_field(
         separated,
         has_where,
         "registrant_id",
-        filter.registrant_id.clone(),
+        text_field_registrant(filter),
     );
-    push_account_event_filter(
+    push_text_event_field(
         separated,
         has_where,
         "new_owner_id",
-        filter.new_owner_id.clone(),
+        text_field_new_owner(filter),
     );
     push_numeric_event_filter(
         separated,

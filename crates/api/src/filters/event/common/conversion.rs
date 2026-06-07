@@ -80,18 +80,22 @@ impl EventFilter {
             owner_id_contains: self.owner_id_contains,
             owner_id_not_contains: self.owner_id_not_contains,
             parent_domain_id: self.parent_domain_id,
+            parent_domain_id_ops: self.parent_domain_id_ops,
             parent_domain_filter: self
                 .parent_domain_filter
                 .map(|filter| Box::new((*filter).into())),
             resolver_id: self.resolver_id,
+            resolver_id_ops: self.resolver_id_ops,
             resolver_filter: self
                 .resolver_filter
                 .map(|filter| Box::new((*filter).into())),
             registrant_id: self.registrant_id,
+            registrant_id_ops: self.registrant_id_ops,
             registrant_filter: self
                 .registrant_filter
                 .map(|filter| Box::new((*filter).into())),
             new_owner_id: self.new_owner_id,
+            new_owner_id_ops: self.new_owner_id_ops,
             new_owner_filter: self
                 .new_owner_filter
                 .map(|filter| Box::new((*filter).into())),

@@ -124,6 +124,25 @@ pub(crate) struct NewResolverRelationFilter {
 impl ApplyEventFilter for NewResolverRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.resolver_id = self.resolver;
+        filter.resolver_id_ops.not = self.resolver_not;
+        filter.resolver_id_ops.gt = self.resolver_gt;
+        filter.resolver_id_ops.lt = self.resolver_lt;
+        filter.resolver_id_ops.gte = self.resolver_gte;
+        filter.resolver_id_ops.lte = self.resolver_lte;
+        filter.resolver_id_ops.in_values = self.resolver_in;
+        filter.resolver_id_ops.not_in = self.resolver_not_in;
+        filter.resolver_id_ops.contains = self.resolver_contains;
+        filter.resolver_id_ops.contains_nocase = self.resolver_contains_nocase;
+        filter.resolver_id_ops.not_contains = self.resolver_not_contains;
+        filter.resolver_id_ops.not_contains_nocase = self.resolver_not_contains_nocase;
+        filter.resolver_id_ops.starts_with = self.resolver_starts_with;
+        filter.resolver_id_ops.starts_with_nocase = self.resolver_starts_with_nocase;
+        filter.resolver_id_ops.not_starts_with = self.resolver_not_starts_with;
+        filter.resolver_id_ops.not_starts_with_nocase = self.resolver_not_starts_with_nocase;
+        filter.resolver_id_ops.ends_with = self.resolver_ends_with;
+        filter.resolver_id_ops.ends_with_nocase = self.resolver_ends_with_nocase;
+        filter.resolver_id_ops.not_ends_with = self.resolver_not_ends_with;
+        filter.resolver_id_ops.not_ends_with_nocase = self.resolver_not_ends_with_nocase;
         filter.resolver_filter = self.resolver_filter;
     }
 }
@@ -144,5 +163,27 @@ mod tests {
 
         assert_eq!(filter.parent_id_gt.as_deref(), Some("0x1000"));
         assert_eq!(filter.parent_id_not_ends_with.as_deref(), Some("ffff"));
+    }
+
+    #[test]
+    fn new_resolver_relation_filter_maps_event_column_operator_fields() {
+        let mut filter = EventFilter::default();
+        NewResolverRelationFilter {
+            resolver_gt: Some("0x1000".into()),
+            resolver_contains_nocase: Some("abcd".into()),
+            resolver_not_ends_with: Some("ffff".into()),
+            ..NewResolverRelationFilter::default()
+        }
+        .apply(&mut filter);
+
+        assert_eq!(filter.resolver_id_ops.gt.as_deref(), Some("0x1000"));
+        assert_eq!(
+            filter.resolver_id_ops.contains_nocase.as_deref(),
+            Some("abcd")
+        );
+        assert_eq!(
+            filter.resolver_id_ops.not_ends_with.as_deref(),
+            Some("ffff")
+        );
     }
 }
