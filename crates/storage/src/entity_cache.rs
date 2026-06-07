@@ -190,10 +190,11 @@ async fn flush_domains(
     storage: &Storage,
     rows: &[(String, Option<DomainRow>)],
 ) -> StorageResult<()> {
-    let rows = rows
-        .iter()
-        .filter_map(|(_, row)| row.clone())
-        .collect::<Vec<_>>();
+    let rows = order_domain_rows_by_parent(
+        rows.iter()
+            .filter_map(|(_, row)| row.clone())
+            .collect::<Vec<_>>(),
+    );
     for chunk in rows.chunks(CURRENT_FLUSH_CHUNK_ROWS) {
         let mut query = QueryBuilder::<Postgres>::new(
             r#"insert into domains (
@@ -239,6 +240,43 @@ async fn flush_domains(
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
+}
+
+fn order_domain_rows_by_parent(rows: Vec<DomainRow>) -> Vec<DomainRow> {
+    let mut pending = rows
+        .into_iter()
+        .map(|row| (row.id.clone(), row))
+        .collect::<BTreeMap<_, _>>();
+    let mut ordered = Vec::with_capacity(pending.len());
+
+    while !pending.is_empty() {
+        let ready_ids = pending
+            .iter()
+            .filter(|(_, row)| {
+                row.parent_id
+                    .as_ref()
+                    .is_none_or(|parent_id| !pending.contains_key(parent_id))
+            })
+            .map(|(id, _)| id.clone())
+            .collect::<Vec<_>>();
+
+        if ready_ids.is_empty() {
+            tracing::warn!(
+                remaining_domains = pending.len(),
+                "could not parent-order all dirty domains before flush"
+            );
+            ordered.extend(pending.into_values());
+            break;
+        }
+
+        for id in ready_ids {
+            if let Some(row) = pending.remove(&id) {
+                ordered.push(row);
+            }
+        }
+    }
+
+    ordered
 }
 
 async fn flush_registrations(
@@ -366,4 +404,51 @@ async fn flush_wrapped_domains(
         query.build().execute(storage.pool()).await?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use bigdecimal::BigDecimal;
+
+    use super::*;
+
+    fn domain(id: &str, parent_id: Option<&str>) -> DomainRow {
+        DomainRow {
+            id: id.to_owned(),
+            name: None,
+            label_name: None,
+            labelhash: None,
+            parent_id: parent_id.map(ToOwned::to_owned),
+            subdomain_count: 0,
+            resolved_address_id: None,
+            resolver_id: None,
+            ttl: None,
+            is_migrated: true,
+            created_at: BigDecimal::from(0),
+            owner_id: "0x0000000000000000000000000000000000000000".to_owned(),
+            registrant_id: None,
+            wrapped_owner_id: None,
+            expiry_date: None,
+        }
+    }
+
+    #[test]
+    fn domain_rows_are_ordered_parent_first() {
+        let ordered = order_domain_rows_by_parent(vec![
+            domain("child", Some("parent")),
+            domain("grandchild", Some("child")),
+            domain("parent", None),
+        ]);
+        let ids = ordered.into_iter().map(|row| row.id).collect::<Vec<_>>();
+
+        assert_eq!(ids, ["parent", "child", "grandchild"]);
+    }
+
+    #[test]
+    fn domain_rows_allow_existing_external_parents() {
+        let ordered = order_domain_rows_by_parent(vec![domain("child", Some("already-flushed"))]);
+        let ids = ordered.into_iter().map(|row| row.id).collect::<Vec<_>>();
+
+        assert_eq!(ids, ["child"]);
+    }
 }
