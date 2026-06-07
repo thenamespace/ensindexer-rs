@@ -151,6 +151,13 @@ pub(super) fn push_event_filters<'qb>(
         filter.block_number_not_in.clone(),
         true,
     );
+    push_i32_filter(
+        separated,
+        has_where,
+        "block_number",
+        ">=",
+        filter.change_block_number_gte,
+    );
 }
 
 #[cfg(test)]

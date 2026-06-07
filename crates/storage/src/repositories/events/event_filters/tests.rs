@@ -7,6 +7,7 @@ use super::super::specific_filters::push_event_specific_filters;
 use super::*;
 use crate::filters::{AccountFilter, DomainFilter, ResolverFilter};
 
+mod change_block;
 mod registration_relations;
 mod relation_operator_fields;
 

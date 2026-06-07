@@ -473,11 +473,12 @@ Current implementation state:
 - Event parent relation scalar predicates for `domain_*`, `registration_*`, and `resolver_*` are mapped through API conversion and SQL predicates on concrete event tables and event-interface unions.
 - Event-specific relation scalar predicates for `parentDomain_*`, new-resolver `resolver_*`, `registrant_*`, and `newOwner_*` are mapped through API conversion and SQL predicates on concrete event tables and event-interface unions.
 - Event relation predicates are mapped through API conversion and SQL subqueries for domain/account/resolver/registration-backed columns such as `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_`.
+- Concrete event and event-interface filters support `_change_block: { number_gte }` by compiling it to `block_number >= number_gte`.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
 - `ResolverFilter` `and`/`or` composition applies nested `domain_` and `addr_` relation predicates instead of dropping relation-only branches.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, deeper generated-filter audits, and `_change_block` filters are still compatibility-expansion work.
+- Historical block snapshots, mutable-entity `_change_block` filters, and deeper generated-filter audits are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 
@@ -505,6 +506,7 @@ Current implementation covers a subset of Tier 1:
 - `expiryDate_*` and `fuses_*` on `WrappedDomain`.
 - `address`, `address_in`, `addr`, `contentHash_*`, `texts_contains`, and `coinTypes_contains` on `Resolver`.
 - event parent filters, ID predicates, full `blockNumber_*` comparisons, `transactionID` equality/list predicates, and concrete/interface event-specific predicates for stored fields such as `domain_*`, `registration_*`, parent and new-resolver `resolver_*`, `parentDomain_*`, `owner_*`, `registrant_*`, `newOwner_*`, `addr_*`, `fuses_*`, `expiryDate_*`, `coinType_*`, `key`, `hash`, `interfaceID`, `isAuthorized`, and `version_*`.
+- event `_change_block.number_gte` predicates for concrete event and event-interface queries.
 - shallow trailing-underscore relationship filters on mutable entities: `Domain.parent_`, `Domain.owner_`, `Domain.resolver_`, `Domain.registrant_`, `Domain.wrappedOwner_`, `Registration.domain_`, `Registration.registrant_`, `WrappedDomain.domain_`, `WrappedDomain.owner_`, `Resolver.domain_`, and `Resolver.addr_`.
 
 Tier 2 filters:

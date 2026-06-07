@@ -45,6 +45,7 @@ pub struct EventFilter {
     pub block_number_lte: Option<i32>,
     pub block_number_in: Option<Vec<i32>>,
     pub block_number_not_in: Option<Vec<i32>>,
+    pub change_block_number_gte: Option<i32>,
     pub transaction_id: Option<String>,
     pub transaction_id_not: Option<String>,
     pub transaction_id_gt: Option<String>,
@@ -341,6 +342,7 @@ impl BaseEventFilter {
         filter.block_number_lte = self.block_number_lte;
         filter.block_number_in = self.block_number_in;
         filter.block_number_not_in = self.block_number_not_in;
+        filter.change_block_number_gte = self.change_block.and_then(|change| change.number_gte);
         filter.transaction_id = self.transaction_id;
         filter.transaction_id_not = self.transaction_id_not;
         filter.transaction_id_gt = self.transaction_id_gt;
@@ -356,4 +358,23 @@ impl BaseEventFilter {
 
 pub(crate) trait ApplyEventFilter {
     fn apply(self, filter: &mut EventFilter);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_event_filter_maps_change_block_predicate() {
+        let mut filter = EventFilter::default();
+        BaseEventFilter {
+            change_block: Some(BlockChangedFilter {
+                number_gte: Some(123),
+            }),
+            ..BaseEventFilter::default()
+        }
+        .apply(&mut filter);
+
+        assert_eq!(filter.change_block_number_gte, Some(123));
+    }
 }

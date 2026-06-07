@@ -59,6 +59,7 @@ impl EventFilter {
             block_number_lte: self.block_number_lte,
             block_number_in: self.block_number_in,
             block_number_not_in: self.block_number_not_in,
+            change_block_number_gte: self.change_block_number_gte,
             transaction_id: self.transaction_id,
             transaction_id_not: self.transaction_id_not,
             transaction_id_gt: self.transaction_id_gt,

@@ -39,6 +39,7 @@ pub struct EventFilter {
     pub block_number_lte: Option<i32>,
     pub block_number_in: Option<Vec<i32>>,
     pub block_number_not_in: Option<Vec<i32>>,
+    pub change_block_number_gte: Option<i32>,
     pub transaction_id: Option<String>,
     pub transaction_id_not: Option<String>,
     pub transaction_id_gt: Option<String>,
