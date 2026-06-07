@@ -72,27 +72,6 @@ pub(crate) fn upsert_manifest_range(
     write_manifest(dir, &manifest)
 }
 
-pub(crate) fn verify_manifest_checksum(
-    dir: &Path,
-    path: &Path,
-    bytes: &[u8],
-) -> anyhow::Result<()> {
-    let manifest = load_manifest(dir)?;
-    let file = relative_archive_path(dir, path)?;
-    let Some(entry) = manifest.ranges.iter().find(|entry| entry.file == file) else {
-        return Ok(());
-    };
-    let actual = sha256_hex(bytes);
-    anyhow::ensure!(
-        actual == entry.sha256,
-        "archive checksum mismatch for {}: manifest={} actual={}",
-        entry.file,
-        entry.sha256,
-        actual
-    );
-    Ok(())
-}
-
 pub(crate) fn verify_manifest_range_checksum(
     dir: &Path,
     expected_chain_id: u64,

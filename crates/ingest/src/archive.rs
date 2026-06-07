@@ -11,9 +11,7 @@ pub(crate) use model::ArchivedRange;
 pub use resolvers::{ResolverCacheStatus, rebuild_resolver_cache};
 pub(crate) use resolvers::{add_resolver_from_log, load_resolver_cache, write_resolver_cache};
 
-use self::manifest::{
-    load_manifest, upsert_manifest_range, verify_manifest_checksum, verify_manifest_range_checksum,
-};
+use self::manifest::{load_manifest, upsert_manifest_range, verify_manifest_range_checksum};
 
 pub(crate) fn write_range(dir: &Path, range: &ArchivedRange) -> anyhow::Result<PathBuf> {
     let ranges_dir = dir.join("ranges");
@@ -29,41 +27,44 @@ pub(crate) fn write_range(dir: &Path, range: &ArchivedRange) -> anyhow::Result<P
     Ok(path)
 }
 
-pub(crate) fn read_ranges(
+pub(crate) fn range_entries(
     dir: &Path,
     expected_chain_id: u64,
     from_block: u64,
     to_block: u64,
-) -> anyhow::Result<Vec<ArchivedRange>> {
+) -> anyhow::Result<Vec<ArchiveManifestRange>> {
     anyhow::ensure!(
         from_block <= to_block,
         "from block must be less than or equal to to block"
     );
 
-    let mut ranges = std::fs::read_dir(dir.join("ranges"))?
-        .map(|entry| -> anyhow::Result<Option<ArchivedRange>> {
-            let entry = entry?;
-            if entry.path().extension().and_then(|ext| ext.to_str()) != Some("json") {
-                return Ok(None);
-            }
-
-            let bytes = std::fs::read(entry.path())?;
-            verify_manifest_checksum(dir, &entry.path(), &bytes)?;
-            let range: ArchivedRange = serde_json::from_slice(&bytes)?;
-            range.validate(expected_chain_id)?;
-            if range.to_block < from_block || range.from_block > to_block {
-                return Ok(None);
-            }
-            Ok(Some(range))
-        })
-        .collect::<anyhow::Result<Vec<_>>>()?
+    let manifest = load_manifest(dir)?;
+    anyhow::ensure!(
+        manifest.chain_id == 0 || manifest.chain_id == expected_chain_id,
+        "archive manifest chain_id {} does not match configured chain_id {}",
+        manifest.chain_id,
+        expected_chain_id
+    );
+    let mut ranges = manifest
+        .ranges
         .into_iter()
-        .flatten()
+        .filter(|range| range.to_block >= from_block && range.from_block <= to_block)
         .collect::<Vec<_>>();
-
     ranges.sort_by_key(|range| range.from_block);
-    validate_contiguous(&ranges, from_block, to_block)?;
+    validate_contiguous_entries(&ranges, from_block, to_block)?;
     Ok(ranges)
+}
+
+pub(crate) fn read_range_entry(
+    dir: &Path,
+    expected_chain_id: u64,
+    entry: &ArchiveManifestRange,
+) -> anyhow::Result<ArchivedRange> {
+    verify_manifest_range_checksum(dir, expected_chain_id, entry)?;
+    let bytes = std::fs::read(dir.join(&entry.file))?;
+    let range: ArchivedRange = serde_json::from_slice(&bytes)?;
+    range.validate(expected_chain_id)?;
+    Ok(range)
 }
 
 pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Result<(u64, u64)> {
@@ -88,8 +89,8 @@ pub(crate) fn range_path(dir: &Path, from_block: u64, to_block: u64) -> PathBuf 
         .join(format!("{from_block:020}-{to_block:020}.json"))
 }
 
-fn validate_contiguous(
-    ranges: &[ArchivedRange],
+fn validate_contiguous_entries(
+    ranges: &[ArchiveManifestRange],
     from_block: u64,
     to_block: u64,
 ) -> anyhow::Result<()> {

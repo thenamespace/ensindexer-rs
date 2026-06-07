@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::IngestService;
-use crate::archive::read_ranges;
+use crate::archive::{range_entries, read_range_entry};
 
 impl IngestService {
     pub async fn replay_archive_range(
@@ -24,7 +24,21 @@ impl IngestService {
             "starting raw archive replay"
         );
 
-        for range in read_ranges(&archive_dir, self.config.chain_id, from_block, to_block)? {
+        let entries = range_entries(&archive_dir, self.config.chain_id, from_block, to_block)?;
+        let total_ranges = entries.len();
+        for (index, entry) in entries.iter().enumerate() {
+            tracing::info!(
+                archive_file = %entry.file,
+                from_block = entry.from_block,
+                to_block = entry.to_block,
+                logs = entry.logs,
+                bytes = entry.bytes,
+                range_index = index + 1,
+                total_ranges,
+                "replaying raw archive range"
+            );
+
+            let range = read_range_entry(&archive_dir, self.config.chain_id, entry)?;
             let range_start = range.from_block;
             let range_end = range.to_block;
             let checkpoint_sources = range.checkpoint_sources.clone();
@@ -34,8 +48,11 @@ impl IngestService {
                 .await?;
 
             tracing::info!(
+                archive_file = %entry.file,
                 from_block = range_start,
                 to_block = range_end,
+                range_index = index + 1,
+                total_ranges,
                 "replayed raw archive range"
             );
         }
