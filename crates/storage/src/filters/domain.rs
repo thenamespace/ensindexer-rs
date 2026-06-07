@@ -1,4 +1,4 @@
-use super::{AccountFilter, ResolverFilter};
+use super::{AccountFilter, RegistrationFilter, ResolverFilter, WrappedDomainFilter};
 
 #[derive(Debug, Clone, Default)]
 pub struct DomainFilter {
@@ -194,6 +194,8 @@ pub struct DomainFilter {
     pub wrapped_owner_id_not_ends_with: Option<String>,
     pub wrapped_owner_id_not_ends_with_nocase: Option<String>,
     pub wrapped_owner_filter: Option<Box<AccountFilter>>,
+    pub registration_filter: Option<Box<RegistrationFilter>>,
+    pub wrapped_domain_filter: Option<Box<WrappedDomainFilter>>,
     pub is_migrated: Option<bool>,
     pub is_migrated_not: Option<bool>,
     pub is_migrated_in: Option<Vec<bool>>,

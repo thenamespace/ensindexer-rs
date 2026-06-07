@@ -313,6 +313,12 @@ impl From<DomainFilter> for StorageDomainFilter {
             wrapped_owner_filter: value
                 .wrapped_owner_filter
                 .map(|filter| Box::new((*filter).into())),
+            registration_filter: extras
+                .registration_
+                .map(|filter| Box::new((*filter).into())),
+            wrapped_domain_filter: extras
+                .wrapped_domain_
+                .map(|filter| Box::new((*filter).into())),
             is_migrated: value.is_migrated,
             is_migrated_not: value.is_migrated_not,
             is_migrated_in: extras.is_migrated_in,

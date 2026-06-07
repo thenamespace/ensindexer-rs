@@ -1,6 +1,7 @@
 use sqlx::{Postgres, QueryBuilder};
 
 use super::DomainsRepo;
+use super::derived_filters::push_domain_derived_relation_filters;
 use super::filter_fields::{push_primary_text_fields, push_relation_id_text_fields};
 use crate::{error::*, filters::*, models::*, query::*};
 
@@ -342,6 +343,12 @@ impl DomainsRepo<'_> {
             "Domain",
             "domains.id",
             filter.change_block_number_gte.take(),
+        );
+        push_domain_derived_relation_filters(
+            &mut separated,
+            &mut has_where,
+            filter.registration_filter.take(),
+            filter.wrapped_domain_filter.take(),
         );
         push_domain_filter_group(&mut separated, &mut has_where, " and ", filter.and.take());
         push_domain_filter_group(&mut separated, &mut has_where, " or ", filter.or.take());

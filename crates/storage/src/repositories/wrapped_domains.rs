@@ -1,6 +1,9 @@
 use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
+pub(crate) use self::composition::{
+    push_wrapped_domain_subquery_filters, wrapped_domain_filter_has_conditions,
+};
 use self::filtering::push_wrapped_domain_filters;
 use crate::{error::*, filters::*, models::*, query::wrapped_domain_order_column};
 

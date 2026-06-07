@@ -40,7 +40,7 @@ pub(super) fn push_wrapped_domain_filter_group<'qb>(
     separated.push_unseparated(")");
 }
 
-fn push_wrapped_domain_subquery_filters<'qb>(
+pub(crate) fn push_wrapped_domain_subquery_filters<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,
     filter: WrappedDomainFilter,
@@ -49,6 +49,10 @@ fn push_wrapped_domain_subquery_filters<'qb>(
     push_sub_text_filter(separated, has_where, "id", "!=", filter.id_not);
     push_sub_text_filter(separated, has_where, "id", ">", filter.id_gt);
     push_sub_text_filter(separated, has_where, "id", "<", filter.id_lt);
+    push_sub_text_filter(separated, has_where, "id", ">=", filter.id_gte);
+    push_sub_text_filter(separated, has_where, "id", "<=", filter.id_lte);
+    push_sub_text_array_filter(separated, has_where, "id", filter.id_in, false);
+    push_sub_text_array_filter(separated, has_where, "id", filter.id_not_in, true);
     push_sub_text_filter(separated, has_where, "domain_id", "=", filter.domain_id);
     push_sub_text_contains_filter(separated, has_where, "domain_id", filter.domain_id_contains);
     push_sub_domain_relation_filter(separated, has_where, "domain_id", filter.domain_filter);
@@ -73,8 +77,13 @@ fn push_wrapped_domain_subquery_filters<'qb>(
         filter.expiry_date_lt,
     );
     push_sub_i32_filter(separated, has_where, "fuses", "=", filter.fuses);
+    push_sub_i32_filter(separated, has_where, "fuses", "!=", filter.fuses_not);
     push_sub_i32_filter(separated, has_where, "fuses", ">", filter.fuses_gt);
     push_sub_i32_filter(separated, has_where, "fuses", "<", filter.fuses_lt);
+    push_sub_i32_filter(separated, has_where, "fuses", ">=", filter.fuses_gte);
+    push_sub_i32_filter(separated, has_where, "fuses", "<=", filter.fuses_lte);
+    push_sub_i32_array_filter(separated, has_where, "fuses", filter.fuses_in, false);
+    push_sub_i32_array_filter(separated, has_where, "fuses", filter.fuses_not_in, true);
     push_sub_change_block_filter(
         separated,
         has_where,
@@ -86,7 +95,7 @@ fn push_wrapped_domain_subquery_filters<'qb>(
     push_wrapped_domain_filter_group(separated, has_where, " or ", filter.or);
 }
 
-fn wrapped_domain_filter_has_conditions(filter: &WrappedDomainFilter) -> bool {
+pub(crate) fn wrapped_domain_filter_has_conditions(filter: &WrappedDomainFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()
         || filter.id_gt.is_some()
@@ -115,8 +124,19 @@ fn wrapped_domain_filter_has_conditions(filter: &WrappedDomainFilter) -> bool {
         || filter.expiry_date_gt.is_some()
         || filter.expiry_date_lt.is_some()
         || filter.fuses.is_some()
+        || filter.fuses_not.is_some()
         || filter.fuses_gt.is_some()
         || filter.fuses_lt.is_some()
+        || filter.fuses_gte.is_some()
+        || filter.fuses_lte.is_some()
+        || filter
+            .fuses_in
+            .as_ref()
+            .is_some_and(|value| !value.is_empty())
+        || filter
+            .fuses_not_in
+            .as_ref()
+            .is_some_and(|value| !value.is_empty())
         || filter
             .and
             .as_ref()
@@ -198,6 +218,52 @@ fn push_sub_text_filter<'qb>(
             .push_unseparated(op)
             .push_unseparated(" ")
             .push_bind_unseparated(value);
+    }
+}
+
+fn push_sub_text_array_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<Vec<String>>,
+    negate: bool,
+) {
+    if let Some(value) = value.filter(|value| !value.is_empty()) {
+        push_sub_where_prefix(separated, has_where);
+        if negate {
+            separated.push_unseparated("not (");
+        }
+        separated
+            .push_unseparated(column)
+            .push_unseparated(" = any(")
+            .push_bind_unseparated(value)
+            .push_unseparated(")");
+        if negate {
+            separated.push_unseparated(")");
+        }
+    }
+}
+
+fn push_sub_i32_array_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<Vec<i32>>,
+    negate: bool,
+) {
+    if let Some(value) = value.filter(|value| !value.is_empty()) {
+        push_sub_where_prefix(separated, has_where);
+        if negate {
+            separated.push_unseparated("not (");
+        }
+        separated
+            .push_unseparated(column)
+            .push_unseparated(" = any(")
+            .push_bind_unseparated(value)
+            .push_unseparated(")");
+        if negate {
+            separated.push_unseparated(")");
+        }
     }
 }
 

@@ -475,6 +475,7 @@ Current implementation state:
 - Event relation predicates are mapped through API conversion and SQL subqueries for domain/account/resolver/registration-backed columns such as `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_`.
 - Concrete event and event-interface filters support `_change_block: { number_gte }` by compiling it to `block_number >= number_gte`.
 - Mutable entity filters support `_change_block: { number_gte }` through the `entity_changes` table populated by projection when `Account`, `Domain`, `Registration`, `WrappedDomain`, or `Resolver` rows are inserted or updated.
+- `Domain_filter.registration_` and `Domain_filter.wrappedDomain_` are implemented as derived one-to-one relation subqueries against `registrations.domain_id` and `wrapped_domains.domain_id`.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
 - `ResolverFilter` `and`/`or` composition applies nested `domain_` and `addr_` relation predicates instead of dropping relation-only branches.
@@ -524,7 +525,7 @@ Tier 3 compatibility:
 - `_change_block`;
 - historical `block` argument;
 - list-field edge cases;
-- relationship filters on derived collections such as `events_`.
+- relationship filters on derived collections such as `subdomains_` and `events_`.
 
 Implementation pattern:
 

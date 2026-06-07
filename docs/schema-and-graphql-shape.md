@@ -358,12 +358,12 @@ where exists (
 
 Current implementation supports shallow trailing-underscore filters on mutable entities:
 
-- `Domain_filter`: `parent_`, `owner_`, `resolver_`, `registrant_`, `wrappedOwner_`;
+- `Domain_filter`: `parent_`, `owner_`, `resolver_`, `registrant_`, `wrappedOwner_`, `registration_`, `wrappedDomain_`;
 - `Registration_filter`: `domain_`, `registrant_`;
 - `WrappedDomain_filter`: `domain_`, `owner_`;
 - `Resolver_filter`: `domain_`, `addr_`.
 
-Those relationship filters apply scalar predicates on the directly related entity. `Domain_filter` also recurses through nested domain/account/resolver relationship predicates, including relation-only `and`/`or` branches. `Registration_filter`, `WrappedDomain_filter`, and `Resolver_filter` composition applies nested `domain_`, `registrant_`, `owner_`, and `addr_` relationship predicates. Event relationship filters apply `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_` predicates where the event table or interface union has the corresponding FK column.
+Those relationship filters apply scalar predicates on the directly related entity. `Domain_filter.registration_` compiles to a `registrations.domain_id` subquery and `Domain_filter.wrappedDomain_` compiles to a `wrapped_domains.domain_id` subquery, matching Graph Node's generated derived one-to-one filter behavior. `Domain_filter` also recurses through nested domain/account/resolver relationship predicates, including relation-only `and`/`or` branches. `Registration_filter`, `WrappedDomain_filter`, and `Resolver_filter` composition applies nested `domain_`, `registrant_`, `owner_`, and `addr_` relationship predicates. Event relationship filters apply `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_` predicates where the event table or interface union has the corresponding FK column. Derived collection filters such as `subdomains_` and `events_` are still compatibility-expansion work because they need collection/existence semantics over child domains or event-interface unions.
 
 Current scalar filter coverage includes the main stored mutable-entity fields:
 
