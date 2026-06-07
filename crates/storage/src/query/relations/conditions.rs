@@ -128,6 +128,26 @@ pub(crate) fn domain_filter_has_conditions(filter: &DomainFilter) -> bool {
             .is_some_and(|filters| filters.iter().any(domain_filter_has_conditions))
 }
 
+pub(crate) fn resolver_filter_has_conditions(filter: &ResolverFilter) -> bool {
+    resolver_filter_has_scalar_conditions(filter)
+        || filter
+            .domain_filter
+            .as_ref()
+            .is_some_and(|filter| domain_filter_has_conditions(filter))
+        || filter
+            .addr_filter
+            .as_ref()
+            .is_some_and(|filter| account_filter_has_conditions(filter))
+        || filter
+            .and
+            .as_ref()
+            .is_some_and(|filters| filters.iter().any(resolver_filter_has_conditions))
+        || filter
+            .or
+            .as_ref()
+            .is_some_and(|filters| filters.iter().any(resolver_filter_has_conditions))
+}
+
 pub(crate) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> bool {
     filter.id.is_some()
         || filter.id_not.is_some()

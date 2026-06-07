@@ -471,8 +471,9 @@ Current implementation state:
 - Event-interface reference unions project typed nullable columns for their concrete event-family fields, so interface filters can apply predicates such as `fuses_*`, `expiryDate_*`, `key_*`, `coinType_*`, and `isAuthorized`.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
+- `ResolverFilter` `and`/`or` composition applies nested `domain_` and `addr_` relation predicates instead of dropping relation-only branches.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, recursive nested filters, and `_change_block` filters are still compatibility-expansion work.
+- Historical block snapshots, event relationship filters, and `_change_block` filters are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 
@@ -506,7 +507,7 @@ Tier 2 filters:
 
 - `_not` and comparison operators for every scalar;
 - `_contains_nocase`, `_starts_with_nocase`, `_ends_with_nocase` for all strings;
-- recursive trailing-underscore filters and relationship filters on event entities;
+- recursive trailing-underscore filters beyond mutable-entity relation composition and relationship filters on event entities;
 - deeper event-interface relationship filtering over union queries;
 - deeper recursive `and` and `or` semantics across relationship-filter boundaries.
 

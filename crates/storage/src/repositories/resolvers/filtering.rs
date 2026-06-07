@@ -228,6 +228,7 @@ mod tests {
     use sqlx::{Execute, Postgres, QueryBuilder};
 
     use super::*;
+    use crate::filters::{AccountFilter, DomainFilter};
 
     #[test]
     fn resolver_filters_support_boolean_composition() {
@@ -260,6 +261,48 @@ mod tests {
         assert_eq!(
             built.sql(),
             "select id from resolvers where address = $1 and (id in (select id from resolvers where content_hash like $2) or id in (select id from resolvers where texts @> array[$3]::text[])) "
+        );
+    }
+
+    #[test]
+    fn resolver_composition_supports_nested_relationship_filters() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from resolvers");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_resolver_filters(
+                &mut separated,
+                &mut has_where,
+                ResolverFilter {
+                    or: Some(vec![
+                        ResolverFilter {
+                            domain_filter: Some(Box::new(DomainFilter {
+                                parent_filter: Some(Box::new(DomainFilter {
+                                    name: Some("eth".into()),
+                                    ..DomainFilter::default()
+                                })),
+                                ..DomainFilter::default()
+                            })),
+                            ..ResolverFilter::default()
+                        },
+                        ResolverFilter {
+                            addr_filter: Some(Box::new(AccountFilter {
+                                id: Some("0xaddr".into()),
+                                ..AccountFilter::default()
+                            })),
+                            ..ResolverFilter::default()
+                        },
+                    ]),
+                    ..ResolverFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from resolvers where (id in (select id from resolvers where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) or id in (select id from resolvers where addr_id in (select id from accounts where id = $2))) "
         );
     }
 }

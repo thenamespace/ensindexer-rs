@@ -333,7 +333,7 @@ or: [T_filter]
 _change_block: BlockChangedFilter
 ```
 
-Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, `WrappedDomain_filter`, concrete event filters, and event-interface filters. Deeper recursive relationship predicates remain compatibility-expansion work.
+Current implementation supports `and` and `or` composition for `Account_filter`, including account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`. It also supports scalar-compatible `and` and `or` composition for `Domain_filter`, `Registration_filter`, `Resolver_filter`, `WrappedDomain_filter`, concrete event filters, and event-interface filters. Mutable-entity relation-only composition is supported for domain, registration, wrapped-domain, and resolver relationship predicates. Event relationship predicates remain compatibility-expansion work.
 
 Relationship filters use Graph Node's trailing underscore convention. Examples:
 
@@ -363,7 +363,7 @@ Current implementation supports shallow trailing-underscore filters on mutable e
 - `WrappedDomain_filter`: `domain_`, `owner_`;
 - `Resolver_filter`: `domain_`, `addr_`.
 
-Those relationship filters apply scalar predicates on the directly related entity. `Domain_filter` also recurses through nested domain/account/resolver relationship predicates, including relation-only `and`/`or` branches. `Registration_filter` and `WrappedDomain_filter` composition applies nested `domain_`, `registrant_`, and `owner_` relationship predicates. Fully recursive relationship filtering across the remaining entity and event filter families remains compatibility-expansion work.
+Those relationship filters apply scalar predicates on the directly related entity. `Domain_filter` also recurses through nested domain/account/resolver relationship predicates, including relation-only `and`/`or` branches. `Registration_filter`, `WrappedDomain_filter`, and `Resolver_filter` composition applies nested `domain_`, `registrant_`, `owner_`, and `addr_` relationship predicates. Event relationship filtering remains compatibility-expansion work.
 
 Current scalar filter coverage includes the main stored mutable-entity fields:
 

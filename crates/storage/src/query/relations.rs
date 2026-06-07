@@ -18,7 +18,7 @@ pub(crate) use self::{
     account::push_account_filter_conditions,
     conditions::{
         account_filter_has_conditions, domain_filter_has_conditions,
-        resolver_filter_has_scalar_conditions,
+        resolver_filter_has_conditions, resolver_filter_has_scalar_conditions,
     },
     domain::{push_domain_filter_group, push_domain_scalar_filter_conditions},
     resolver::push_resolver_scalar_filter_conditions,

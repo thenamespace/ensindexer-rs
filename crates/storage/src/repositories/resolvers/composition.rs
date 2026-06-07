@@ -1,6 +1,13 @@
 use sqlx::{Postgres, query_builder::Separated};
 
-use crate::{filters::ResolverFilter, query::push_where_prefix};
+use crate::{
+    filters::{AccountFilter, DomainFilter, ResolverFilter},
+    query::{
+        account_filter_has_conditions, domain_filter_has_conditions,
+        push_account_filter_conditions, push_domain_scalar_filter_conditions, push_where_prefix,
+        resolver_filter_has_conditions,
+    },
+};
 
 pub(super) fn push_resolver_filter_group<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
@@ -46,10 +53,12 @@ fn push_resolver_subquery_filters<'qb>(
     push_sub_text_filter(separated, has_where, "id", "<=", filter.id_lte);
     push_sub_text_filter(separated, has_where, "domain_id", "=", filter.domain_id);
     push_sub_text_contains_filter(separated, has_where, "domain_id", filter.domain_id_contains);
+    push_sub_domain_relation_filter(separated, has_where, "domain_id", filter.domain_filter);
     push_sub_text_filter(separated, has_where, "address", "=", filter.address);
     push_sub_text_contains_filter(separated, has_where, "address", filter.address_contains);
     push_sub_text_filter(separated, has_where, "addr_id", "=", filter.addr_id);
     push_sub_text_contains_filter(separated, has_where, "addr_id", filter.addr_id_contains);
+    push_sub_account_relation_filter(separated, has_where, "addr_id", filter.addr_filter);
     push_sub_text_filter(
         separated,
         has_where,
@@ -82,40 +91,48 @@ fn push_resolver_subquery_filters<'qb>(
     push_resolver_filter_group(separated, has_where, " or ", filter.or);
 }
 
-fn resolver_filter_has_conditions(filter: &ResolverFilter) -> bool {
-    filter.id.is_some()
-        || filter.id_not.is_some()
-        || filter.id_gt.is_some()
-        || filter.id_lt.is_some()
-        || filter.id_gte.is_some()
-        || filter.id_lte.is_some()
-        || filter.id_in.as_ref().is_some_and(|value| !value.is_empty())
-        || filter
-            .id_not_in
-            .as_ref()
-            .is_some_and(|value| !value.is_empty())
-        || filter.domain_id.is_some()
-        || filter.domain_id_contains.is_some()
-        || filter.domain_filter.is_some()
-        || filter.address.is_some()
-        || filter.address_contains.is_some()
-        || filter.addr_id.is_some()
-        || filter.addr_id_contains.is_some()
-        || filter.addr_filter.is_some()
-        || filter.content_hash.is_some()
-        || filter.content_hash_contains.is_some()
-        || filter.texts.is_some()
-        || filter.texts_contains.is_some()
-        || filter.coin_types.is_some()
-        || filter.coin_types_contains.is_some()
-        || filter
-            .and
-            .as_ref()
-            .is_some_and(|filters| filters.iter().any(resolver_filter_has_conditions))
-        || filter
-            .or
-            .as_ref()
-            .is_some_and(|filters| filters.iter().any(resolver_filter_has_conditions))
+fn push_sub_domain_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: Option<Box<DomainFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !domain_filter_has_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated(column)
+        .push_unseparated(" in (select id from domains");
+    let mut sub_has_where = false;
+    push_domain_scalar_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
+}
+
+fn push_sub_account_relation_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: Option<Box<AccountFilter>>,
+) {
+    let Some(filter) = filter else {
+        return;
+    };
+    if !account_filter_has_conditions(&filter) {
+        return;
+    }
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated(column)
+        .push_unseparated(" in (select id from accounts");
+    let mut sub_has_where = false;
+    push_account_filter_conditions(separated, &mut sub_has_where, *filter);
+    separated.push_unseparated(")");
 }
 
 fn push_sub_where_prefix<'qb>(
