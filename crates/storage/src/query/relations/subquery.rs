@@ -30,6 +30,28 @@ pub(super) fn push_sub_text_filter<'qb>(
     }
 }
 
+pub(crate) fn push_sub_change_block_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    entity_type: &'static str,
+    id_column: &'static str,
+    number_gte: Option<i32>,
+) {
+    let Some(number_gte) = number_gte else {
+        return;
+    };
+
+    push_sub_where_prefix(separated, has_where);
+    separated
+        .push_unseparated("exists (select 1 from entity_changes where entity_type = ")
+        .push_bind_unseparated(entity_type)
+        .push_unseparated(" and entity_id = ")
+        .push_unseparated(id_column)
+        .push_unseparated(" and block_number >= ")
+        .push_bind_unseparated(number_gte)
+        .push_unseparated(")");
+}
+
 pub(super) fn push_sub_text_array_filter<'qb>(
     separated: &mut Separated<'qb, Postgres, &'static str>,
     has_where: &mut bool,

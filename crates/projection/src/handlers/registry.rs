@@ -12,7 +12,7 @@ use crate::{
     ProjectionResult,
     support::{
         block_number, decimal_from_u256, ensure_account, ensure_domain, known_label,
-        label_from_hash,
+        label_from_hash, mark_domain_changed, mark_resolver_changed,
     },
 };
 
@@ -28,9 +28,17 @@ pub(crate) async fn registry_transfer(
         return Ok(());
     }
 
-    let owner_id = ensure_account(storage, owner).await?;
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, false).await?;
+    let owner_id = ensure_account(storage, owner, block_number(ctx)?).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        false,
+        block_number(ctx)?,
+    )
+    .await?;
     storage.domains().set_owner(&domain_id, &owner_id).await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_transfer(TransferEventInsert {
@@ -62,11 +70,25 @@ pub(crate) async fn registry_new_owner(
     }
 
     let parent_id = DomainId(parent_node).as_subgraph_id();
-    let owner_id = ensure_account(storage, owner).await?;
-    ensure_domain(storage, &parent_id, ctx.block_timestamp, false).await?;
+    let owner_id = ensure_account(storage, owner, block_number(ctx)?).await?;
+    ensure_domain(
+        storage,
+        &parent_id,
+        ctx.block_timestamp,
+        false,
+        block_number(ctx)?,
+    )
+    .await?;
 
     let existing = storage.domains().find_by_id(&domain_id).await?;
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, is_migrated).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        is_migrated,
+        block_number(ctx)?,
+    )
+    .await?;
 
     if existing
         .as_ref()
@@ -77,6 +99,7 @@ pub(crate) async fn registry_new_owner(
             .domains()
             .increment_subdomain_count(&parent_id)
             .await?;
+        mark_domain_changed(storage, &parent_id, block_number(ctx)?).await?;
     }
 
     let known_label = known_label(labelhash);
@@ -118,6 +141,7 @@ pub(crate) async fn registry_new_owner(
         )
         .await?;
     storage.domains().set_owner(&domain_id, &owner_id).await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_new_owner(NewOwnerEventInsert {
@@ -145,7 +169,14 @@ pub(crate) async fn registry_new_resolver(
         return Ok(());
     }
 
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, false).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        false,
+        block_number(ctx)?,
+    )
+    .await?;
 
     let (resolver_id, resolved_address_id, event_resolver_id) = if resolver == Address::ZERO {
         (None, None, EMPTY_ADDRESS.to_owned())
@@ -155,10 +186,13 @@ pub(crate) async fn registry_new_resolver(
             node,
         }
         .as_subgraph_id();
-        storage
+        if storage
             .resolvers()
             .create_if_missing(&resolver_id, &domain_id, &hex_address(resolver))
-            .await?;
+            .await?
+        {
+            mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
+        }
         let resolved_address_id = storage
             .resolvers()
             .find_by_id(&resolver_id)
@@ -175,6 +209,7 @@ pub(crate) async fn registry_new_resolver(
             resolved_address_id.as_deref(),
         )
         .await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_new_resolver(NewResolverEventInsert {
@@ -201,9 +236,17 @@ pub(crate) async fn registry_new_ttl(
         return Ok(());
     }
 
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, false).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        false,
+        block_number(ctx)?,
+    )
+    .await?;
     let ttl = decimal_from_u256(ttl)?;
     storage.domains().set_ttl(&domain_id, ttl.clone()).await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_new_ttl(NewTtlEventInsert {

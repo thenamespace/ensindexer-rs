@@ -23,6 +23,13 @@ pub(crate) fn push_registration_filters<'qb>(
     );
     push_text_array_filter(separated, has_where, "id", filter.id_in);
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in);
+    push_change_block_filter(
+        separated,
+        has_where,
+        "Registration",
+        "registrations.id",
+        filter.change_block_number_gte,
+    );
     push_registration_text_fields(separated, has_where, remaining_filter);
     push_registration_filter_group(separated, has_where, " and ", group_filter.and);
     push_registration_filter_group(separated, has_where, " or ", group_filter.or);
@@ -285,6 +292,30 @@ mod tests {
         assert_eq!(
             built.sql(),
             "select id from registrations where (id in (select id from registrations where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) and id in (select id from registrations where registrant_id in (select id from accounts where id = $2))) "
+        );
+    }
+
+    #[test]
+    fn registration_filters_support_change_block_predicate() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_registration_filters(
+                &mut separated,
+                &mut has_where,
+                RegistrationFilter {
+                    change_block_number_gte: Some(100),
+                    ..RegistrationFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from registrations where exists (select 1 from entity_changes where entity_type = $1 and entity_id = registrations.id and block_number >= $2) "
         );
     }
 }

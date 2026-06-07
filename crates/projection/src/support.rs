@@ -16,14 +16,22 @@ pub(crate) const PARENT_CANNOT_CONTROL: i32 = 65_536;
 pub(crate) async fn ensure_account(
     storage: &Storage,
     address: Address,
+    block_number: i32,
 ) -> ProjectionResult<String> {
     let account_id = AccountId(address).as_subgraph_id();
-    storage.accounts().create_if_missing(&account_id).await?;
+    if storage.accounts().create_if_missing(&account_id).await? {
+        mark_account_changed(storage, &account_id, block_number).await?;
+    }
     Ok(account_id)
 }
 
-pub(crate) async fn ensure_empty_account(storage: &Storage) -> ProjectionResult<String> {
-    storage.accounts().create_if_missing(EMPTY_ADDRESS).await?;
+pub(crate) async fn ensure_empty_account(
+    storage: &Storage,
+    block_number: i32,
+) -> ProjectionResult<String> {
+    if storage.accounts().create_if_missing(EMPTY_ADDRESS).await? {
+        mark_account_changed(storage, EMPTY_ADDRESS, block_number).await?;
+    }
     Ok(EMPTY_ADDRESS.to_owned())
 }
 
@@ -32,10 +40,11 @@ pub(crate) async fn ensure_domain(
     domain_id: &str,
     timestamp: i64,
     is_migrated: bool,
+    block_number: i32,
 ) -> ProjectionResult<()> {
-    let empty_account = ensure_empty_account(storage).await?;
+    let empty_account = ensure_empty_account(storage, block_number).await?;
     let is_root = domain_id == ROOT_NODE;
-    storage
+    if storage
         .domains()
         .create_if_missing(DomainUpsert {
             id: domain_id.to_owned(),
@@ -43,7 +52,10 @@ pub(crate) async fn ensure_domain(
             owner_id: empty_account,
             is_migrated: is_root || is_migrated,
         })
-        .await?;
+        .await?
+    {
+        mark_domain_changed(storage, domain_id, block_number).await?;
+    }
     Ok(())
 }
 
@@ -52,24 +64,32 @@ pub(crate) async fn ensure_resolver(
     resolver: Address,
     node: B256,
     timestamp: i64,
+    block_number: i32,
 ) -> ProjectionResult<String> {
     let domain_id = DomainId(node).as_subgraph_id();
-    ensure_domain(storage, &domain_id, timestamp, true).await?;
+    ensure_domain(storage, &domain_id, timestamp, true, block_number).await?;
     let resolver_id = ResolverId {
         address: resolver,
         node,
     }
     .as_subgraph_id();
-    storage
+    if storage
         .resolvers()
         .create_if_missing(&resolver_id, &domain_id, &hex_address(resolver))
-        .await?;
+        .await?
+    {
+        mark_resolver_changed(storage, &resolver_id, block_number).await?;
+    }
     Ok(resolver_id)
 }
 
-pub(crate) async fn ensure_eth_parent(storage: &Storage, timestamp: i64) -> ProjectionResult<()> {
-    ensure_domain(storage, ROOT_NODE, timestamp, true).await?;
-    ensure_domain(storage, ETH_NODE, timestamp, true).await?;
+pub(crate) async fn ensure_eth_parent(
+    storage: &Storage,
+    timestamp: i64,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    ensure_domain(storage, ROOT_NODE, timestamp, true, block_number).await?;
+    ensure_domain(storage, ETH_NODE, timestamp, true, block_number).await?;
     storage
         .domains()
         .set_name(ETH_NODE, Some("eth"), Some("eth"))
@@ -77,6 +97,67 @@ pub(crate) async fn ensure_eth_parent(storage: &Storage, timestamp: i64) -> Proj
     storage
         .domains()
         .set_parent_and_label(ETH_NODE, ROOT_NODE, &eth_labelhash(), true)
+        .await?;
+    mark_domain_changed(storage, ETH_NODE, block_number).await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_account_changed(
+    storage: &Storage,
+    account_id: &str,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    storage
+        .entity_changes()
+        .record("Account", account_id, block_number)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_domain_changed(
+    storage: &Storage,
+    domain_id: &str,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    storage
+        .entity_changes()
+        .record("Domain", domain_id, block_number)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_registration_changed(
+    storage: &Storage,
+    registration_id: &str,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    storage
+        .entity_changes()
+        .record("Registration", registration_id, block_number)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_resolver_changed(
+    storage: &Storage,
+    resolver_id: &str,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    storage
+        .entity_changes()
+        .record("Resolver", resolver_id, block_number)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_wrapped_domain_changed(
+    storage: &Storage,
+    wrapped_domain_id: &str,
+    block_number: i32,
+) -> ProjectionResult<()> {
+    storage
+        .entity_changes()
+        .record("WrappedDomain", wrapped_domain_id, block_number)
         .await?;
     Ok(())
 }

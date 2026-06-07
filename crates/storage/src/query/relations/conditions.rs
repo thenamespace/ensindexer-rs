@@ -12,6 +12,7 @@ pub(crate) fn account_filter_has_conditions(filter: &AccountFilter) -> bool {
             .id_not_in
             .as_ref()
             .is_some_and(|value| !value.is_empty())
+        || filter.change_block_number_gte.is_some()
         || filter
             .and
             .as_ref()
@@ -82,6 +83,7 @@ pub(crate) fn domain_filter_has_scalar_conditions(filter: &DomainFilter) -> bool
         || filter.ttl_lt.is_some()
         || filter.ttl_gte.is_some()
         || filter.ttl_lte.is_some()
+        || filter.change_block_number_gte.is_some()
         || filter
             .and
             .as_ref()
@@ -180,4 +182,5 @@ pub(crate) fn resolver_filter_has_scalar_conditions(filter: &ResolverFilter) -> 
         || filter.content_hash_contains.is_some()
         || filter.texts_contains.is_some()
         || filter.coin_types_contains.is_some()
+        || filter.change_block_number_gte.is_some()
 }

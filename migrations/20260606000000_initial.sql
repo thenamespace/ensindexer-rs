@@ -63,6 +63,13 @@ create table if not exists source_checkpoints (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists entity_changes (
+  entity_type text not null,
+  entity_id text not null,
+  block_number integer not null,
+  primary key (entity_type, entity_id, block_number)
+);
+
 create table if not exists transfer_events (
   id text primary key,
   domain_id text not null references domains(id),
@@ -304,3 +311,4 @@ create index if not exists authorisation_changed_events_resolver_idx on authoris
 create index if not exists authorisation_changed_events_block_idx on authorisation_changed_events(block_number);
 create index if not exists version_changed_events_resolver_idx on version_changed_events(resolver_id);
 create index if not exists version_changed_events_block_idx on version_changed_events(block_number);
+create index if not exists entity_changes_lookup_idx on entity_changes(entity_type, entity_id, block_number);

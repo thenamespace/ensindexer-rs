@@ -17,20 +17,21 @@ impl ResolversRepo<'_> {
         id: &str,
         domain_id: &str,
         address: &str,
-    ) -> StorageResult<()> {
-        sqlx::query(
+    ) -> StorageResult<bool> {
+        let inserted = sqlx::query_scalar::<_, String>(
             r#"
             insert into resolvers (id, domain_id, address)
             values ($1, $2, $3)
             on conflict (id) do nothing
+            returning id
             "#,
         )
         .bind(id)
         .bind(domain_id)
         .bind(address)
-        .execute(self.pool)
+        .fetch_optional(self.pool)
         .await?;
-        Ok(())
+        Ok(inserted.is_some())
     }
 
     pub async fn set_addr(&self, id: &str, addr_id: &str) -> StorageResult<()> {

@@ -4,22 +4,23 @@ use super::DomainsRepo;
 use crate::{error::*, inserts::DomainUpsert};
 
 impl DomainsRepo<'_> {
-    pub async fn create_if_missing(&self, input: DomainUpsert) -> StorageResult<()> {
-        sqlx::query(
+    pub async fn create_if_missing(&self, input: DomainUpsert) -> StorageResult<bool> {
+        let inserted = sqlx::query_scalar::<_, String>(
             r#"
         insert into domains (id, created_at, owner_id, is_migrated)
         values ($1, $2, $3, $4)
         on conflict (id) do nothing
+        returning id
         "#,
         )
         .bind(input.id)
         .bind(input.created_at)
         .bind(input.owner_id)
         .bind(input.is_migrated)
-        .execute(self.pool)
+        .fetch_optional(self.pool)
         .await?;
 
-        Ok(())
+        Ok(inserted.is_some())
     }
 
     pub async fn set_owner(&self, id: &str, owner_id: &str) -> StorageResult<()> {

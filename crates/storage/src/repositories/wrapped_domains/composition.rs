@@ -4,7 +4,8 @@ use crate::{
     filters::{AccountFilter, DomainFilter, WrappedDomainFilter},
     query::{
         account_filter_has_conditions, domain_filter_has_conditions,
-        push_account_filter_conditions, push_domain_scalar_filter_conditions, push_where_prefix,
+        push_account_filter_conditions, push_domain_scalar_filter_conditions,
+        push_sub_change_block_filter, push_where_prefix,
     },
 };
 
@@ -74,6 +75,13 @@ fn push_wrapped_domain_subquery_filters<'qb>(
     push_sub_i32_filter(separated, has_where, "fuses", "=", filter.fuses);
     push_sub_i32_filter(separated, has_where, "fuses", ">", filter.fuses_gt);
     push_sub_i32_filter(separated, has_where, "fuses", "<", filter.fuses_lt);
+    push_sub_change_block_filter(
+        separated,
+        has_where,
+        "WrappedDomain",
+        "id",
+        filter.change_block_number_gte,
+    );
     push_wrapped_domain_filter_group(separated, has_where, " and ", filter.and);
     push_wrapped_domain_filter_group(separated, has_where, " or ", filter.or);
 }
@@ -88,6 +96,7 @@ fn wrapped_domain_filter_has_conditions(filter: &WrappedDomainFilter) -> bool {
             .id_not_in
             .as_ref()
             .is_some_and(|value| !value.is_empty())
+        || filter.change_block_number_gte.is_some()
         || filter.domain_id.is_some()
         || filter.domain_id_contains.is_some()
         || filter

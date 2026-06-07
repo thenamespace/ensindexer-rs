@@ -8,6 +8,7 @@ pub struct AccountFilter {
     pub id_lte: Option<String>,
     pub id_in: Option<Vec<String>>,
     pub id_not_in: Option<Vec<String>>,
+    pub change_block_number_gte: Option<i32>,
     pub and: Option<Vec<AccountFilter>>,
     pub or: Option<Vec<AccountFilter>>,
 }

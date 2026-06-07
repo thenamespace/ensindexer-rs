@@ -21,6 +21,13 @@ pub(super) fn push_wrapped_domain_filters<'qb>(
     );
     push_text_array_filter(separated, has_where, "id", filter.id_in.take());
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in.take());
+    push_change_block_filter(
+        separated,
+        has_where,
+        "WrappedDomain",
+        "wrapped_domains.id",
+        filter.change_block_number_gte.take(),
+    );
     let and_filters = filter.and.take();
     let or_filters = filter.or.take();
     push_text_field_filters(separated, has_where, "domain_id", domain_field(&mut filter));
@@ -247,6 +254,24 @@ mod tests {
         assert_eq!(
             query.build().sql(),
             "select id from wrapped_domains where (id in (select id from wrapped_domains where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) or id in (select id from wrapped_domains where owner_id in (select id from accounts where id = $2)))"
+        );
+    }
+
+    #[test]
+    fn wrapped_domain_filters_support_change_block_predicate() {
+        let filter = WrappedDomainFilter {
+            change_block_number_gte: Some(100),
+            ..Default::default()
+        };
+
+        let mut query = QueryBuilder::<Postgres>::new("select id from wrapped_domains");
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_wrapped_domain_filters(&mut separated, &mut has_where, filter);
+
+        assert_eq!(
+            query.build().sql(),
+            "select id from wrapped_domains where exists (select 1 from entity_changes where entity_type = $1 and entity_id = wrapped_domains.id and block_number >= $2)"
         );
     }
 }

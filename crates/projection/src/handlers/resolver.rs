@@ -9,7 +9,10 @@ use types::{DomainId, hex_address, hex_bytes};
 
 use crate::{
     ProjectionResult,
-    support::{block_number, decimal_from_u256, ensure_account, ensure_resolver},
+    support::{
+        block_number, decimal_from_u256, ensure_account, ensure_resolver, mark_domain_changed,
+        mark_resolver_changed,
+    },
 };
 
 pub(crate) async fn resolver_addr_changed(
@@ -20,10 +23,18 @@ pub(crate) async fn resolver_addr_changed(
     addr: Address,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
-    let addr_id = ensure_account(storage, addr).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
+    let addr_id = ensure_account(storage, addr, block_number(ctx)?).await?;
 
     storage.resolvers().set_addr(&resolver_id, &addr_id).await?;
+    mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
 
     if storage
         .domains()
@@ -35,6 +46,7 @@ pub(crate) async fn resolver_addr_changed(
             .domains()
             .set_resolver(&domain_id, Some(&resolver_id), Some(&addr_id))
             .await?;
+        mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     }
 
     storage
@@ -58,12 +70,20 @@ pub(crate) async fn resolver_multicoin_addr_changed(
     coin_type: U256,
     addr: Vec<u8>,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     let coin_type = decimal_from_u256(coin_type)?;
     storage
         .resolvers()
         .add_coin_type(&resolver_id, coin_type.clone())
         .await?;
+    mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_multicoin_addr_changed(MulticoinAddrChangedEventInsert {
@@ -89,7 +109,14 @@ pub(crate) async fn resolver_name_changed(
         return Ok(());
     }
 
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage
         .events()
         .insert_name_changed(NameChangedEventInsert {
@@ -110,7 +137,14 @@ pub(crate) async fn resolver_abi_changed(
     node: B256,
     content_type: U256,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage
         .events()
         .insert_abi_changed(AbiChangedEventInsert {
@@ -132,7 +166,14 @@ pub(crate) async fn resolver_pubkey_changed(
     x: B256,
     y: B256,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage
         .events()
         .insert_pubkey_changed(PubkeyChangedEventInsert {
@@ -155,8 +196,16 @@ pub(crate) async fn resolver_text_changed(
     key: String,
     value: Option<String>,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage.resolvers().add_text(&resolver_id, &key).await?;
+    mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_text_changed(TextChangedEventInsert {
@@ -178,12 +227,20 @@ pub(crate) async fn resolver_contenthash_changed(
     node: B256,
     hash: Vec<u8>,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     let hash = hex_bytes(&hash);
     storage
         .resolvers()
         .set_content_hash(&resolver_id, &hash)
         .await?;
+    mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_contenthash_changed(ContenthashChangedEventInsert {
@@ -205,7 +262,14 @@ pub(crate) async fn resolver_interface_changed(
     interface_id: FixedBytes<4>,
     implementer: Address,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage
         .events()
         .insert_interface_changed(InterfaceChangedEventInsert {
@@ -229,7 +293,14 @@ pub(crate) async fn resolver_authorisation_changed(
     target: Address,
     is_authorized: bool,
 ) -> ProjectionResult<()> {
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
     storage
         .events()
         .insert_authorisation_changed(AuthorisationChangedEventInsert {
@@ -253,7 +324,14 @@ pub(crate) async fn resolver_version_changed(
     version: U256,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    let resolver_id = ensure_resolver(storage, resolver, node, ctx.block_timestamp).await?;
+    let resolver_id = ensure_resolver(
+        storage,
+        resolver,
+        node,
+        ctx.block_timestamp,
+        block_number(ctx)?,
+    )
+    .await?;
 
     storage
         .events()
@@ -276,8 +354,10 @@ pub(crate) async fn resolver_version_changed(
             .domains()
             .set_resolver(&domain_id, Some(&resolver_id), None)
             .await?;
+        mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     }
 
     storage.resolvers().reset_records(&resolver_id).await?;
+    mark_resolver_changed(storage, &resolver_id, block_number(ctx)?).await?;
     Ok(())
 }

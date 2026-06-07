@@ -4,8 +4,8 @@ use crate::{
     filters::{AccountFilter, DomainFilter, ResolverFilter},
     query::{
         account_filter_has_conditions, domain_filter_has_conditions,
-        push_account_filter_conditions, push_domain_scalar_filter_conditions, push_where_prefix,
-        resolver_filter_has_conditions,
+        push_account_filter_conditions, push_domain_scalar_filter_conditions,
+        push_sub_change_block_filter, push_where_prefix, resolver_filter_has_conditions,
     },
 };
 
@@ -86,6 +86,13 @@ fn push_resolver_subquery_filters<'qb>(
         "coin_types",
         filter.coin_types_contains,
         false,
+    );
+    push_sub_change_block_filter(
+        separated,
+        has_where,
+        "Resolver",
+        "id",
+        filter.change_block_number_gte,
     );
     push_resolver_filter_group(separated, has_where, " and ", filter.and);
     push_resolver_filter_group(separated, has_where, " or ", filter.or);

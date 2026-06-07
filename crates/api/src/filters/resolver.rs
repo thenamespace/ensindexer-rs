@@ -126,6 +126,7 @@ impl From<ResolverFilter> for StorageResolverFilter {
             coin_types_contains_nocase: extras.coin_types_contains_nocase,
             coin_types_not_contains: extras.coin_types_not_contains,
             coin_types_not_contains_nocase: extras.coin_types_not_contains_nocase,
+            change_block_number_gte: extras.change_block.and_then(|change| change.number_gte),
             and: extras
                 .and
                 .map(|filters| filters.into_iter().map(Into::into).collect()),

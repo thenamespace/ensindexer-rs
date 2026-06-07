@@ -341,6 +341,7 @@ impl From<DomainFilter> for StorageDomainFilter {
             ttl_lte: value.ttl_lte,
             ttl_in: extras.ttl_in,
             ttl_not_in: extras.ttl_not_in,
+            change_block_number_gte: extras.change_block.and_then(|change| change.number_gte),
             and: extras
                 .and
                 .map(|filters| filters.into_iter().map(Into::into).collect()),

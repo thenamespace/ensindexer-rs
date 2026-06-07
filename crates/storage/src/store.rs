@@ -1,8 +1,8 @@
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::{
-    AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EventsRepo, MaintenanceRepo,
-    RegistrationsRepo, ResolversRepo, StorageResult, WrappedDomainsRepo,
+    AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
+    MaintenanceRepo, RegistrationsRepo, ResolversRepo, StorageResult, WrappedDomainsRepo,
 };
 
 #[derive(Clone)]
@@ -55,6 +55,10 @@ impl Storage {
 
     pub fn events(&self) -> EventsRepo<'_> {
         EventsRepo { pool: &self.pool }
+    }
+
+    pub fn entity_changes(&self) -> EntityChangesRepo<'_> {
+        EntityChangesRepo { pool: &self.pool }
     }
 
     pub fn blocks(&self) -> BlocksRepo<'_> {

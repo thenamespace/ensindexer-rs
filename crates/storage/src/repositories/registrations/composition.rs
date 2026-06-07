@@ -4,7 +4,8 @@ use crate::{
     filters::{AccountFilter, DomainFilter, RegistrationFilter},
     query::{
         account_filter_has_conditions, domain_filter_has_conditions,
-        push_account_filter_conditions, push_domain_scalar_filter_conditions, push_where_prefix,
+        push_account_filter_conditions, push_domain_scalar_filter_conditions,
+        push_sub_change_block_filter, push_where_prefix,
     },
 };
 
@@ -111,6 +112,13 @@ pub(crate) fn push_registration_subquery_filters<'qb>(
     push_sub_numeric_text_filter(separated, has_where, "cost", "=", filter.cost);
     push_sub_numeric_text_filter(separated, has_where, "cost", ">", filter.cost_gt);
     push_sub_numeric_text_filter(separated, has_where, "cost", "<", filter.cost_lt);
+    push_sub_change_block_filter(
+        separated,
+        has_where,
+        "Registration",
+        "id",
+        filter.change_block_number_gte,
+    );
     push_registration_filter_group(separated, has_where, " and ", filter.and);
     push_registration_filter_group(separated, has_where, " or ", filter.or);
 }
@@ -127,6 +135,7 @@ pub(crate) fn registration_filter_has_conditions(filter: &RegistrationFilter) ->
             .id_not_in
             .as_ref()
             .is_some_and(|value| !value.is_empty())
+        || filter.change_block_number_gte.is_some()
         || filter.domain_id.is_some()
         || filter.domain_id_not.is_some()
         || filter.domain_id_contains.is_some()

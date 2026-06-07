@@ -89,6 +89,53 @@ fn account_filter_supports_boolean_composition() {
 }
 
 #[test]
+fn account_filter_supports_change_block_predicate() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from accounts");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_account_filters(
+            &mut separated,
+            &mut has_where,
+            AccountFilter {
+                change_block_number_gte: Some(100),
+                ..AccountFilter::default()
+            },
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from accounts where exists (select 1 from entity_changes where entity_type = $1 and entity_id = accounts.id and block_number >= $2) "
+    );
+}
+
+#[test]
+fn change_block_filter_emits_entity_changes_predicate() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from domains");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_change_block_filter(
+            &mut separated,
+            &mut has_where,
+            "Domain",
+            "domains.id",
+            Some(50),
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from domains where exists (select 1 from entity_changes where entity_type = $1 and entity_id = domains.id and block_number >= $2) "
+    );
+}
+
+#[test]
 fn account_relation_filter_supports_boolean_composition() {
     let mut query = QueryBuilder::<Postgres>::new("select id from domains");
     {

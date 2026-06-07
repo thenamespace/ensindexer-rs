@@ -9,7 +9,7 @@ use crate::{
     ProjectionResult,
     support::{
         block_number, check_pcc_burned, decimal_from_u256, decode_wrapped_name, ensure_account,
-        ensure_domain, fuses_to_i32,
+        ensure_domain, fuses_to_i32, mark_domain_changed, mark_wrapped_domain_changed,
     },
 };
 
@@ -23,8 +23,15 @@ pub(crate) async fn name_wrapped(
     expiry: U256,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    let owner_id = ensure_account(storage, owner).await?;
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
+    let owner_id = ensure_account(storage, owner, block_number(ctx)?).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        true,
+        block_number(ctx)?,
+    )
+    .await?;
 
     let decoded = decode_wrapped_name(&dns_name);
     if let Some((label, name)) = decoded.as_ref() {
@@ -46,6 +53,7 @@ pub(crate) async fn name_wrapped(
         .domains()
         .set_wrapped_owner(&domain_id, &owner_id)
         .await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .wrapped_domains()
         .upsert_full(
@@ -57,6 +65,7 @@ pub(crate) async fn name_wrapped(
             decoded.as_ref().map(|(_, name)| name.as_str()),
         )
         .await?;
+    mark_wrapped_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_name_wrapped(NameWrappedEventInsert {
@@ -81,14 +90,22 @@ pub(crate) async fn name_unwrapped(
     owner: Address,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    let owner_id = ensure_account(storage, owner).await?;
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
+    let owner_id = ensure_account(storage, owner, block_number(ctx)?).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        true,
+        block_number(ctx)?,
+    )
+    .await?;
 
     if let Some(domain) = storage.domains().find_by_id(&domain_id).await? {
         storage.domains().clear_wrapped_owner(&domain_id).await?;
         if domain.expiry_date.is_some() && domain.parent_id.as_deref() != Some(ETH_NODE) {
             storage.domains().clear_expiry(&domain_id).await?;
         }
+        mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     }
 
     storage.wrapped_domains().delete(&domain_id).await?;
@@ -113,7 +130,14 @@ pub(crate) async fn fuses_set(
     fuses: u32,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        true,
+        block_number(ctx)?,
+    )
+    .await?;
     let fuses = fuses_to_i32(fuses);
 
     if let Some(wrapped) = storage.wrapped_domains().find_by_id(&domain_id).await? {
@@ -121,11 +145,13 @@ pub(crate) async fn fuses_set(
             .wrapped_domains()
             .set_fuses(&domain_id, fuses)
             .await?;
+        mark_wrapped_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
         if check_pcc_burned(fuses) {
             storage
                 .domains()
                 .set_expiry_if_newer(&domain_id, wrapped.expiry_date)
                 .await?;
+            mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
         }
     }
 
@@ -150,7 +176,14 @@ pub(crate) async fn expiry_extended(
     expiry: U256,
 ) -> ProjectionResult<()> {
     let domain_id = DomainId(node).as_subgraph_id();
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        true,
+        block_number(ctx)?,
+    )
+    .await?;
     let expiry = decimal_from_u256(expiry)?;
 
     if let Some(wrapped) = storage.wrapped_domains().find_by_id(&domain_id).await? {
@@ -158,11 +191,13 @@ pub(crate) async fn expiry_extended(
             .wrapped_domains()
             .set_expiry(&domain_id, expiry.clone())
             .await?;
+        mark_wrapped_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
         if check_pcc_burned(wrapped.fuses) {
             storage
                 .domains()
                 .set_expiry_if_newer(&domain_id, expiry.clone())
                 .await?;
+            mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
         }
     }
 
@@ -189,17 +224,26 @@ pub(crate) async fn wrapped_transfer(
 ) -> ProjectionResult<()> {
     let node = B256::from(token_id.to_be_bytes());
     let domain_id = DomainId(node).as_subgraph_id();
-    let owner_id = ensure_account(storage, to).await?;
-    ensure_domain(storage, &domain_id, ctx.block_timestamp, true).await?;
+    let owner_id = ensure_account(storage, to, block_number(ctx)?).await?;
+    ensure_domain(
+        storage,
+        &domain_id,
+        ctx.block_timestamp,
+        true,
+        block_number(ctx)?,
+    )
+    .await?;
 
     storage
         .wrapped_domains()
         .upsert_transfer_placeholder(&domain_id, &domain_id, &owner_id)
         .await?;
+    mark_wrapped_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .domains()
         .set_wrapped_owner(&domain_id, &owner_id)
         .await?;
+    mark_domain_changed(storage, &domain_id, block_number(ctx)?).await?;
     storage
         .events()
         .insert_wrapped_transfer(WrappedTransferEventInsert {

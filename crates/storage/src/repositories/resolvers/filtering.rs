@@ -21,6 +21,13 @@ pub(super) fn push_resolver_filters<'qb>(
     );
     push_text_array_filter(separated, has_where, "id", filter.id_in.take());
     push_text_not_array_filter(separated, has_where, "id", filter.id_not_in.take());
+    push_change_block_filter(
+        separated,
+        has_where,
+        "Resolver",
+        "resolvers.id",
+        filter.change_block_number_gte.take(),
+    );
     let and_filters = filter.and.take();
     let or_filters = filter.or.take();
     push_text_field_filters(separated, has_where, "domain_id", domain_field(&mut filter));
@@ -303,6 +310,30 @@ mod tests {
         assert_eq!(
             built.sql(),
             "select id from resolvers where (id in (select id from resolvers where domain_id in (select id from domains where parent_id in (select id from domains where name = $1))) or id in (select id from resolvers where addr_id in (select id from accounts where id = $2))) "
+        );
+    }
+
+    #[test]
+    fn resolver_filters_support_change_block_predicate() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from resolvers");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_resolver_filters(
+                &mut separated,
+                &mut has_where,
+                ResolverFilter {
+                    change_block_number_gte: Some(100),
+                    ..ResolverFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from resolvers where exists (select 1 from entity_changes where entity_type = $1 and entity_id = resolvers.id and block_number >= $2) "
         );
     }
 }

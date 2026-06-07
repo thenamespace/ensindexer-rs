@@ -44,6 +44,7 @@ impl From<AccountFilter> for StorageAccountFilter {
             id_lte: value.id_lte,
             id_in: value.id_in,
             id_not_in: value.id_not_in,
+            change_block_number_gte: value.change_block.and_then(|change| change.number_gte),
             and: value
                 .and
                 .map(|filters| filters.into_iter().map(Into::into).collect()),

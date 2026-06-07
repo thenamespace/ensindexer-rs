@@ -84,6 +84,7 @@ pub struct ResolverFilter {
     pub coin_types_contains_nocase: Option<String>,
     pub coin_types_not_contains: Option<String>,
     pub coin_types_not_contains_nocase: Option<String>,
+    pub change_block_number_gte: Option<i32>,
     pub and: Option<Vec<ResolverFilter>>,
     pub or: Option<Vec<ResolverFilter>>,
 }

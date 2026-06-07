@@ -88,6 +88,7 @@ pub struct WrappedDomainFilter {
     pub fuses_lte: Option<i32>,
     pub fuses_in: Option<Vec<i32>>,
     pub fuses_not_in: Option<Vec<i32>>,
+    pub change_block_number_gte: Option<i32>,
     pub and: Option<Vec<WrappedDomainFilter>>,
     pub or: Option<Vec<WrappedDomainFilter>>,
 }

@@ -209,6 +209,13 @@ pub(crate) fn push_domain_scalar_filter_conditions<'qb>(
     push_sub_numeric_text_filter(separated, has_where, "ttl", "<", filter.ttl_lt);
     push_sub_numeric_text_filter(separated, has_where, "ttl", ">=", filter.ttl_gte);
     push_sub_numeric_text_filter(separated, has_where, "ttl", "<=", filter.ttl_lte);
+    push_sub_change_block_filter(
+        separated,
+        has_where,
+        "Domain",
+        "id",
+        filter.change_block_number_gte,
+    );
     push_sub_domain_relation_filter(separated, has_where, "parent_id", filter.parent_filter);
     push_sub_account_relation_filter(
         separated,

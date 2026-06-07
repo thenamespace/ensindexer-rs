@@ -7,12 +7,14 @@ pub struct AccountsRepo<'a> {
 }
 
 impl AccountsRepo<'_> {
-    pub async fn create_if_missing(&self, id: &str) -> StorageResult<()> {
-        sqlx::query("insert into accounts (id) values ($1) on conflict (id) do nothing")
-            .bind(id)
-            .execute(self.pool)
-            .await?;
-        Ok(())
+    pub async fn create_if_missing(&self, id: &str) -> StorageResult<bool> {
+        let inserted = sqlx::query_scalar::<_, String>(
+            "insert into accounts (id) values ($1) on conflict (id) do nothing returning id",
+        )
+        .bind(id)
+        .fetch_optional(self.pool)
+        .await?;
+        Ok(inserted.is_some())
     }
 
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<AccountRow>> {

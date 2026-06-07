@@ -32,7 +32,7 @@ Projection code should call repository methods instead of hand-writing SQL. Quer
 
 Mutable ENS state lives in current-state entity tables. Immutable history lives in event tables with IDs shaped like the official subgraph. This mirrors Graph Node projections: handlers update current rows as events arrive, while also preserving event records for chronological queries and relationship fields.
 
-The current implementation intentionally starts with current-state reads. Historical block reads and `_change_block` support require snapshot tables or versioned rows, and should be added as an explicit storage milestone rather than hidden inside API code.
+The current implementation intentionally starts with current-state reads. `_change_block` predicates use projection-maintained `entity_changes` plus event `block_number` columns. Historical block reads still require snapshot tables or versioned rows, and should be added as an explicit storage milestone rather than hidden inside API code.
 
 ## Testing Approach
 

@@ -21,6 +21,13 @@ pub(crate) fn push_account_filter_conditions<'qb>(
     push_sub_text_filter(separated, has_where, "id", "<=", filter.id_lte);
     push_sub_text_array_filter(separated, has_where, "id", filter.id_in, false);
     push_sub_text_array_filter(separated, has_where, "id", filter.id_not_in, true);
+    push_sub_change_block_filter(
+        separated,
+        has_where,
+        "Account",
+        "id",
+        filter.change_block_number_gte,
+    );
     push_sub_account_filter_group(separated, has_where, " and ", filter.and);
     push_sub_account_filter_group(separated, has_where, " or ", filter.or);
 }
@@ -100,8 +107,37 @@ fn append_account_filter_predicates<'qb>(
     append_text_predicate(separated, has_predicate, "id", "<=", filter.id_lte);
     append_text_array_predicate(separated, has_predicate, "id", filter.id_in, false);
     append_text_array_predicate(separated, has_predicate, "id", filter.id_not_in, true);
+    append_change_block_predicate(
+        separated,
+        has_predicate,
+        "Account",
+        "id",
+        filter.change_block_number_gte,
+    );
     append_account_composite_predicate(separated, has_predicate, " and ", filter.and);
     append_account_composite_predicate(separated, has_predicate, " or ", filter.or);
+}
+
+fn append_change_block_predicate<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_predicate: &mut bool,
+    entity_type: &'static str,
+    id_column: &'static str,
+    number_gte: Option<i32>,
+) {
+    let Some(number_gte) = number_gte else {
+        return;
+    };
+
+    append_predicate_prefix(separated, has_predicate);
+    separated
+        .push_unseparated("exists (select 1 from entity_changes where entity_type = ")
+        .push_bind_unseparated(entity_type)
+        .push_unseparated(" and entity_id = ")
+        .push_unseparated(id_column)
+        .push_unseparated(" and block_number >= ")
+        .push_bind_unseparated(number_gte)
+        .push_unseparated(")");
 }
 
 fn append_account_composite_predicate<'qb>(
