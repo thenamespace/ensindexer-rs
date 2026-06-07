@@ -23,7 +23,7 @@ impl IngestService {
         );
         anyhow::ensure!(
             !self.config.backfill_source.is_raw(),
-            "BACKFILL_SOURCE=raw is only valid for archive replay; use replay or SERVE_BACKFILL_SOURCE=raw"
+            "BACKFILL_SOURCE=raw is only valid for archive replay"
         );
 
         tracing::info!(
@@ -130,7 +130,10 @@ impl IngestService {
                 block_meta.insert(range_end, meta);
             }
 
-            if let Some(dir) = &self.config.raw_archive_dir {
+            if self.config.archive_backfills {
+                let dir = self.config.raw_archive_dir.as_ref().ok_or_else(|| {
+                    anyhow::anyhow!("RAW_ARCHIVE_DIR is required when ARCHIVE_BACKFILLS=true")
+                })?;
                 let archive = ArchivedRange::new(
                     self.config.chain_id,
                     range_start,
@@ -162,17 +165,16 @@ impl IngestService {
     }
 
     fn hypersync_backfill_client(&self) -> anyhow::Result<Option<HypersyncBackfillClient>> {
-        let Some(api_key) = self.config.envio_api_key.as_deref() else {
-            anyhow::ensure!(
-                self.config.backfill_source != BackfillSource::Hypersync,
-                "BACKFILL_SOURCE=hypersync requires ENVIO_API_KEY"
-            );
-            return Ok(None);
-        };
-
-        if !self.config.backfill_source.use_hypersync(Some(api_key)) {
+        if self.config.backfill_source != BackfillSource::Hypersync {
             return Ok(None);
         }
+
+        let api_key = self
+            .config
+            .envio_api_key
+            .as_deref()
+            .filter(|key| !key.trim().is_empty())
+            .ok_or_else(|| anyhow::anyhow!("BACKFILL_SOURCE=hypersync requires ENVIO_API_KEY"))?;
 
         Ok(Some(HypersyncBackfillClient::new(
             self.config.hypersync_url.to_string(),

@@ -130,6 +130,29 @@ pub(crate) fn read_ranges(
     Ok(ranges)
 }
 
+pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Result<(u64, u64)> {
+    let mut from = None::<u64>;
+    let mut to = None::<u64>;
+
+    for entry in std::fs::read_dir(dir.join("ranges"))? {
+        let entry = entry?;
+        if entry.path().extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+
+        let bytes = std::fs::read(entry.path())?;
+        let range: ArchivedRange = serde_json::from_slice(&bytes)?;
+        range.validate(expected_chain_id)?;
+        from = Some(from.map_or(range.from_block, |current| current.min(range.from_block)));
+        to = Some(to.map_or(range.to_block, |current| current.max(range.to_block)));
+    }
+
+    match (from, to) {
+        (Some(from), Some(to)) => Ok((from, to)),
+        _ => anyhow::bail!("raw archive contains no range files"),
+    }
+}
+
 fn range_path(dir: &Path, from_block: u64, to_block: u64) -> PathBuf {
     dir.join("ranges")
         .join(format!("{from_block:020}-{to_block:020}.json"))

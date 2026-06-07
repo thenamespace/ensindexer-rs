@@ -18,12 +18,11 @@ use tower_http::{
 pub struct ServerState {
     schema: EnsSchema,
     storage: Storage,
-    sandbox: bool,
 }
 
 pub async fn serve_http(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
     let bind_address = config.bind_address;
-    let app = build_router(config, storage);
+    let app = build_router(storage);
     let listener = tokio::net::TcpListener::bind(bind_address).await?;
 
     tracing::info!(%bind_address, "starting ENS indexer HTTP server");
@@ -31,13 +30,9 @@ pub async fn serve_http(config: AppConfig, storage: Storage) -> anyhow::Result<(
     Ok(())
 }
 
-pub fn build_router(config: AppConfig, storage: Storage) -> Router {
+pub fn build_router(storage: Storage) -> Router {
     let schema = build_schema(storage.clone());
-    let state = ServerState {
-        schema,
-        storage,
-        sandbox: config.graphql_sandbox,
-    };
+    let state = ServerState { schema, storage };
 
     Router::new()
         .route("/graphql", post(graphql_handler).get(graphql_sandbox))
@@ -60,12 +55,8 @@ async fn graphql_handler(
     state.schema.execute(request.into_inner()).await.into()
 }
 
-async fn graphql_sandbox(State(state): State<ServerState>) -> impl IntoResponse {
-    if state.sandbox {
-        Html(apollo_sandbox_html()).into_response()
-    } else {
-        axum::http::StatusCode::NOT_FOUND.into_response()
-    }
+async fn graphql_sandbox() -> impl IntoResponse {
+    Html(apollo_sandbox_html()).into_response()
 }
 
 fn apollo_sandbox_html() -> &'static str {

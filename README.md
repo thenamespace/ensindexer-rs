@@ -26,17 +26,17 @@ make serve
 ```
 
 Configuration is loaded from `.env` via `config`.
-Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox when `GRAPHQL_SANDBOX=true`.
-`make serve` starts the GraphQL API. Set `SERVE_INDEXER=true` to run the catchup/live indexer in the same process. If `SERVE_BACKFILL_FROM` and `SERVE_BACKFILL_TO` are both set, the server runs that bounded startup backfill before entering the live confirmed-block loop. `SERVE_BACKFILL_SOURCE` selects startup backfill transport: `auto`, `hypersync`, `rpc`, or `raw`.
+Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox. The Sandbox is always available in dev and prod.
+`make serve` starts the GraphQL API. Set `ENABLE_BACKFILL=true` to run a startup catchup backfill in the same process, and set `ENABLE_LIVE_INDEXING=true` to keep indexing confirmed live ranges after startup. If both toggles are enabled, startup backfill runs before live indexing.
 
-Historical backfills use Envio HyperSync automatically when `ENVIO_API_KEY` is set. Set `BACKFILL_SOURCE=rpc` to force JSON-RPC backfills, or `BACKFILL_SOURCE=hypersync` to fail fast unless HyperSync is configured. `HYPERSYNC_URL` defaults to `https://eth.hypersync.xyz`.
-Set `RAW_ARCHIVE_DIR` to persist fetched raw logs and block metadata as JSON range files. A first run can use `SERVE_BACKFILL_SOURCE=hypersync` plus `RAW_ARCHIVE_DIR=.raw-archive`; a later fresh database can use the same range with `SERVE_BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. The CLI equivalent is `cargo run -p cli -- replay --from <block> --to <block>`.
+`BACKFILL_SOURCE` is strict: `rpc`, `hypersync`, or `raw`. There is no automatic transport selection. `BACKFILL_FROM` and `BACKFILL_TO` are optional for serve-time backfills and `cargo run -p cli -- backfill`; omitted `BACKFILL_FROM` defaults to the earliest ENS indexed source block, omitted `BACKFILL_TO` defaults to the latest RPC block for `rpc`/`hypersync`, and raw replay can infer archive bounds.
+Set `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as JSON range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `INDEXING_SOURCE` controls live indexing and must be `http_rpc` or `wss`; `wss` requires `ETH_WS_URL`.
 
 Indexer commands:
 
 ```bash
 make status
-make backfill BACKFILL_FROM=9380380 BACKFILL_TO=9381380
+cargo run -p cli -- backfill --from 9380380 --to 9381380
 cargo run -p cli -- replay --from 9380380 --to 9381380
 cargo run -p cli -- index
 make reset
@@ -59,7 +59,7 @@ Run the API from the image:
 make docker-run
 ```
 
-The container entrypoint runs `ensindexer serve`. Set `SERVE_INDEXER=true` in `.env` to run startup backfill/live indexing inside the same process as the GraphQL API.
+The container entrypoint runs `ensindexer serve`. Use `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` in `.env` to run startup backfill and live indexing inside the same process as the GraphQL API.
 
 ## Code Layout
 

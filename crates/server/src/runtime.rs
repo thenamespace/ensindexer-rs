@@ -5,23 +5,25 @@ use storage::Storage;
 use crate::http;
 
 pub async fn serve(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
-    if config.serve_indexer {
-        serve_with_indexer(config, storage).await
-    } else {
+    if !config.enable_backfill && !config.enable_live_indexing {
         http::serve_http(config, storage).await
+    } else {
+        serve_with_indexing(config, storage).await
     }
 }
 
-async fn serve_with_indexer(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
-    tracing::info!("starting unified HTTP and indexer service");
+async fn serve_with_indexing(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
+    tracing::info!(
+        enable_backfill = config.enable_backfill,
+        enable_live_indexing = config.enable_live_indexing,
+        "starting unified HTTP and optional indexer service"
+    );
 
     let indexer_config = config.clone();
     let indexer_storage = storage.clone();
     let mut indexer = tokio::spawn(async move {
-        run_startup_backfill(&indexer_config, &indexer_storage).await?;
-        IngestService::new(indexer_config, indexer_storage)
-            .run_live()
-            .await
+        run_enabled_backfill(&indexer_config, &indexer_storage).await?;
+        run_enabled_live_indexing(indexer_config, indexer_storage).await
     });
 
     tokio::select! {
@@ -39,29 +41,28 @@ async fn serve_with_indexer(config: AppConfig, storage: Storage) -> anyhow::Resu
     }
 }
 
-async fn run_startup_backfill(config: &AppConfig, storage: &Storage) -> anyhow::Result<()> {
-    match (config.serve_backfill_from, config.serve_backfill_to) {
-        (Some(from), Some(to)) => {
-            tracing::info!(
-                from_block = from,
-                to_block = to,
-                source = ?config.serve_backfill_source,
-                "running startup backfill"
-            );
-            let service = IngestService::new(config.clone(), storage.clone());
-            if config.serve_backfill_source.is_raw() {
-                service.replay_archive_range(from, to, None).await
-            } else {
-                let mut backfill_config = config.clone();
-                backfill_config.backfill_source = config.serve_backfill_source;
-                IngestService::new(backfill_config, storage.clone())
-                    .backfill_range(from, to)
-                    .await
-            }
-        }
-        (None, None) => Ok(()),
-        _ => anyhow::bail!(
-            "SERVE_BACKFILL_FROM and SERVE_BACKFILL_TO must both be set for startup backfill"
-        ),
+async fn run_enabled_backfill(config: &AppConfig, storage: &Storage) -> anyhow::Result<()> {
+    if !config.enable_backfill {
+        return Ok(());
+    }
+
+    tracing::info!(
+        from_block = ?config.backfill_from,
+        to_block = ?config.backfill_to,
+        source = ?config.backfill_source,
+        archive_backfills = config.archive_backfills,
+        "running configured startup backfill"
+    );
+
+    IngestService::new(config.clone(), storage.clone())
+        .run_configured_backfill(config.backfill_from, config.backfill_to)
+        .await
+}
+
+async fn run_enabled_live_indexing(config: AppConfig, storage: Storage) -> anyhow::Result<()> {
+    if config.enable_live_indexing {
+        IngestService::new(config, storage).run_live().await
+    } else {
+        std::future::pending().await
     }
 }

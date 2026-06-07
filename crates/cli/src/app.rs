@@ -26,9 +26,9 @@ enum Command {
     },
     Backfill {
         #[arg(long)]
-        from: u64,
+        from: Option<u64>,
         #[arg(long)]
-        to: u64,
+        to: Option<u64>,
     },
     Replay {
         #[arg(long)]
@@ -108,7 +108,7 @@ pub async fn run() -> anyhow::Result<()> {
             let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             IngestService::new(config, storage)
-                .backfill_range(from, to)
+                .run_configured_backfill(from, to)
                 .await?;
         }
         Command::Replay {

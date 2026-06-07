@@ -585,12 +585,18 @@ Runtime config:
 | ---------------------------- | ----------------------------------------------------------- |
 | `DATABASE_URL`               | Postgres connection string                                  |
 | `ETH_RPC_URL`                | Ethereum JSON-RPC endpoint                                  |
+| `ETH_WS_URL`                 | Ethereum websocket endpoint, required when `INDEXING_SOURCE=wss` |
 | `ENVIO_API_KEY`              | Envio HyperSync API key for fast historical backfills       |
 | `HYPERSYNC_URL`              | HyperSync endpoint, default `https://eth.hypersync.xyz`     |
-| `BACKFILL_SOURCE`            | historical source selector: `auto`, `hypersync`, `rpc`, or `raw` for replay-only flows |
-| `SERVE_BACKFILL_SOURCE`      | startup range source; defaults to `BACKFILL_SOURCE`, supports `raw` archive replay |
+| `ENABLE_BACKFILL`            | run configured startup backfill in `serve`                  |
+| `ENABLE_LIVE_INDEXING`       | run live confirmed-block indexing in `serve`                |
+| `BACKFILL_SOURCE`            | strict historical source selector: `rpc`, `hypersync`, or `raw` |
+| `INDEXING_SOURCE`            | strict live source selector: `http_rpc` or `wss`            |
+| `BACKFILL_FROM`              | optional startup/CLI backfill start; defaults to earliest ENS source block |
+| `BACKFILL_TO`                | optional startup/CLI backfill end; defaults to latest RPC block or raw archive end |
+| `ARCHIVE_BACKFILLS`          | write fetched backfill ranges to `RAW_ARCHIVE_DIR` when true |
+| `RAW_ARCHIVE_DIR`            | archive directory used for backfill writes and raw replay   |
 | `CHAIN_ID`                   | chain selector                                              |
-| `GRAPHQL_PLAYGROUND`         | enable/disable playground                                   |
 | `INDEXER_CONFIRMATION_DEPTH` | live indexing lag                                           |
 | `BACKFILL_BATCH_BLOCKS`      | initial range size                                          |
 | `LIVE_POLL_SECONDS`          | live loop sleep interval when the safe head has no new work |

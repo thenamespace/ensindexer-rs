@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the snapshot-backed historical `block` read slice. The updated initial migration also applied cleanly on a fresh temporary Postgres database.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the strict CLI/server indexing env slice.
 
 ## Completed
 
@@ -12,7 +12,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] `.env.example` exists and runtime configuration is read from `.env`.
 - [x] Docker Compose includes Postgres 17.
 - [x] Makefile provides common commands for setup, serving, schema checks, tests, and linting.
-- [x] Apollo Sandbox is used for the GraphQL UI instead of GraphiQL.
+- [x] Apollo Sandbox is used for the GraphQL UI instead of GraphiQL and is always served on `GET /graphql`.
 - [x] Each crate has a README describing its purpose, architecture, and responsibilities.
 - [x] Root docs describe the official ENS subgraph schema, projection logic, and Rust implementation plan.
 - [x] Repository files are split into modules rather than single large `lib.rs` files.
@@ -25,6 +25,11 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Historical ingestion can fetch from HyperSync when configured.
 - [x] Raw log archive writing is supported.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
+- [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
+- [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
+- [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
+- [x] Backfill ranges can omit `from` and `to`; defaults resolve to the earliest ENS source block and latest available target.
+- [x] Backfill archive writes are explicit through `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR`.
 - [x] Source checkpoints are stored per indexed source.
 - [x] Live indexing loop runs with configurable confirmation depth.
 - [x] Live indexing verifies parent hashes before applying new confirmed ranges.
@@ -98,7 +103,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 ### API And Server
 
 - [x] Axum server exposes GraphQL and health/status routes.
-- [x] Unified server mode can start API and optional indexing/backfill behavior from environment configuration.
+- [x] `serve` always starts API, GraphQL, health checks, and Apollo Sandbox, with optional backfill/live indexing controlled by strict env toggles.
 - [x] CLI includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, `reset --yes`, `compare`, `schema-local`, and `schema-diff`.
 
 ## Pending

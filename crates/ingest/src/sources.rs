@@ -85,6 +85,14 @@ pub fn fixed_sources() -> anyhow::Result<Vec<FixedSource>> {
     ])
 }
 
+pub fn first_source_start_block() -> anyhow::Result<u64> {
+    fixed_sources()?
+        .into_iter()
+        .map(|source| source.start_block)
+        .min()
+        .ok_or_else(|| anyhow::anyhow!("no ingest sources configured"))
+}
+
 #[cfg(test)]
 mod tests {
     use contracts::{FixedLogSource, fixed_source_topic0s};
