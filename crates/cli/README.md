@@ -24,6 +24,8 @@ Operational command-line entrypoint for the ENS indexer.
 
 The binary keeps `main.rs` small and delegates command execution to `app.rs`. Commands share the same `.env` configuration path as the server and ingest crates, so operational behavior does not diverge between local and production runs.
 
+The CLI builds Tokio explicitly instead of using `#[tokio::main]` so worker threads have enough stack for the large async-graphql ENS compatibility schema. This avoids request-time stack overflows during GraphQL validation/execution while keeping runtime behavior uniform for `serve`, `backfill`, and live indexing commands.
+
 `compare` is intentionally network-only and does not open the database. It reads `SUBGRAPH_URL` and optional `SUBGRAPH_AUTH_TOKEN` from `.env` or CLI flags, posts the same query and optional variables JSON to both endpoints, and fails with both pretty-printed responses when they differ. Use `--operation-name` for named query documents; the request body and user agent intentionally match the official Graph gateway's documented curl shape.
 
 `schema-local` and `schema-diff` are schema-contract checks. `schema-diff` uses the same `.env` gateway configuration as `compare`, writes the official introspection JSON when `--output` is provided, and compares Graph Node compatibility names before any data is indexed. It intentionally exits non-zero while required official query fields, arguments, filter fields, or order enum values are missing.
