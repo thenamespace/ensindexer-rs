@@ -78,6 +78,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] `DomainFilter` relationship predicates recurse through nested parent/account/resolver predicates, including relation-only `and`/`or` branches.
 - [x] `RegistrationFilter`, `WrappedDomainFilter`, and `ResolverFilter` composition preserves nested relation-only predicates.
 - [x] Event owner/addr scalar operators are mapped through API conversion and SQL predicates.
+- [x] Event parent relation scalar operators are mapped for `domain_*`, `registration_*`, and `resolver_*` predicates.
 - [x] Event relation predicates are wired for domain/account/resolver/registration-backed columns such as `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_`.
 - [x] Relationship order fields map to explicit static SQL expressions for entity queries, concrete event queries, and event-interface queries.
 - [x] Query-builder SQL-shape tests cover scalar filters, relationship filters, ordering, and event filter composition.

@@ -36,6 +36,30 @@ fn base_event_filters_include_generated_operator_variants() {
 }
 
 #[test]
+fn parent_event_filters_include_relation_operator_variants() {
+    let filter = EventFilter {
+        parent_id_not: Some("0xold".into()),
+        parent_id_in: Some(vec!["0xone".into(), "0xtwo".into()]),
+        parent_id_contains_nocase: Some("abcd".into()),
+        parent_id_not_ends_with: Some("ffff".into()),
+        ..EventFilter::default()
+    };
+    let mut query = QueryBuilder::<Postgres>::new("select id from transfer_events");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+        push_event_filters(&mut separated, &mut has_where, "domain_id", &filter);
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from transfer_events where domain_id != $1 and domain_id = any($2) and lower(domain_id) like lower($3) and not (domain_id like $4) "
+    );
+}
+
+#[test]
 fn event_specific_filters_are_added_only_for_matching_table_columns() {
     let filter = EventFilter {
         parent_id: Some("0xdomain".into()),

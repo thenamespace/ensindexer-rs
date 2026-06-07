@@ -52,6 +52,25 @@ pub(crate) struct ResolverRelationFilter {
 impl ApplyEventFilter for ResolverRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.parent_id = self.resolver;
+        filter.parent_id_not = self.resolver_not;
+        filter.parent_id_gt = self.resolver_gt;
+        filter.parent_id_lt = self.resolver_lt;
+        filter.parent_id_gte = self.resolver_gte;
+        filter.parent_id_lte = self.resolver_lte;
+        filter.parent_id_in = self.resolver_in;
+        filter.parent_id_not_in = self.resolver_not_in;
+        filter.parent_id_contains = self.resolver_contains;
+        filter.parent_id_contains_nocase = self.resolver_contains_nocase;
+        filter.parent_id_not_contains = self.resolver_not_contains;
+        filter.parent_id_not_contains_nocase = self.resolver_not_contains_nocase;
+        filter.parent_id_starts_with = self.resolver_starts_with;
+        filter.parent_id_starts_with_nocase = self.resolver_starts_with_nocase;
+        filter.parent_id_not_starts_with = self.resolver_not_starts_with;
+        filter.parent_id_not_starts_with_nocase = self.resolver_not_starts_with_nocase;
+        filter.parent_id_ends_with = self.resolver_ends_with;
+        filter.parent_id_ends_with_nocase = self.resolver_ends_with_nocase;
+        filter.parent_id_not_ends_with = self.resolver_not_ends_with;
+        filter.parent_id_not_ends_with_nocase = self.resolver_not_ends_with_nocase;
         filter.resolver_filter = self.resolver_filter;
     }
 }
@@ -106,5 +125,24 @@ impl ApplyEventFilter for NewResolverRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.resolver_id = self.resolver;
         filter.resolver_filter = self.resolver_filter;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolver_relation_filter_maps_parent_operator_fields() {
+        let mut filter = EventFilter::default();
+        ResolverRelationFilter {
+            resolver_gt: Some("0x1000".into()),
+            resolver_not_ends_with: Some("ffff".into()),
+            ..ResolverRelationFilter::default()
+        }
+        .apply(&mut filter);
+
+        assert_eq!(filter.parent_id_gt.as_deref(), Some("0x1000"));
+        assert_eq!(filter.parent_id_not_ends_with.as_deref(), Some("ffff"));
     }
 }

@@ -470,6 +470,7 @@ Current implementation state:
 - Relationship order fields compile to explicit SQL expressions for mutable entities, concrete events, and event-interface reference queries. Concrete event ordering uses table-specific parent columns such as `domain_id`, `registration_id`, and `resolver_id`; interface references use the union-level `parent_id`.
 - Event-interface reference unions project typed nullable columns for their concrete event-family fields, so interface filters can apply predicates such as `fuses_*`, `expiryDate_*`, `key_*`, `coinType_*`, and `isAuthorized`.
 - Event account-like scalar predicates for `owner_*` and `addr_*` are mapped through API conversion and SQL predicates on concrete event tables and event-interface unions.
+- Event parent relation scalar predicates for `domain_*`, `registration_*`, and `resolver_*` are mapped through API conversion and SQL predicates on concrete event tables and event-interface unions.
 - Event relation predicates are mapped through API conversion and SQL subqueries for domain/account/resolver/registration-backed columns such as `domain_`, `parentDomain_`, `registration_`, `resolver_`, `owner_`, `registrant_`, `newOwner_`, and `addr_`.
 - `DomainFilter` relationship predicates recurse through nested `parent_`, account-backed relations, and resolver scalar predicates, including when the only condition is inside a nested `and`/`or` branch.
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
@@ -502,7 +503,7 @@ Current implementation covers a subset of Tier 1:
 - `registrationDate_*`, `expiryDate_*`, and `cost_*` on `Registration`.
 - `expiryDate_*` and `fuses_*` on `WrappedDomain`.
 - `address`, `address_in`, `addr`, `contentHash_*`, `texts_contains`, and `coinTypes_contains` on `Resolver`.
-- event parent filters, ID predicates, full `blockNumber_*` comparisons, `transactionID` equality/list predicates, and concrete event-specific predicates for stored fields such as `owner_*`, `addr_*`, `fuses_*`, `expiryDate_*`, `coinType_*`, `key`, `hash`, `interfaceID`, `isAuthorized`, and `version_*`.
+- event parent filters, ID predicates, full `blockNumber_*` comparisons, `transactionID` equality/list predicates, and concrete event-specific predicates for stored fields such as `domain_*`, `registration_*`, `resolver_*`, `owner_*`, `addr_*`, `fuses_*`, `expiryDate_*`, `coinType_*`, `key`, `hash`, `interfaceID`, `isAuthorized`, and `version_*`.
 - shallow trailing-underscore relationship filters on mutable entities: `Domain.parent_`, `Domain.owner_`, `Domain.resolver_`, `Domain.registrant_`, `Domain.wrappedOwner_`, `Registration.domain_`, `Registration.registrant_`, `WrappedDomain.domain_`, `WrappedDomain.owner_`, `Resolver.domain_`, and `Resolver.addr_`.
 
 Tier 2 filters:

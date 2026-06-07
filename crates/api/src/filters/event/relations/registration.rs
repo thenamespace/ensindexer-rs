@@ -52,6 +52,25 @@ pub(crate) struct RegistrationRelationFilter {
 impl ApplyEventFilter for RegistrationRelationFilter {
     fn apply(self, filter: &mut EventFilter) {
         filter.parent_id = self.registration;
+        filter.parent_id_not = self.registration_not;
+        filter.parent_id_gt = self.registration_gt;
+        filter.parent_id_lt = self.registration_lt;
+        filter.parent_id_gte = self.registration_gte;
+        filter.parent_id_lte = self.registration_lte;
+        filter.parent_id_in = self.registration_in;
+        filter.parent_id_not_in = self.registration_not_in;
+        filter.parent_id_contains = self.registration_contains;
+        filter.parent_id_contains_nocase = self.registration_contains_nocase;
+        filter.parent_id_not_contains = self.registration_not_contains;
+        filter.parent_id_not_contains_nocase = self.registration_not_contains_nocase;
+        filter.parent_id_starts_with = self.registration_starts_with;
+        filter.parent_id_starts_with_nocase = self.registration_starts_with_nocase;
+        filter.parent_id_not_starts_with = self.registration_not_starts_with;
+        filter.parent_id_not_starts_with_nocase = self.registration_not_starts_with_nocase;
+        filter.parent_id_ends_with = self.registration_ends_with;
+        filter.parent_id_ends_with_nocase = self.registration_ends_with_nocase;
+        filter.parent_id_not_ends_with = self.registration_not_ends_with;
+        filter.parent_id_not_ends_with_nocase = self.registration_not_ends_with_nocase;
         filter.registration_filter = self.registration_filter;
     }
 }
@@ -67,12 +86,17 @@ mod tests {
         nested.label_name = Some("vitalik".into());
         RegistrationRelationFilter {
             registration: Some("registration-id".into()),
+            registration_in: Some(vec!["registration-a".into(), "registration-b".into()]),
             registration_filter: Some(Box::new(nested)),
             ..RegistrationRelationFilter::default()
         }
         .apply(&mut filter);
 
         assert_eq!(filter.parent_id.as_deref(), Some("registration-id"));
+        assert_eq!(
+            filter.parent_id_in,
+            Some(vec!["registration-a".into(), "registration-b".into()])
+        );
         assert_eq!(
             filter
                 .registration_filter
