@@ -1,6 +1,9 @@
-use sqlx::PgPool;
+mod replay_indexes;
+
+use sqlx::{AssertSqlSafe, PgPool};
 
 use crate::StorageResult;
+use replay_indexes::BULK_REPLAY_INDEXES;
 
 pub struct MaintenanceRepo<'a> {
     pub(crate) pool: &'a PgPool,
@@ -51,6 +54,25 @@ impl MaintenanceRepo<'_> {
         )
         .execute(self.pool)
         .await?;
+        Ok(())
+    }
+
+    pub async fn drop_bulk_replay_indexes(&self) -> StorageResult<()> {
+        for index in BULK_REPLAY_INDEXES {
+            sqlx::query(AssertSqlSafe(format!(
+                "drop index if exists {}",
+                index.name
+            )))
+            .execute(self.pool)
+            .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn recreate_bulk_replay_indexes(&self) -> StorageResult<()> {
+        for index in BULK_REPLAY_INDEXES {
+            sqlx::query(index.create_sql).execute(self.pool).await?;
+        }
         Ok(())
     }
 }

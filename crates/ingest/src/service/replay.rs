@@ -24,7 +24,40 @@ impl IngestService {
             "starting raw archive replay"
         );
 
-        let entries = range_entries(&archive_dir, self.config.chain_id, from_block, to_block)?;
+        tracing::info!("dropping secondary indexes for bulk raw replay");
+        self.storage
+            .maintenance()
+            .drop_bulk_replay_indexes()
+            .await?;
+
+        let result = self
+            .replay_archive_range_without_indexes(&archive_dir, from_block, to_block)
+            .await;
+
+        tracing::info!("recreating secondary indexes after bulk raw replay");
+        let recreate_result = self
+            .storage
+            .maintenance()
+            .recreate_bulk_replay_indexes()
+            .await;
+        match (result, recreate_result) {
+            (Ok(()), Ok(())) => Ok(()),
+            (Err(error), Ok(())) => Err(error),
+            (Ok(()), Err(error)) => Err(error.into()),
+            (Err(error), Err(recreate_error)) => {
+                tracing::error!(%recreate_error, "failed to recreate secondary indexes");
+                Err(error)
+            }
+        }
+    }
+
+    async fn replay_archive_range_without_indexes(
+        &self,
+        archive_dir: &std::path::Path,
+        from_block: u64,
+        to_block: u64,
+    ) -> anyhow::Result<()> {
+        let entries = range_entries(archive_dir, self.config.chain_id, from_block, to_block)?;
         let total_ranges = entries.len();
         for (index, entry) in entries.iter().enumerate() {
             let started_at = Instant::now();
@@ -39,7 +72,7 @@ impl IngestService {
                 "replaying raw archive range"
             );
 
-            let range = read_range_entry(&archive_dir, self.config.chain_id, entry)?;
+            let range = read_range_entry(archive_dir, self.config.chain_id, entry)?;
             let range_start = range.from_block;
             let range_end = range.to_block;
             let checkpoint_sources = range.checkpoint_sources.clone();

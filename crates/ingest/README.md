@@ -23,6 +23,10 @@ When `ARCHIVE_BACKFILLS=true`, each fetched range is written to `RAW_ARCHIVE_DIR
 
 Raw replay streams one manifest range file at a time and applies each range inside a single Postgres transaction with local `synchronous_commit=off`. The CLI uses a single-connection pool for raw replay so all projection statements in a range share that transaction. This keeps memory bounded by one archive file and reduces per-statement commit/fsync overhead during production replays.
 
+Before raw replay starts, secondary query indexes are dropped and recreated after replay finishes. Primary keys, unique constraints, and foreign-key enforcement remain intact. This makes bulk replay substantially cheaper because Postgres does not maintain every API query index for each inserted event and snapshot row.
+
+If replay fails after dropping indexes, the replay service attempts to recreate them before returning the original error. A failed process can also be recovered by rerunning migrations, because the migration index statements use `create index if not exists`.
+
 `cli archive` uses the same RPC/HyperSync fetch path but writes raw archive ranges without applying projection writes. During a continuous archive-only run it keeps resolver addresses discovered from registry events in memory, so resolver log fetching remains complete even though the database is not being projected yet. For complete historical archives, run archive-only from the first ENS source block before replaying from raw files.
 
 Archive-only also persists discovered resolver addresses in `resolvers.json` beside `manifest.json`. Resume loads this cache and refuses to continue if it is missing or stale for the requested resume block, because resolver log completeness depends on all previously discovered resolver addresses. `archive-resolvers` rebuilds that cache from existing range files when older archives were created before cache persistence existed.

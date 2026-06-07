@@ -28,6 +28,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Archive-only resume persists discovered resolver addresses in `resolvers.json` and can rebuild that cache from existing archive files.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
 - [x] Raw archive replay streams one range file at a time and wraps each range in a single Postgres transaction.
+- [x] Raw archive replay drops secondary query indexes before bulk replay and recreates them afterward.
+- [x] Raw archive replay attempts to restore dropped secondary indexes if replay fails.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
 - [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
