@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use alloy_primitives::{Address, B256, U256, keccak256};
 use bigdecimal::BigDecimal;
-use storage::{DomainUpsert, Storage, decimal_from_str};
+use storage::{DomainUpsert, EntityKind, Storage, decimal_from_str};
 use types::{
     AccountId, DomainId, LabelHash, ResolverId,
     constants::{EMPTY_ADDRESS, ETH_NODE, ETH_REGISTRATION_GRACE_PERIOD_SECONDS, ROOT_NODE},
@@ -108,12 +108,7 @@ pub(crate) async fn mark_account_changed(
     block_number: i32,
 ) -> ProjectionResult<()> {
     storage
-        .entity_changes()
-        .record("Account", account_id, block_number)
-        .await?;
-    storage
-        .snapshots()
-        .record_account(account_id, block_number)
+        .record_entity_change(EntityKind::Account, account_id, block_number)
         .await?;
     Ok(())
 }
@@ -124,12 +119,7 @@ pub(crate) async fn mark_domain_changed(
     block_number: i32,
 ) -> ProjectionResult<()> {
     storage
-        .entity_changes()
-        .record("Domain", domain_id, block_number)
-        .await?;
-    storage
-        .snapshots()
-        .record_domain(domain_id, block_number)
+        .record_entity_change(EntityKind::Domain, domain_id, block_number)
         .await?;
     Ok(())
 }
@@ -140,12 +130,7 @@ pub(crate) async fn mark_registration_changed(
     block_number: i32,
 ) -> ProjectionResult<()> {
     storage
-        .entity_changes()
-        .record("Registration", registration_id, block_number)
-        .await?;
-    storage
-        .snapshots()
-        .record_registration(registration_id, block_number)
+        .record_entity_change(EntityKind::Registration, registration_id, block_number)
         .await?;
     Ok(())
 }
@@ -156,12 +141,7 @@ pub(crate) async fn mark_resolver_changed(
     block_number: i32,
 ) -> ProjectionResult<()> {
     storage
-        .entity_changes()
-        .record("Resolver", resolver_id, block_number)
-        .await?;
-    storage
-        .snapshots()
-        .record_resolver(resolver_id, block_number)
+        .record_entity_change(EntityKind::Resolver, resolver_id, block_number)
         .await?;
     Ok(())
 }
@@ -172,12 +152,7 @@ pub(crate) async fn mark_wrapped_domain_changed(
     block_number: i32,
 ) -> ProjectionResult<()> {
     storage
-        .entity_changes()
-        .record("WrappedDomain", wrapped_domain_id, block_number)
-        .await?;
-    storage
-        .snapshots()
-        .record_wrapped_domain(wrapped_domain_id, block_number)
+        .record_entity_change(EntityKind::WrappedDomain, wrapped_domain_id, block_number)
         .await?;
     Ok(())
 }

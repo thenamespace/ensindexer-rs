@@ -1,3 +1,4 @@
+pub mod change_buffer;
 pub mod error;
 pub mod filters;
 pub mod inserts;
@@ -7,6 +8,7 @@ pub mod query;
 pub mod repositories;
 pub mod store;
 
+pub use change_buffer::*;
 pub use error::*;
 pub use filters::*;
 pub use inserts::*;

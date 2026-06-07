@@ -251,7 +251,7 @@ The root query also exposes:
 _meta(block: Block_height): _Meta_
 ```
 
-Current implementation exposes `_meta(block: Block_height)` and supports `hash`, `number`, and `number_gte` lookup against stored indexed blocks. Mutable-entity, concrete-event, and event-interface root queries accept `block: Block_height` and `subgraphError: _SubgraphErrorPolicy_`; current-state reads work, while non-current block reads return a clear compatibility error because historical snapshots are not implemented yet.
+Current implementation exposes `_meta(block: Block_height)` and supports `hash`, `number`, and `number_gte` lookup against stored indexed blocks. Mutable-entity, concrete-event, and event-interface root queries accept `block: Block_height` and `subgraphError: _SubgraphErrorPolicy_`; event roots clamp rows to `blockNumber <= requestedBlock`, and mutable-entity roots read from snapshot tables for historical `block.number`, `block.hash`, and `block.number_gte` requests.
 
 `OrderDirection` is:
 
@@ -272,7 +272,7 @@ input Block_height {
 }
 ```
 
-For a Rust replacement, support the arguments even if the first version only serves canonical current-state data. If historical `block` reads are not implemented at first, keep the input in the GraphQL schema and return a clear compatibility error for non-current block requests.
+For a Rust replacement, support these arguments from the start. Historical reads should resolve the requested canonical block and then execute entity queries against the latest mutable-entity snapshot at or before that block; event queries should clamp rows by `blockNumber`.
 
 ### Root Queries
 

@@ -463,7 +463,7 @@ Current implementation state:
 - Event interfaces (`domainEvent/domainEvents`, `registrationEvent/registrationEvents`, `resolverEvent/resolverEvents`) exist and paginate after a SQL `union all` reference query.
 - `Domain.events`, `Registration.events`, and `Resolver.events` expose derived interface relationships.
 - `_meta(block: Block_height)` exists and returns the stored indexed block plus `deployment` and `hasIndexingErrors`.
-- Mutable-entity, concrete-event, and event-interface roots accept `block: Block_height` and `subgraphError: _SubgraphErrorPolicy_`. Current-state reads work; non-current block reads return an explicit compatibility error until historical snapshots are implemented.
+- Mutable-entity, concrete-event, and event-interface roots accept `block: Block_height` and `subgraphError: _SubgraphErrorPolicy_`. Event roots clamp by `blockNumber`; mutable-entity roots read from projection-maintained snapshot tables for historical `block.number`, `block.hash`, and `block.number_gte` requests.
 - Entity filters support exact IDs, `id_not`, `id_in`, `id_not_in`, common string predicates for known name fields, labelhash/contenthash predicates, `subdomainCount_*`, `isMigrated`, resolver `texts_contains` and `coinTypes_contains`, numeric comparison filters for core `BigInt`/`Int` fields, and shallow trailing-underscore relationship filters on direct mutable-entity relationships.
 - `AccountFilter` supports `and` and `or` composition, including when used in account-backed relationship filters such as `owner_`, `registrant_`, `wrappedOwner_`, `resolvedAddress_`, and `addr_`.
 - Scalar-compatible `DomainFilter`, `RegistrationFilter`, `WrappedDomainFilter`, `ResolverFilter`, concrete event filters, and event-interface filters support `and` and `or` composition.
@@ -482,7 +482,7 @@ Current implementation state:
 - `RegistrationFilter` and `WrappedDomainFilter` `and`/`or` composition applies nested `domain_`, `registrant_`, and `owner_` relation predicates instead of dropping relation-only branches.
 - `ResolverFilter` `and`/`or` composition applies nested `domain_` and `addr_` relation predicates instead of dropping relation-only branches.
 - Storage query helpers use delimiter-safe `sqlx::QueryBuilder` fragments and have SQL-shape unit tests for scalar and relationship predicates.
-- Historical block snapshots, reversible rollback payloads, and deeper generated-filter audits are still compatibility-expansion work.
+- Historical block snapshots are implemented for mutable root entity reads. Reversible rollback payloads, nested historical context audits, and deeper generated-filter audits are still compatibility-expansion work.
 
 ## Step 10: Filters, Ordering, and Joins
 
@@ -810,7 +810,7 @@ This assumes one engineer working steadily with the official subgraph behavior a
 | Week 4  | dynamic resolver ingestion and resolver projections                   | resolver records, addr/text/contenthash events                  |
 | Week 5  | GraphQL base API and tier 1 filters/order                             | usable subgraph-compatible API for core queries                 |
 | Week 6  | event interfaces, nested filters, live indexing, reorg path           | compatibility expansion and production readiness                |
-| Week 7+ | differential validation, performance tuning, historical block support | confidence against official subgraph and client-specific polish |
+| Week 7+ | differential validation, performance tuning, nested historical context audits, rollback hardening | confidence against official subgraph and client-specific polish |
 
 The critical path is projection correctness. API completeness can be expanded incrementally once the database state is trustworthy.
 

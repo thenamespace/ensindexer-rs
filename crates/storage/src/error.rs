@@ -8,4 +8,10 @@ pub enum StorageError {
     Migrate(#[from] sqlx::migrate::MigrateError),
     #[error("invalid decimal value {0}")]
     InvalidDecimal(String),
+    #[error("storage change buffer lock is poisoned")]
+    ChangeBufferPoisoned,
+    #[error("storage change buffer is already active")]
+    ChangeBufferAlreadyActive,
+    #[error("storage change buffer is not active")]
+    ChangeBufferNotActive,
 }

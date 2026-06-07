@@ -1,14 +1,20 @@
+use std::{
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
+
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::{
     AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
     MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo, StorageResult,
-    WrappedDomainsRepo,
+    WrappedDomainsRepo, change_buffer::EntityChange,
 };
 
 #[derive(Clone)]
 pub struct Storage {
     pool: PgPool,
+    pub(crate) change_buffer: Arc<Mutex<Option<BTreeSet<EntityChange>>>>,
 }
 
 impl Storage {
@@ -25,11 +31,14 @@ impl Storage {
             .connect(database_url)
             .await?;
 
-        Ok(Self { pool })
+        Ok(Self::from_pool(pool))
     }
 
     pub fn from_pool(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            change_buffer: Arc::new(Mutex::new(None)),
+        }
     }
 
     pub fn pool(&self) -> &PgPool {

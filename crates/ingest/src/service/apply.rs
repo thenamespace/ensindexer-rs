@@ -18,17 +18,28 @@ impl IngestService {
         sqlx::query("set local synchronous_commit = off")
             .execute(self.storage.pool())
             .await?;
+        if let Err(error) = self.storage.begin_change_buffer() {
+            if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await
+            {
+                tracing::error!(%rollback_error, "failed to roll back raw replay range");
+            }
+            return Err(error.into());
+        }
 
         let result = self
-            .apply_raw_range(range_end, raw_logs, block_meta, checkpoint_sources)
+            .apply_raw_range_buffered(range_end, raw_logs, block_meta, checkpoint_sources)
             .await;
 
         match result {
             Ok(()) => {
+                self.storage.clear_change_buffer()?;
                 sqlx::query("commit").execute(self.storage.pool()).await?;
                 Ok(())
             }
             Err(error) => {
+                if let Err(clear_error) = self.storage.clear_change_buffer() {
+                    tracing::error!(%clear_error, "failed to clear replay change buffer");
+                }
                 if let Err(rollback_error) =
                     sqlx::query("rollback").execute(self.storage.pool()).await
                 {
@@ -39,12 +50,35 @@ impl IngestService {
         }
     }
 
+    async fn apply_raw_range_buffered(
+        &self,
+        range_end: u64,
+        raw_logs: Vec<(LogSource, Log)>,
+        block_meta: BTreeMap<u64, BlockMeta>,
+        checkpoint_sources: Vec<String>,
+    ) -> anyhow::Result<()> {
+        self.apply_raw_range_inner(range_end, raw_logs, block_meta, checkpoint_sources, true)
+            .await
+    }
+
     pub(super) async fn apply_raw_range(
         &self,
         range_end: u64,
         raw_logs: Vec<(LogSource, Log)>,
         block_meta: BTreeMap<u64, BlockMeta>,
         checkpoint_sources: Vec<String>,
+    ) -> anyhow::Result<()> {
+        self.apply_raw_range_inner(range_end, raw_logs, block_meta, checkpoint_sources, false)
+            .await
+    }
+
+    async fn apply_raw_range_inner(
+        &self,
+        range_end: u64,
+        raw_logs: Vec<(LogSource, Log)>,
+        block_meta: BTreeMap<u64, BlockMeta>,
+        checkpoint_sources: Vec<String>,
+        flush_changes_by_block: bool,
     ) -> anyhow::Result<()> {
         for meta in block_meta.values() {
             self.storage
@@ -74,8 +108,20 @@ impl IngestService {
             )
         });
 
+        let mut current_block = None;
         for event in decoded {
+            if flush_changes_by_block
+                && current_block.is_some_and(|block| block != event.ctx.block_number)
+            {
+                let flushed = self.storage.flush_change_buffer().await?;
+                tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
+            }
+            current_block = Some(event.ctx.block_number);
             projection::apply_event(&self.storage, event).await?;
+        }
+        if flush_changes_by_block {
+            let flushed = self.storage.flush_change_buffer().await?;
+            tracing::debug!(flushed_changes = flushed, "flushed replay change buffer");
         }
 
         if let Some(meta) = block_meta.get(&range_end) {
