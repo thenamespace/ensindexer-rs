@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the archive manifest and checksum slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed for the archive manifest and checksum slice. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
 
 ## Completed
 
@@ -34,6 +34,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Raw archive replay was validated against a fresh dev Postgres database for a small ENS deployment range.
 - [x] Raw archives include manifest entries with SHA-256 checksums and can be inspected for coverage gaps.
 - [x] Raw replay verifies archive checksums when a manifest is present.
+- [x] A 1,000-block mainnet HyperSync backfill was run and archived for blocks `9380380..9381380`; archive status reports contiguous coverage and checksum verification.
 - [x] Source checkpoints are stored per indexed source.
 - [x] Live indexing loop runs with configurable confirmation depth.
 - [x] Live indexing verifies parent hashes before applying new confirmed ranges.
@@ -125,7 +126,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 
 ### Indexing Correctness And Production Hardening
 
-- [ ] Run and validate a real 1,000 block mainnet fill with configured RPC/HyperSync credentials.
+- [x] Run a real 1,000 block mainnet fill with configured HyperSync credentials.
+- [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.
 - [ ] Verify stored rows and GraphQL responses from that range against the official subgraph.
 - [ ] Add differential validation reports for domains, registrations, resolvers, wrapped domains, and events.
 - [ ] Replace coarse reorg reset with efficient common-ancestor rollback.
@@ -147,3 +149,13 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Update this file after every compatibility or indexing slice.
 - [ ] Keep `docs/README.md`, `docs/implementation-roadmap.md`, and `docs/schema-and-graphql-shape.md` in sync with this checklist.
 - [ ] Record every verified mainnet range fill and official-subgraph comparison result.
+
+## Verified Mainnet Ranges
+
+### `9380380..9381380`
+
+- Source: `BACKFILL_SOURCE=hypersync` with `ARCHIVE_BACKFILLS=true`.
+- Archive: `.raw-archive`, manifest chain id `1`, 3 range files, 177,696 bytes, 188 raw logs, no coverage gaps.
+- Database checkpoint: all configured sources at block `9381380` with hash `0x5dde9defc28957eacf0489a827dce4e030f6ab383c17ea3e959e00fed6a65f95`.
+- Projected rows after the run: 78 domains, 45 accounts, 44 resolvers, 1 registration, 99 indexed blocks, 270 entity changes, 72 `new_owner_events`, 37 `new_resolver_events`, 26 `addr_changed_events`, 22 `multicoin_addr_changed_events`, 12 `transfer_events`, and 1 `name_registered_event`.
+- Remaining validation: compare representative local GraphQL responses for this range against the official hosted ENS subgraph.
