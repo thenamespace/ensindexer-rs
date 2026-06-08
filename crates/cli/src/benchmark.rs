@@ -40,10 +40,13 @@ struct QueryReport {
     response_bytes: usize,
     compute_ms: Option<Stats>,
     wall_ms: Option<Stats>,
+    baseline_wall_ms: Option<Stats>,
+    baseline_adjusted_ms: Option<Stats>,
     provider_ms: Option<Stats>,
+    error: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 struct Stats {
     min: f64,
     median: f64,
@@ -64,6 +67,21 @@ struct Endpoint {
     auth_token: Option<String>,
 }
 
+struct EndpointBaseline {
+    wall_ms: Stats,
+}
+
+const BASELINE_QUERY: &str = r#"
+query BenchmarkBaseline {
+  _meta {
+    hasIndexingErrors
+    block {
+      number
+    }
+  }
+}
+"#;
+
 pub async fn run(storage: Storage, options: BenchmarkOptions) -> anyhow::Result<()> {
     anyhow::ensure!(
         options.iterations > 0,
@@ -83,6 +101,13 @@ pub async fn run(storage: Storage, options: BenchmarkOptions) -> anyhow::Result<
         None
     };
     let endpoints = endpoints(&options);
+    let mut endpoint_baselines = Vec::with_capacity(endpoints.len());
+    for endpoint in &endpoints {
+        endpoint_baselines.push(
+            measure_endpoint_baseline(&client, endpoint, options.iterations, options.warmup)
+                .await?,
+        );
+    }
     let mut results = Vec::new();
 
     for case in &cases {
@@ -90,17 +115,25 @@ pub async fn run(storage: Storage, options: BenchmarkOptions) -> anyhow::Result<
             results
                 .push(run_local_compute(schema, case, options.iterations, options.warmup).await?);
         }
-        for endpoint in &endpoints {
-            results.push(
-                run_endpoint(&client, endpoint, case, options.iterations, options.warmup).await?,
-            );
+        for (endpoint, baseline) in endpoints.iter().zip(&endpoint_baselines) {
+            let result = run_endpoint(
+                &client,
+                endpoint,
+                baseline,
+                case,
+                options.iterations,
+                options.warmup,
+            )
+            .await
+            .unwrap_or_else(|error| endpoint_error_report(endpoint, baseline, case, error));
+            results.push(result);
         }
     }
 
     let report = BenchmarkReport {
         iterations: options.iterations,
         warmup: options.warmup,
-        note: "compute_ms is only emitted for in-process local execution. endpoint wall_ms includes HTTP and network time. provider_ms is recorded only when a provider exposes timing in GraphQL extensions.",
+        note: "compute_ms is only emitted for in-process local execution. endpoint wall_ms includes HTTP and network time. baseline_wall_ms is the same endpoint's lightweight _meta request. baseline_adjusted_ms subtracts the baseline median from each endpoint sample to approximate provider-side query work when provider_ms is unavailable. provider_ms is recorded only when a provider exposes timing in GraphQL extensions.",
         results,
     };
 
@@ -210,7 +243,10 @@ async fn run_local_compute(
         response_bytes,
         compute_ms: Some(stats(elapsed)),
         wall_ms: None,
+        baseline_wall_ms: None,
+        baseline_adjusted_ms: None,
         provider_ms: None,
+        error: None,
     })
 }
 
@@ -232,6 +268,7 @@ async fn execute_local(schema: &api::EnsSchema, case: &QueryCase) -> anyhow::Res
 async fn run_endpoint(
     client: &Client,
     endpoint: &Endpoint,
+    baseline: &EndpointBaseline,
     case: &QueryCase,
     iterations: usize,
     warmup: usize,
@@ -241,12 +278,15 @@ async fn run_endpoint(
     }
 
     let mut wall = Vec::with_capacity(iterations);
+    let mut adjusted = Vec::with_capacity(iterations);
     let mut provider = Vec::new();
     let mut response_bytes = 0;
     for _ in 0..iterations {
         let start = Instant::now();
         let response = execute_endpoint(client, endpoint, case).await?;
-        wall.push(start.elapsed());
+        let elapsed = start.elapsed();
+        adjusted.push(duration_minus_ms(elapsed, baseline.wall_ms.median));
+        wall.push(elapsed);
         response_bytes = response.body_bytes;
         if let Some(provider_ms) = response.provider_ms {
             provider.push(Duration::from_secs_f64(provider_ms / 1000.0));
@@ -259,7 +299,65 @@ async fn run_endpoint(
         response_bytes,
         compute_ms: None,
         wall_ms: Some(stats(wall)),
+        baseline_wall_ms: Some(baseline.wall_ms),
+        baseline_adjusted_ms: Some(stats(adjusted)),
         provider_ms: (!provider.is_empty()).then(|| stats(provider)),
+        error: None,
+    })
+}
+
+fn endpoint_error_report(
+    endpoint: &Endpoint,
+    baseline: &EndpointBaseline,
+    case: &QueryCase,
+    error: anyhow::Error,
+) -> QueryReport {
+    QueryReport {
+        name: case.name.clone(),
+        source: endpoint.name.to_owned(),
+        response_bytes: 0,
+        compute_ms: None,
+        wall_ms: None,
+        baseline_wall_ms: Some(baseline.wall_ms),
+        baseline_adjusted_ms: None,
+        provider_ms: None,
+        error: Some(error.to_string()),
+    }
+}
+
+async fn measure_endpoint_baseline(
+    client: &Client,
+    endpoint: &Endpoint,
+    iterations: usize,
+    warmup: usize,
+) -> anyhow::Result<EndpointBaseline> {
+    for _ in 0..warmup {
+        execute_endpoint_query(
+            client,
+            endpoint,
+            "benchmark-baseline",
+            BASELINE_QUERY,
+            &json!({}),
+        )
+        .await?;
+    }
+
+    let mut wall = Vec::with_capacity(iterations);
+    for _ in 0..iterations {
+        let start = Instant::now();
+        execute_endpoint_query(
+            client,
+            endpoint,
+            "benchmark-baseline",
+            BASELINE_QUERY,
+            &json!({}),
+        )
+        .await?;
+        wall.push(start.elapsed());
+    }
+
+    Ok(EndpointBaseline {
+        wall_ms: stats(wall),
     })
 }
 
@@ -273,13 +371,45 @@ async fn execute_endpoint(
     endpoint: &Endpoint,
     case: &QueryCase,
 ) -> anyhow::Result<EndpointResponse> {
+    let (query, variables) = endpoint_query_case(endpoint, case);
+    execute_endpoint_query(client, endpoint, &case.name, &query, &variables).await
+}
+
+fn endpoint_query_case(endpoint: &Endpoint, case: &QueryCase) -> (String, Value) {
+    if endpoint.name != "ensnode" {
+        return (case.query.clone(), case.variables.clone());
+    }
+
+    let query = case
+        .query
+        .replace("$expiry: String!", "$expiry: BigInt!")
+        .replace("$ethNode: ID!", "$ethNode: String!")
+        .replace("labelName_contains_nocase", "labelName_contains")
+        .replace("name_contains_nocase", "name_contains");
+    let mut variables = case.variables.clone();
+    if let Some(expiry) = variables.get("expiry").and_then(Value::as_str)
+        && let Ok(expiry) = expiry.parse::<i64>()
+    {
+        variables["expiry"] = json!(expiry);
+    }
+
+    (query, variables)
+}
+
+async fn execute_endpoint_query(
+    client: &Client,
+    endpoint: &Endpoint,
+    query_name: &str,
+    query: &str,
+    variables: &Value,
+) -> anyhow::Result<EndpointResponse> {
     let mut request = client
         .post(&endpoint.url)
         .header(header::USER_AGENT, "ensindexer-benchmark/0.1")
         .header(header::ACCEPT, "application/json")
         .json(&json!({
-            "query": case.query,
-            "variables": case.variables,
+            "query": query,
+            "variables": variables,
         }));
 
     if let Some(token) = endpoint
@@ -293,27 +423,27 @@ async fn execute_endpoint(
     let response = request
         .send()
         .await
-        .with_context(|| format!("failed to send {} to {}", case.name, endpoint.name))?;
+        .with_context(|| format!("failed to send {query_name} to {}", endpoint.name))?;
     let status = response.status();
     let body = response.text().await?;
     if !status.is_success() {
         anyhow::bail!(
             "{} query {} failed with {status}: {body}",
             endpoint.name,
-            case.name
+            query_name
         );
     }
     let value: Value = serde_json::from_str(&body).with_context(|| {
         format!(
             "failed to parse {} response for {}",
-            endpoint.name, case.name
+            endpoint.name, query_name
         )
     })?;
     if value.get("errors").is_some() {
         anyhow::bail!(
             "{} query {} returned errors: {}",
             endpoint.name,
-            case.name,
+            query_name,
             serde_json::to_string_pretty(&value)?
         );
     }
@@ -348,6 +478,11 @@ fn stats(samples: Vec<Duration>) -> Stats {
         max: values[values.len() - 1],
         mean,
     }
+}
+
+fn duration_minus_ms(duration: Duration, baseline_ms: f64) -> Duration {
+    let adjusted_ms = (duration.as_secs_f64() * 1000.0 - baseline_ms).max(0.0);
+    Duration::from_secs_f64(adjusted_ms / 1000.0)
 }
 
 fn percentile(values: &[f64], percentile: f64) -> f64 {

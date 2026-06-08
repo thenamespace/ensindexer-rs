@@ -77,17 +77,17 @@ enum Command {
         iterations: usize,
         #[arg(long, default_value_t = 3)]
         warmup: usize,
-        #[arg(long, default_value_t = true)]
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
         local_compute: bool,
         #[arg(long)]
         local_url: Option<String>,
-        #[arg(long)]
+        #[arg(long, env = "SUBGRAPH_URL")]
         official_url: Option<String>,
-        #[arg(long)]
+        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
         official_auth_token: Option<String>,
-        #[arg(long)]
+        #[arg(long, env = "ENSNODE_SUBGRAPH_URL")]
         ensnode_url: Option<String>,
-        #[arg(long)]
+        #[arg(long, env = "ENSNODE_SUBGRAPH_AUTH_TOKEN")]
         ensnode_auth_token: Option<String>,
         #[arg(long)]
         output: Option<PathBuf>,

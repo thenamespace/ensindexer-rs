@@ -2,7 +2,43 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after the ENSNode index audit and address-query optimization. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A repeatable benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads; the current smoke run has 9/11 local in-process query medians under 45ms, with broad substring searches still at roughly 168-186ms.
+Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after the ENSNode index audit and address-query optimization. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A release-mode benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads with baseline-adjusted hosted timings; the current production run has 9/11 local in-process query medians under 32ms, with broad substring searches still at roughly 161-173ms.
+
+## Latest Production Benchmark
+
+Release benchmark command:
+
+```bash
+ENSNODE_SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
+cargo run --release -p cli -- benchmark \
+  --iterations 10 \
+  --warmup 3 \
+  --output target/benchmark-production.json
+```
+
+The local column is in-process Rust GraphQL compute time. Hosted columns use provider timing if exposed, otherwise baseline-adjusted wall time; The Graph and ENSNode did not expose provider timing in this run.
+
+| operation | ensindexer-rs | ensnode | the graph indexer |
+| --- | ---: | ---: | ---: |
+| `01-domain-batch` | 5.985ms | 12.836ms | 80.771ms |
+| `02-names-for-address` | 18.722ms | 13.398ms | 201.511ms |
+| `03-eth-subnames` | 31.281ms | 1903.604ms | 234.277ms |
+| `04-subnames-search` | 161.328ms | 1724.506ms | 504 timeout |
+| `05-decoded-label` | 1.843ms | 64.406ms | 99.493ms |
+| `06-resolver-records` | 10.922ms | 94.708ms | 216.811ms |
+| `07-registrations` | 9.260ms | 1079.505ms | 233.749ms |
+| `08-name-history` | 5.777ms | <1ms | 95.292ms |
+| `09-event-scan` | 28.043ms | unsupported | 6506.291ms |
+| `10-relationship-filter` | 6.828ms | unsupported | 233.165ms |
+| `11-text-search` | 172.538ms | 642.963ms | 144.134ms |
+
+Benchmark notes:
+
+- [x] The Graph hosted gateway benchmark ran with a measured `_meta` baseline median of roughly 381ms.
+- [x] ENSNode hosted benchmark ran with a measured `_meta` baseline median of roughly 361ms.
+- [x] ENSNode-only benchmark compatibility rewrites are isolated in the CLI benchmark runner; canonical local fixtures remain aligned with this indexer's schema/source of truth.
+- [x] ENSNode `09-event-scan` and `10-relationship-filter` are recorded as unsupported because its public alpha schema does not expose those official-compatible query shapes.
+- [x] The Graph `04-subnames-search` is recorded as `504 timeout` for this production run, not unsupported; the provider can run nearby queries but timed out under the chosen release benchmark settings.
 
 ## Completed
 
@@ -149,6 +185,11 @@ Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo
 - [x] Optimized no-op local label repair candidate scans with a bracketed-labelhash partial index and preimage join so completed heal passes return immediately.
 - [x] Added repeatable benchmark fixtures and CLI runner for local compute, localhost HTTP, official The Graph, and ENSNode endpoint comparisons.
 - [x] Added hash-backed exact/in query paths and indexes for `Domain.name`, `Domain.labelName`, and `Registration.labelName` to avoid long-text btree hazards and slow exact batch scans.
+- [x] Benchmark runner records hosted endpoint `_meta` baseline timing and `baseline_adjusted_ms` so hosted provider comparisons are not dominated by internet round-trip time.
+- [x] Benchmark runner supports `--local-compute false` for provider-only runs.
+- [x] Benchmark runner records per-provider unsupported/errors per operation instead of aborting the whole comparison.
+- [x] Benchmark runner keeps ENSNode schema quirks isolated to endpoint-only rewrites for the public alpha endpoint.
+- [x] Production benchmark report is documented in `benchmarks/README.md` and this TODO file with the requested `operation | ensindexer-rs | ensnode | the graph indexer` table.
 
 ### API And Server
 
@@ -204,6 +245,10 @@ Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo
 - [ ] Add query-plan checks for exact domain-name, labelhash decoded-name, and parent subdomain traversal queries.
 - [ ] Add query-plan checks for ENSJS names-for-address queries to prevent regressions in the storage fast path.
 - [ ] Design a search-specific optimization for broad substring workloads such as `name_contains_nocase: "art"` and `Domain.subdomains(where: { labelName_contains_nocase: "art" })`; current GIN plans still fetch/sort 40k+ candidate rows and sit above the sub-100ms target.
+- [ ] Investigate a search-specific plan for `04-subnames-search`; local release median is roughly 161ms, ENSNode is roughly 1.7s, and hosted The Graph returned a 504 timeout in the production benchmark.
+- [ ] Investigate why `11-text-search` is slower locally than hosted The Graph in the release benchmark; likely candidate volume/sort behavior after trigram match.
+- [ ] Add benchmark report generation that converts `target/benchmark-production.json` directly into the Markdown comparison table to avoid manual transcription.
+- [ ] Add optional per-query timeout/retry settings for hosted benchmarks so transient provider failures are clearly separated from schema-incompatible unsupported operations.
 - [ ] Add production Docker image build and serve verification.
 
 ### Documentation Maintenance
