@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after local ENSRainbow dictionary import and label repair work. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database.
+Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after the ENSNode index audit and address-query optimization. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`.
 
 ## Completed
 
@@ -143,10 +143,15 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] `labels-heal` repairs affected domain names from the local `label_preimages` dictionary without resetting or replaying the database.
 - [x] Removed runtime external ENSRainbow repair probing; label healing is now local file import plus local Postgres repair only.
 - [x] Verified local `labelhash(7261111)` response matches the official subgraph after label repair: `7261111.eth` in ~17ms local vs ~595ms official.
+- [x] Audited ENSNode/Ponder subgraph indexes and added matching production query indexes: domain trigram/fuzzy name indexes, domain relation indexes, registration date indexes, wrapped-domain domain index, and compound derived-event parent indexes.
+- [x] Added ENSJS-oriented address/sort indexes for `owner`, `registrant`, `wrappedOwner`, and `resolvedAddress` ordered by `expiryDate` and `createdAt`.
+- [x] Added a storage fast path for the common ENSJS names-for-address filter shape, preserving GraphQL filter semantics while avoiding nested `id in (select ...)` plans on the full mainnet database.
+- [x] Optimized no-op local label repair candidate scans with a bracketed-labelhash partial index and preimage join so completed heal passes return immediately.
 
 ### API And Server
 
 - [x] Axum server exposes GraphQL and health/status routes.
+- [x] `/subgraph` POST aliases the GraphQL endpoint for official-subgraph and ENSJS-style clients.
 - [x] `serve` always starts API, GraphQL, health checks, and Apollo Sandbox, with optional backfill/live indexing controlled by strict env toggles.
 - [x] CLI includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, `reset --yes`, `compare`, `schema-local`, and `schema-diff`.
 
@@ -176,6 +181,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
 - [x] Add first database indexes tuned from full-mainnet query timings: exact `Domain.name`, exact `Domain.labelName`, and exact `Domain.labelhash`.
+- [x] Add ENSNode/Ponder-inspired indexes from `.repos/ensnode/packages/ensdb-sdk/src/ensindexer-abstract/subgraph.schema.ts`.
+- [x] Add full-mainnet query optimization for ENSJS-style address lookups; local warm latency is now roughly 18-22ms for `domains(where: { and: [{ or: owner/registrant/wrappedOwner/resolvedAddress }, { or: expiryDate_gt/null }] })`.
 - [ ] Continue adding database indexes from real query plans after representative official/ENSJS query audits.
 - [ ] Profile historical fills with a real flamegraph or `tokio-console` style instrumentation on dense 250k+ log ranges and record top CPU/SQL paths.
 - [ ] Audit range-wide buffered historical snapshots against seeded fixtures for block-boundary correctness across repeated mutations in the same range.
@@ -192,6 +199,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add pagination stress tests for large event-interface unions.
 - [ ] Add query-plan checks for expensive relationship filters and order fields.
 - [ ] Add query-plan checks for exact domain-name, labelhash decoded-name, and parent subdomain traversal queries.
+- [ ] Add query-plan checks for ENSJS names-for-address queries to prevent regressions in the storage fast path.
 - [ ] Add production Docker image build and serve verification.
 
 ### Documentation Maintenance

@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 mod derived_filters;
+mod fast_address;
 mod filter_fields;
 mod mutations;
 mod queries;

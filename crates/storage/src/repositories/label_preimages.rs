@@ -67,10 +67,8 @@ impl LabelPreimagesRepo<'_> {
             from domains as domain
             join label_preimages as preimage on preimage.labelhash = domain.labelhash
             where domain.labelhash is not null
-              and (
-                domain.label_name is distinct from preimage.label_name
-                or domain.name like '[%'
-              )
+              and domain.label_name like '[%'
+              and domain.label_name is distinct from preimage.label_name
             order by domain.labelhash
             limit $1
             "#,
@@ -113,58 +111,66 @@ impl LabelPreimagesRepo<'_> {
             return Ok(0);
         }
 
-        let mut total = 0;
-        for _ in 0..max_passes {
-            let changed = sqlx::query(
-                r#"
-                with recursive affected(id) as (
-                  select id
-                  from domains
-                  where labelhash = any($1)
-                  union
-                  select child.id
-                  from domains as child
-                  join affected on affected.id = child.parent_id
+        let mut changed_ids = sqlx::query_scalar::<_, String>(
+            r#"
+            update domains as domain
+            set
+              label_name = preimage.label_name,
+              name = case
+                when domain.parent_id is not null then preimage.label_name || '.' || (
+                  select parent.name from domains as parent where parent.id = domain.parent_id
                 )
-                update domains as domain
-                set
-                  label_name = preimage.label_name,
-                  name = case
-                    when domain.parent_id is not null then preimage.label_name || '.' || (
-                      select parent.name from domains as parent where parent.id = domain.parent_id
-                    )
-                    else preimage.label_name
-                  end
-                from label_preimages as preimage
-                where domain.labelhash = preimage.labelhash
-                  and domain.id in (select id from affected)
-                  and (
-                    domain.label_name is distinct from preimage.label_name
-                    or domain.name is distinct from case
-                      when domain.parent_id is not null then preimage.label_name || '.' || (
-                        select parent.name from domains as parent where parent.id = domain.parent_id
-                      )
-                      else preimage.label_name
-                    end
+                else preimage.label_name
+              end
+            from label_preimages as preimage
+            where domain.labelhash = any($1)
+              and domain.labelhash = preimage.labelhash
+              and (
+                domain.label_name is distinct from preimage.label_name
+                or domain.name is distinct from case
+                  when domain.parent_id is not null then preimage.label_name || '.' || (
+                    select parent.name from domains as parent where parent.id = domain.parent_id
                   )
-                  and (
-                    domain.parent_id is null
-                    or exists (
-                      select 1 from domains as parent
-                      where parent.id = domain.parent_id
-                        and parent.name is not null
-                    )
-                  )
-                "#,
-            )
-            .bind(labelhashes)
-            .execute(self.pool)
-            .await?
-            .rows_affected();
-            total += changed;
-            if changed == 0 {
+                  else preimage.label_name
+                end
+              )
+              and (
+                domain.parent_id is null
+                or exists (
+                  select 1 from domains as parent
+                  where parent.id = domain.parent_id
+                    and parent.name is not null
+                )
+              )
+            returning domain.id
+            "#,
+        )
+        .bind(labelhashes)
+        .fetch_all(self.pool)
+        .await?;
+
+        let mut total = changed_ids.len() as u64;
+        for _ in 0..max_passes.saturating_sub(1) {
+            if changed_ids.is_empty() {
                 break;
             }
+            changed_ids = sqlx::query_scalar::<_, String>(
+                r#"
+                update domains as child
+                set name = child.label_name || '.' || parent.name
+                from domains as parent
+                where child.parent_id = parent.id
+                  and child.parent_id = any($1)
+                  and child.label_name is not null
+                  and parent.name is not null
+                  and child.name is distinct from child.label_name || '.' || parent.name
+                returning child.id
+                "#,
+            )
+            .bind(&changed_ids)
+            .fetch_all(self.pool)
+            .await?;
+            total += changed_ids.len() as u64;
         }
         Ok(total)
     }

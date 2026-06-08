@@ -36,6 +36,7 @@ pub fn build_router(storage: Storage) -> Router {
 
     Router::new()
         .route("/graphql", post(graphql_handler).get(graphql_sandbox))
+        .route("/subgraph", post(graphql_handler))
         .route("/healthz", get(healthz))
         .route("/readyz", get(readyz))
         .with_state(state)

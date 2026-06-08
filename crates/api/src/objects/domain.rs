@@ -2,6 +2,7 @@ use async_graphql::{Context, Result, SimpleObject};
 use storage::{DomainRow, Storage};
 
 use super::{Account, DomainEvent, Registration, Resolver, WrappedDomain, hydrate_domain_event};
+use crate::filters::{DomainFilter, DomainOrderBy, OrderDirection};
 use crate::pagination::{normalize_first, normalize_skip};
 
 #[derive(Debug, Clone, SimpleObject)]
@@ -76,11 +77,22 @@ impl Domain {
         ctx: &Context<'_>,
         first: Option<i32>,
         skip: Option<i32>,
+        #[graphql(name = "where")] filter: Option<DomainFilter>,
+        #[graphql(name = "orderBy")] order_by: Option<DomainOrderBy>,
+        #[graphql(name = "orderDirection")] order_direction: Option<OrderDirection>,
     ) -> Result<Vec<Domain>> {
         let storage = ctx.data::<Storage>()?;
+        let mut filter = filter.map(storage::DomainFilter::from).unwrap_or_default();
+        filter.parent_id = Some(self.id.clone());
         Ok(storage
             .domains()
-            .list_by_parent(&self.id, normalize_first(first), normalize_skip(skip))
+            .list_filtered(
+                normalize_first(first),
+                normalize_skip(skip),
+                filter,
+                order_by.unwrap_or_default().into(),
+                order_direction.unwrap_or_default().into(),
+            )
             .await?
             .into_iter()
             .map(Into::into)

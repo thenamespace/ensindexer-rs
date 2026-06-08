@@ -51,6 +51,14 @@ impl DomainsRepo<'_> {
         order_by: DomainOrderField,
         direction: OrderDirection,
     ) -> StorageResult<Vec<DomainRow>> {
+        if block_number.is_none()
+            && let Some(lookup) = super::fast_address::detect_address_lookup_filter(&filter)
+        {
+            return self
+                .list_for_address_fast(first, skip, lookup, order_by, direction)
+                .await;
+        }
+
         let mut query = QueryBuilder::<Postgres>::new("");
         if let Some(block_number) = block_number {
             push_historical_entity_ctes(&mut query, block_number);

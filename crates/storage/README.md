@@ -70,6 +70,16 @@ Dirty current rows are flushed before snapshots, with domains flushed parent-fir
 
 Domain exact `name` and `label_name` filters use MD5 expression indexes plus exact text rechecks so lookups stay fast without unsafe btree indexes over arbitrarily large on-chain strings. `labelhash` has a normal btree index because it is fixed-size hex text.
 
+The secondary index set is based on the official ENSNode/Ponder schema and local full-mainnet query plans:
+
+- trigram indexes for fuzzy/nocase `Domain.name` and `Domain.labelName` queries;
+- relation indexes for `Domain.parent`, `owner`, `registrant`, `wrappedOwner`, `resolver`, and `resolvedAddress`;
+- sort indexes for ENSJS-style names-for-address queries over `owner`, `registrant`, `wrappedOwner`, and `resolvedAddress` by `expiryDate` and `createdAt`;
+- `Registration.domain`, `Registration.registrant`, `registrationDate`, and `expiryDate`;
+- `WrappedDomain.domain` and `WrappedDomain.owner`;
+- `Resolver.domain`, `Resolver.address`, and `Resolver.addr`;
+- compound `(parent_id, id)` style indexes on all derived event tables for `Domain.events`, `Registration.events`, and `Resolver.events`.
+
 ## Query Support
 
 Storage query builders map official GraphQL filters into SQL:
@@ -83,10 +93,24 @@ Storage query builders map official GraphQL filters into SQL:
 - historical snapshot reads for `block` arguments
 - event-interface filtering across concrete event tables
 
+The repository also contains a specialized fast path for the common ENSJS names-for-address query shape:
+
+```graphql
+domains(where: {
+  and: [
+    { or: [{ owner: $addr }, { registrant: $addr }, { wrappedOwner: $addr }, { resolvedAddress: $addr }] }
+    { or: [{ expiryDate_gt: $now }, { expiryDate: null }] }
+  ]
+}, orderBy: expiryDate, orderDirection: desc)
+```
+
+That path keeps the same GraphQL semantics but emits direct indexed predicates over the four address columns. On the local full-mainnet database this changed warm `/subgraph` latency from multi-second plans to roughly 18-22ms.
+
 ## Main Files
 
 - `src/store.rs`: `Storage` connection and repository accessors.
 - `src/repositories/*`: entity, event, block, checkpoint, snapshot, and maintenance repositories.
+- `src/repositories/domains/fast_address.rs`: optimized ENSJS-style domain lookup by owner/registrant/wrapped owner/resolved address.
 - `src/query/*`: SQL predicate, relation, scalar, array, and select builders.
 - `src/filters/*`: storage-level filter models consumed by API conversions.
 - `src/entity_cache.rs`: current-state projection cache and dirty flushes.
@@ -111,11 +135,14 @@ Storage query builders map official GraphQL filters into SQL:
 - Replay index drop/recreate maintenance.
 - Label-preimage persistence, local ENSRainbow imports, and cache-backed reads for projection-time label healing.
 - Hash-backed domain lookup indexes for exact `name` and `labelName` GraphQL filters.
+- ENSNode/Ponder-inspired trigram, relation, sort, and derived-event compound indexes.
+- Fast indexed address lookup for high-volume ENSJS names-for-address queries.
 - Query-builder tests for scalar, relation, order, and event predicates.
 
 ## Future Improvements
 
 - Add query plan regression tests for expensive GraphQL filters.
+- Add query-plan regression tests for the ENSJS address fast path and other representative GraphQL workloads.
 - Add more indexes based on full mainnet workload profiling.
 - Add automated scheduling/metrics around local dictionary label repair for production deployments that need continuous dictionary parity.
 - Add partitioning or hypertable-style strategies for very large event tables if Postgres plans degrade.
