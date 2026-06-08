@@ -133,6 +133,15 @@ ENSNode is not treated as the schema source of truth here. The benchmark runner 
 
 The two remaining slow local-compute cases are intentionally broad substring searches. Their current GIN trigram plans find matches quickly but still fetch and sort tens of thousands of candidate rows. They need a search-specific optimization rather than another raw btree index over unbounded ENS labels.
 
+After adding API DataLoader batching for hot `Domain` account/resolver relationships, local release slices improved:
+
+| operation | before | after |
+| --- | ---: | ---: |
+| `04-subnames-search` | 161.328ms | 137.814ms |
+| `11-text-search` | 172.538ms | 165.903ms |
+
+This optimization reduces nested relationship roundtrips. It does not remove the main broad-search cost, which is still matching and sorting tens of thousands of domain rows for common substrings such as `art`.
+
 ## Adding Queries
 
 Add a new pair:

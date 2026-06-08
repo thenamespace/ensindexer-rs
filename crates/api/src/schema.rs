@@ -1,4 +1,8 @@
-use async_graphql::{EmptyMutation, EmptySubscription, MergedObject, Result, Schema};
+use async_graphql::{
+    EmptyMutation, EmptySubscription, MergedObject, Result, Schema,
+    dataloader::DataLoader,
+    runtime::{TokioSpawner, TokioTimer},
+};
 use storage::{
     AbiChangedEventRow, AddrChangedEventRow, AuthorisationChangedEventRow,
     ContenthashChangedEventRow, ExpiryExtendedEventRow, FusesSetEventRow, InterfaceChangedEventRow,
@@ -21,15 +25,22 @@ use self::{
     events_resolver::ResolverEventQueries, meta::MetaQueries,
 };
 use crate::filters::{AggregationCurrent, AggregationInterval, BlockChangedFilter};
+use crate::loaders::EntityLoader;
 use crate::meta::BlockHeight;
 
 pub type EnsSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
 
 pub fn build_schema(storage: Storage) -> EnsSchema {
+    let loader = DataLoader::new(
+        EntityLoader::new(storage.clone()),
+        TokioSpawner::current(),
+        TokioTimer::default(),
+    );
     Schema::build(QueryRoot::default(), EmptyMutation, EmptySubscription)
         .register_input_type::<BlockChangedFilter>()
         .register_output_type::<AggregationCurrent>()
         .register_output_type::<AggregationInterval>()
+        .data(loader)
         .data(storage)
         .finish()
 }

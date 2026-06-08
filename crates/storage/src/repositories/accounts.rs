@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use sqlx::{PgPool, Postgres, QueryBuilder};
 
@@ -86,6 +89,17 @@ impl AccountsRepo<'_> {
 
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<AccountRow>> {
         self.find_by_id_uncached(id).await
+    }
+
+    pub async fn find_by_ids(&self, ids: &[String]) -> StorageResult<HashMap<String, AccountRow>> {
+        if ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query_as::<_, AccountRow>("select id from accounts where id = any($1)")
+            .bind(ids)
+            .fetch_all(self.pool)
+            .await?;
+        Ok(rows.into_iter().map(|row| (row.id.clone(), row)).collect())
     }
 
     pub async fn find_by_id_at_block(

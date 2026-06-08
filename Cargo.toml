@@ -14,7 +14,7 @@ alloy-network-primitives = "2.0.5"
 alloy-primitives = { version = "1.6.0", features = ["serde"] }
 alloy-sol-types = "1.6.0"
 anyhow = "1.0.102"
-async-graphql = { version = "8.0.0-rc.5", features = ["dataloader"] }
+async-graphql = { version = "8.0.0-rc.5", features = ["dataloader", "tokio"] }
 async-graphql-axum = "8.0.0-rc.5"
 axum = "0.8.9"
 bigdecimal = { version = "0.4.10", features = ["serde"] }

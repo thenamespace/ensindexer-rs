@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after the ENSNode index audit and address-query optimization. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A release-mode benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads with baseline-adjusted hosted timings; the current production run has 9/11 local in-process query medians under 32ms, with broad substring searches still at roughly 161-173ms.
+Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after adding API DataLoader batching for hot `Domain` account/resolver relationships. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A release-mode benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads with baseline-adjusted hosted timings; the current production run has 9/11 local in-process query medians under 32ms, with broad substring searches still at roughly 161-173ms before DataLoader relationship batching.
 
 ## Latest Production Benchmark
 
@@ -40,6 +40,7 @@ Benchmark notes:
 - [x] ENSNode-only benchmark compatibility rewrites are isolated in the CLI benchmark runner; canonical local fixtures remain aligned with this indexer's schema/source of truth.
 - [x] ENSNode `09-event-scan` and `10-relationship-filter` are recorded as unsupported because its public alpha schema does not expose those official-compatible query shapes.
 - [x] The Graph `04-subnames-search` is recorded as `504 timeout` for this production run, not unsupported; the provider can run nearby queries but timed out under the chosen release benchmark settings.
+- [x] After API DataLoader batching for `Domain` account/resolver relationships, local release benchmark slices improved `04-subnames-search` from roughly 161ms to 138ms median and `11-text-search` from roughly 173ms to 166ms median. This reduces N+1 relationship hydration but does not fully solve broad substring search cost.
 
 ## Completed
 
@@ -191,6 +192,8 @@ Benchmark notes:
 - [x] Benchmark runner records per-provider unsupported/errors per operation instead of aborting the whole comparison.
 - [x] Benchmark runner keeps ENSNode schema quirks isolated to endpoint-only rewrites for the public alpha endpoint.
 - [x] Production benchmark report is documented in `benchmarks/README.md` and this TODO file with the requested `operation | ensindexer-rs | ensnode | the graph indexer` table.
+- [x] Added API DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, and `Domain.resolver`.
+- [x] Added storage batch lookup helpers for accounts and resolvers.
 
 ### API And Server
 
@@ -239,7 +242,7 @@ Benchmark notes:
 
 ### Performance And API Quality
 
-- [ ] Add DataLoader or batched repository loading for high-volume nested GraphQL relationship fields.
+- [ ] Expand DataLoader or batched repository loading to registration, wrapped-domain, resolver-domain, and event-parent hydration paths.
 - [ ] Add integration tests with seeded Postgres fixtures for common GraphQL query shapes.
 - [ ] Add pagination stress tests for large event-interface unions.
 - [ ] Add query-plan checks for expensive relationship filters and order fields.

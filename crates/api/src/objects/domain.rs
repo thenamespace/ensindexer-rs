@@ -1,8 +1,9 @@
-use async_graphql::{Context, Result, SimpleObject};
+use async_graphql::{Context, Error, Result, SimpleObject, dataloader::DataLoader};
 use storage::{DomainRow, Storage};
 
 use super::{Account, DomainEvent, Registration, Resolver, WrappedDomain, hydrate_domain_event};
 use crate::filters::{DomainFilter, DomainOrderBy, OrderDirection};
+use crate::loaders::{AccountKey, EntityLoader, ResolverKey};
 use crate::pagination::{normalize_first, normalize_skip};
 
 #[derive(Debug, Clone, SimpleObject)]
@@ -103,57 +104,37 @@ impl Domain {
         let Some(account_id) = self.resolved_address_id.as_ref() else {
             return Ok(None);
         };
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .find_by_id(account_id)
-            .await?
-            .map(Into::into))
+        load_account(ctx, account_id).await
     }
 
     async fn resolver(&self, ctx: &Context<'_>) -> Result<Option<Resolver>> {
         let Some(resolver_id) = self.resolver_id.as_ref() else {
             return Ok(None);
         };
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .resolvers()
-            .find_by_id(resolver_id)
-            .await?
+        Ok(ctx
+            .data::<DataLoader<EntityLoader>>()?
+            .load_one(ResolverKey(resolver_id.clone()))
+            .await
+            .map_err(Error::new)?
             .map(Into::into))
     }
 
     async fn owner(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .find_by_id(&self.owner_id)
-            .await?
-            .map(Into::into))
+        load_account(ctx, &self.owner_id).await
     }
 
     async fn registrant(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
         let Some(registrant_id) = self.registrant_id.as_ref() else {
             return Ok(None);
         };
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .find_by_id(registrant_id)
-            .await?
-            .map(Into::into))
+        load_account(ctx, registrant_id).await
     }
 
     async fn wrapped_owner(&self, ctx: &Context<'_>) -> Result<Option<Account>> {
         let Some(wrapped_owner_id) = self.wrapped_owner_id.as_ref() else {
             return Ok(None);
         };
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .accounts()
-            .find_by_id(wrapped_owner_id)
-            .await?
-            .map(Into::into))
+        load_account(ctx, wrapped_owner_id).await
     }
 
     async fn registration(&self, ctx: &Context<'_>) -> Result<Option<Registration>> {
@@ -202,4 +183,13 @@ impl Domain {
         }
         Ok(events)
     }
+}
+
+async fn load_account(ctx: &Context<'_>, id: &str) -> Result<Option<Account>> {
+    Ok(ctx
+        .data::<DataLoader<EntityLoader>>()?
+        .load_one(AccountKey(id.to_owned()))
+        .await
+        .map_err(Error::new)?
+        .map(Into::into))
 }

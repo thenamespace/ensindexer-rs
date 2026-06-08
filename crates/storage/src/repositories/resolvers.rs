@@ -1,6 +1,9 @@
 #![allow(clippy::collapsible_if)]
 
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
@@ -237,6 +240,23 @@ impl ResolversRepo<'_> {
         .bind(id)
         .fetch_optional(self.pool)
         .await?)
+    }
+
+    pub async fn find_by_ids(&self, ids: &[String]) -> StorageResult<HashMap<String, ResolverRow>> {
+        if ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query_as::<_, ResolverRow>(
+            r#"
+            select id, domain_id, address, addr_id, content_hash, texts, coin_types
+            from resolvers
+            where id = any($1)
+            "#,
+        )
+        .bind(ids)
+        .fetch_all(self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|row| (row.id.clone(), row)).collect())
     }
 
     pub async fn find_by_id_at_block(
