@@ -1,0 +1,29 @@
+query EthSubnames($ethNode: ID!, $first: Int) {
+  domain(id: $ethNode) {
+    id
+    name
+    subdomains(first: $first, orderBy: labelName, orderDirection: asc) {
+      id
+      name
+      labelName
+      labelhash
+      owner {
+        id
+      }
+      registrant {
+        id
+      }
+      wrappedOwner {
+        id
+      }
+      registration {
+        registrationDate
+        expiryDate
+      }
+      wrappedDomain {
+        expiryDate
+        fuses
+      }
+    }
+  }
+}

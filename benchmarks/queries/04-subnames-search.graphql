@@ -1,0 +1,23 @@
+query SubnamesSearch($parentName: String!, $search: String!, $first: Int) {
+  domains(first: 1, where: { name: $parentName }) {
+    id
+    name
+    subdomains(
+      first: $first
+      orderBy: labelName
+      orderDirection: asc
+      where: { labelName_contains_nocase: $search }
+    ) {
+      id
+      name
+      labelName
+      owner {
+        id
+      }
+      resolver {
+        id
+        address
+      }
+    }
+  }
+}

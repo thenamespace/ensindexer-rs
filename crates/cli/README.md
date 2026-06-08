@@ -34,6 +34,7 @@ sequenceDiagram
 - `labels-heal [--limit <n>] [--labelhash <hash>]`: repairs unknown labels from the local dictionary in the already-indexed database.
 - `index`: runs live indexing only.
 - `compare`: runs one GraphQL query against local and official subgraph endpoints and diffs JSON responses.
+- `benchmark`: runs all query fixtures from `benchmarks/queries` and reports local in-process compute timing plus optional endpoint timing.
 - `schema-local`: prints local GraphQL SDL.
 - `schema-diff`: introspects the official subgraph and checks root fields, args, inputs, and enums.
 
@@ -55,6 +56,7 @@ The CLI opens Postgres through `storage`, runs migrations, and then delegates ta
 
 - `src/app.rs`: Clap command definitions and command dispatch.
 - `src/compare.rs`: local-vs-official GraphQL comparison helper.
+- `src/benchmark.rs`: file-based GraphQL benchmark runner for local compute and endpoint comparisons.
 - `src/label_heal.rs`: local ENSRainbow file import and label repair command.
 - `src/schema.rs` and `src/schema/*`: local SDL generation, official introspection, and schema compatibility diffing.
 - `src/main.rs`: Tokio entrypoint.
@@ -81,6 +83,7 @@ Importing before a fresh backfill gives projection a local dictionary during ind
 - Strict live source selection: `http_rpc` or `wss`.
 - Binary archive-only, archive replay, and archive inspection commands.
 - Schema diff and data compare commands for official subgraph compatibility.
+- GraphQL benchmark command for ENSJS/ENSNode/official-subgraph query workloads.
 - Local ENSRainbow dictionary import and label healing for post-backfill database repair.
 - Dev helpers for migrations, status, reset, and live indexing.
 
@@ -89,4 +92,4 @@ Importing before a fresh backfill gives projection a local dictionary during ind
 - Add structured progress output formats for automation.
 - Add richer status output for lag, ranges, archive coverage, and source health.
 - Add safety prompts for reset in interactive terminals while keeping `--yes` for scripts.
-- Add benchmark commands for replay throughput and GraphQL query latency.
+- Add replay-throughput benchmarks alongside the current GraphQL benchmark suite.

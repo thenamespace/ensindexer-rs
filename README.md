@@ -42,6 +42,7 @@ cargo run -p cli -- replay
 cargo run -p cli -- index
 make labels-import
 make labels-heal
+make benchmark
 make reset
 make check
 ```
@@ -62,6 +63,8 @@ LABEL_HEAL_LIMIT=100000 make labels-heal
 ```
 
 For the cleanest first full backfill, import labels before replay/backfill so projection can resolve known labelhashes as rows are created. If the database is already backfilled, import labels and run `labels-heal` after the backfill finishes. Avoid running large heal batches concurrently with dense backfill ranges because both compete for Postgres write and index IO.
+
+GraphQL benchmark fixtures live in [benchmarks](benchmarks). `make benchmark` records local in-process compute time without HTTP or external network latency. `make benchmark-all` can additionally compare localhost HTTP, The Graph, and ENSNode endpoints when the relevant URLs and tokens are configured.
 
 Archive workflow for repeatable projection testing:
 

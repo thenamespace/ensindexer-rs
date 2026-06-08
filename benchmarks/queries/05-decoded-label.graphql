@@ -1,0 +1,8 @@
+query DecodedLabel($labelhash: String!) {
+  domains(first: 1, where: { labelhash: $labelhash, labelName_not: null }) {
+    id
+    name
+    labelName
+    labelhash
+  }
+}

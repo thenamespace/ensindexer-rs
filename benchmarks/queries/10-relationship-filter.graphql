@@ -1,0 +1,23 @@
+query RelationshipFilter($owner: String!, $first: Int) {
+  domains(
+    first: $first
+    orderBy: createdAt
+    orderDirection: desc
+    where: { owner_: { id: $owner }, resolver_: { address_not: null } }
+  ) {
+    id
+    name
+    labelName
+    createdAt
+    owner {
+      id
+    }
+    resolver {
+      id
+      address
+      addr {
+        id
+      }
+    }
+  }
+}

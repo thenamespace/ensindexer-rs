@@ -1,4 +1,5 @@
 mod app;
+mod benchmark;
 mod compare;
 mod label_heal;
 mod schema;

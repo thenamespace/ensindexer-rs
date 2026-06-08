@@ -1,4 +1,4 @@
-.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-only archive-backfill raw-backfill archive-status archive-status-verify labels-import labels-heal test lint check
+.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-only archive-backfill raw-backfill archive-status archive-status-verify labels-import labels-heal benchmark benchmark-all test lint check
 
 RAW_ARCHIVE_DIR ?= .raw-archive
 IMAGE ?= ensindexer:local
@@ -64,6 +64,12 @@ labels-heal:
 
 labels-import:
 	cargo run -p cli -- labels-import --input "$${LABELS_FILE:?set LABELS_FILE to a .ensrainbow or TSV label file}"
+
+benchmark:
+	cargo run -p cli -- benchmark --output target/benchmark-local.json
+
+benchmark-all:
+	cargo run -p cli -- benchmark --local-url http://127.0.0.1:8080/subgraph --official-url "$${SUBGRAPH_URL:-}" --official-auth-token "$${SUBGRAPH_AUTH_TOKEN:-}" --ensnode-url "$${ENSNODE_SUBGRAPH_URL:-}" --ensnode-auth-token "$${ENSNODE_SUBGRAPH_AUTH_TOKEN:-}" --output target/benchmark-all.json
 
 test:
 	cargo test --workspace

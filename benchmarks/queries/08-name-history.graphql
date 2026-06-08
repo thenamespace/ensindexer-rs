@@ -1,0 +1,51 @@
+query NameHistory($name: String!, $first: Int) {
+  domains(first: 1, where: { name: $name }) {
+    id
+    name
+    events(first: $first) {
+      id
+      blockNumber
+      transactionID
+      ... on Transfer {
+        owner {
+          id
+        }
+      }
+      ... on NewOwner {
+        parentDomain {
+          id
+          name
+        }
+        owner {
+          id
+        }
+      }
+      ... on NewResolver {
+        resolver {
+          id
+          address
+        }
+      }
+      ... on NewTTL {
+        ttl
+      }
+      ... on WrappedTransfer {
+        owner {
+          id
+        }
+      }
+      ... on NameWrapped {
+        owner {
+          id
+        }
+        fuses
+        expiryDate
+      }
+      ... on NameUnwrapped {
+        owner {
+          id
+        }
+      }
+    }
+  }
+}

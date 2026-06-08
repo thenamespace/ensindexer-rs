@@ -59,6 +59,24 @@ macro_rules! gin_expression_index {
 
 pub(super) const BULK_REPLAY_INDEXES: &[ReplayIndex] = &[
     index!("domains_parent_idx", "domains", "parent_id"),
+    ReplayIndex {
+        name: "domains_parent_label_name_sort_idx",
+        create_sql: "create index if not exists domains_parent_label_name_sort_idx on domains(parent_id, left(label_name, 256), id)",
+    },
+    ReplayIndex {
+        name: "domains_parent_name_sort_idx",
+        create_sql: "create index if not exists domains_parent_name_sort_idx on domains(parent_id, left(name, 256), id)",
+    },
+    index!(
+        "domains_parent_created_idx",
+        "domains",
+        "parent_id, created_at desc, id"
+    ),
+    index!(
+        "domains_parent_expiry_idx",
+        "domains",
+        "parent_id, expiry_date desc, id"
+    ),
     index!("domains_owner_idx", "domains", "owner_id"),
     index!("domains_resolver_idx", "domains", "resolver_id"),
     index!("domains_registrant_idx", "domains", "registrant_id"),
@@ -117,6 +135,12 @@ pub(super) const BULK_REPLAY_INDEXES: &[ReplayIndex] = &[
     },
     expression_index!("domains_name_md5_idx", "domains", "md5(name)"),
     expression_index!("domains_label_name_md5_idx", "domains", "md5(label_name)"),
+    index!("domains_name_md5_id_idx", "domains", "md5(name), id"),
+    index!(
+        "domains_label_name_md5_id_idx",
+        "domains",
+        "md5(label_name), id"
+    ),
     gin_expression_index!("domains_name_trgm_idx", "domains", "name gin_trgm_ops"),
     gin_expression_index!(
         "domains_name_lower_trgm_idx",
@@ -148,6 +172,11 @@ pub(super) const BULK_REPLAY_INDEXES: &[ReplayIndex] = &[
         "registrations_expiry_date_idx",
         "registrations",
         "expiry_date"
+    ),
+    index!(
+        "registrations_label_name_md5_expiry_idx",
+        "registrations",
+        "md5(label_name), expiry_date desc, id"
     ),
     index!("wrapped_domains_owner_idx", "wrapped_domains", "owner_id"),
     index!("wrapped_domains_domain_idx", "wrapped_domains", "domain_id"),
@@ -518,11 +547,19 @@ mod tests {
     #[test]
     fn replay_indexes_include_ensnode_domain_lookup_indexes() {
         assert!(index_sql("domains_name_trgm_idx").contains("using gin"));
+        assert!(index_sql("domains_name_md5_id_idx").contains("md5(name), id"));
+        assert!(index_sql("domains_label_name_md5_id_idx").contains("md5(label_name), id"));
         assert!(index_sql("domains_name_lower_trgm_idx").contains("lower(name) gin_trgm_ops"));
         assert!(index_sql("domains_label_name_lower_trgm_idx").contains("gin_trgm_ops"));
+        assert!(index_sql("domains_parent_label_name_sort_idx").contains("left(label_name, 256)"));
+        assert!(index_sql("domains_parent_name_sort_idx").contains("left(name, 256)"));
         index_sql("domains_registrant_idx");
         index_sql("domains_wrapped_owner_idx");
         index_sql("domains_resolved_address_idx");
+        assert!(
+            index_sql("registrations_label_name_md5_expiry_idx")
+                .contains("md5(label_name), expiry_date desc, id")
+        );
     }
 
     #[test]

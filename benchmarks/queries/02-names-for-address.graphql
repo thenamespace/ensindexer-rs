@@ -1,0 +1,45 @@
+query NamesForAddress($address: String!, $expiry: String!, $first: Int) {
+  domains(
+    first: $first
+    orderBy: expiryDate
+    orderDirection: desc
+    where: {
+      and: [
+        {
+          or: [
+            { owner: $address }
+            { registrant: $address }
+            { wrappedOwner: $address }
+            { resolvedAddress: $address }
+          ]
+        }
+        { or: [{ expiryDate_gt: $expiry }, { expiryDate: null }] }
+      ]
+    }
+  ) {
+    id
+    name
+    labelName
+    expiryDate
+    owner {
+      id
+    }
+    registrant {
+      id
+    }
+    wrappedOwner {
+      id
+    }
+    resolvedAddress {
+      id
+    }
+    registration {
+      registrationDate
+      expiryDate
+    }
+    wrappedDomain {
+      expiryDate
+      fuses
+    }
+  }
+}

@@ -105,7 +105,7 @@ fn push_registration_text_fields<'qb>(
         "registrant_id",
         filter.registrant_filter,
     );
-    push_text_field_filters(
+    push_text_field_filters_hashed_exact(
         separated,
         has_where,
         "label_name",
@@ -253,6 +253,31 @@ mod tests {
         assert_eq!(
             built.sql(),
             "select id from registrations where cost >= $1::numeric and (id in (select id from registrations where label_name like $2) or id in (select id from registrations where expiry_date > $3::numeric)) "
+        );
+    }
+
+    #[test]
+    fn registration_label_name_in_uses_hashed_exact_recheck() {
+        let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
+        {
+            let mut separated = query.separated(" and ");
+            let mut has_where = false;
+            push_registration_filters(
+                &mut separated,
+                &mut has_where,
+                RegistrationFilter {
+                    label_name_in: Some(vec!["vitalik".into(), "nick".into()]),
+                    expiry_date_gt: Some("1780000000".into()),
+                    ..RegistrationFilter::default()
+                },
+            );
+            separated.push_unseparated(" ");
+        }
+
+        let built = query.build();
+        assert_eq!(
+            built.sql(),
+            "select id from registrations where md5(label_name) = any(array[md5($1), md5($2)]) and label_name = any($3) and expiry_date > $4::numeric "
         );
     }
 

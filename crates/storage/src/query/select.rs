@@ -55,8 +55,8 @@ pub(crate) fn account_order_column(order_by: AccountOrderField) -> &'static str 
 pub(crate) fn domain_order_column(order_by: DomainOrderField) -> &'static str {
     match order_by {
         DomainOrderField::Id => "id",
-        DomainOrderField::Name => "name",
-        DomainOrderField::LabelName => "label_name",
+        DomainOrderField::Name => "left(name, 256)",
+        DomainOrderField::LabelName => "left(label_name, 256)",
         DomainOrderField::Labelhash => "labelhash",
         DomainOrderField::Parent => "parent_id",
         DomainOrderField::ParentId => "(select p.id from domains p where p.id = domains.parent_id)",

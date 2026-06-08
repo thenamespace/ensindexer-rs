@@ -66,7 +66,11 @@ fn push_text_field_filters_inner<'qb>(
     push_text_comparison_filters(
         separated, has_where, column, filter.gt, filter.lt, filter.gte, filter.lte,
     );
-    push_text_array_filter(separated, has_where, column, filter.in_values);
+    if hashed_exact {
+        push_text_hashed_exact_array_filter(separated, has_where, column, filter.in_values);
+    } else {
+        push_text_array_filter(separated, has_where, column, filter.in_values);
+    }
     push_text_not_array_filter(separated, has_where, column, filter.not_in);
     push_text_contains_filter(separated, has_where, column, filter.contains, false);
     push_text_contains_filter(separated, has_where, column, filter.contains_nocase, true);
@@ -118,4 +122,36 @@ fn push_text_hashed_exact_filter<'qb>(
             .push_unseparated(" = ")
             .push_bind_unseparated(value);
     }
+}
+
+fn push_text_hashed_exact_array_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    values: Option<Vec<String>>,
+) {
+    let Some(values) = values.filter(|values| !values.is_empty()) else {
+        return;
+    };
+
+    push_where_prefix(separated, has_where);
+    separated
+        .push("md5(")
+        .push_unseparated(column)
+        .push_unseparated(") = any(array[");
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            separated.push_unseparated(", ");
+        }
+        separated
+            .push_unseparated("md5(")
+            .push_bind_unseparated(value)
+            .push_unseparated(")");
+    }
+    separated
+        .push_unseparated("]) and ")
+        .push_unseparated(column)
+        .push_unseparated(" = any(")
+        .push_bind_unseparated(values)
+        .push_unseparated(")");
 }

@@ -1,0 +1,40 @@
+query DomainBatch($names: [String!]) {
+  domains(first: 25, orderBy: name, orderDirection: asc, where: { name_in: $names }) {
+    id
+    name
+    labelName
+    labelhash
+    expiryDate
+    owner {
+      id
+    }
+    registrant {
+      id
+    }
+    wrappedOwner {
+      id
+    }
+    resolvedAddress {
+      id
+    }
+    resolver {
+      id
+      address
+      addr {
+        id
+      }
+      contentHash
+      texts
+      coinTypes
+    }
+    registration {
+      registrationDate
+      expiryDate
+      cost
+    }
+    wrappedDomain {
+      expiryDate
+      fuses
+    }
+  }
+}

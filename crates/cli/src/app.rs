@@ -6,7 +6,7 @@ use ingest::IngestService;
 use storage::Storage;
 use tracing_subscriber::{EnvFilter, fmt};
 
-use crate::{compare, label_heal, schema};
+use crate::{benchmark, compare, label_heal, schema};
 
 #[derive(Debug, Parser)]
 #[command(name = "cli", about = "Custom Rust ENS indexer")]
@@ -69,6 +69,28 @@ enum Command {
         operation_name: Option<String>,
         #[arg(long)]
         show_json: bool,
+    },
+    Benchmark {
+        #[arg(long, default_value = "benchmarks/queries")]
+        query_dir: PathBuf,
+        #[arg(long, default_value_t = 20)]
+        iterations: usize,
+        #[arg(long, default_value_t = 3)]
+        warmup: usize,
+        #[arg(long, default_value_t = true)]
+        local_compute: bool,
+        #[arg(long)]
+        local_url: Option<String>,
+        #[arg(long)]
+        official_url: Option<String>,
+        #[arg(long)]
+        official_auth_token: Option<String>,
+        #[arg(long)]
+        ensnode_url: Option<String>,
+        #[arg(long)]
+        ensnode_auth_token: Option<String>,
+        #[arg(long)]
+        output: Option<PathBuf>,
     },
     SchemaLocal {
         #[arg(long)]
@@ -201,6 +223,37 @@ pub async fn run() -> anyhow::Result<()> {
                 variables_file,
                 operation_name,
                 show_json,
+            )
+            .await?;
+        }
+        Command::Benchmark {
+            query_dir,
+            iterations,
+            warmup,
+            local_compute,
+            local_url,
+            official_url,
+            official_auth_token,
+            ensnode_url,
+            ensnode_auth_token,
+            output,
+        } => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
+            benchmark::run(
+                storage,
+                benchmark::BenchmarkOptions {
+                    query_dir,
+                    iterations,
+                    warmup,
+                    local_compute,
+                    local_url,
+                    official_url,
+                    official_auth_token,
+                    ensnode_url,
+                    ensnode_auth_token,
+                    output,
+                },
             )
             .await?;
         }

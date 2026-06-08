@@ -1,0 +1,39 @@
+query ResolverRecords($names: [String!]) {
+  domains(first: 25, where: { name_in: $names }) {
+    id
+    name
+    resolver {
+      id
+      domain {
+        id
+        name
+      }
+      address
+      addr {
+        id
+      }
+      contentHash
+      texts
+      coinTypes
+      events(first: 25) {
+        id
+        blockNumber
+        transactionID
+        ... on AddrChanged {
+          addr {
+            id
+          }
+        }
+        ... on MulticoinAddrChanged {
+          coinType
+        }
+        ... on TextChanged {
+          key
+        }
+        ... on ContenthashChanged {
+          hash
+        }
+      }
+    }
+  }
+}
