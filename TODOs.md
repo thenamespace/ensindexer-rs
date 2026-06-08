@@ -20,22 +20,23 @@ The local column is in-process Rust GraphQL compute time. Hosted columns use pro
 
 | operation | ensindexer-rs | ensnode | the graph indexer |
 | --- | ---: | ---: | ---: |
-| `01-domain-batch` | 5.985ms | 12.836ms | 80.771ms |
-| `02-names-for-address` | 18.722ms | 13.398ms | 201.511ms |
-| `03-eth-subnames` | 31.281ms | 1903.604ms | 234.277ms |
-| `04-subnames-search` | 161.328ms | 1724.506ms | 504 timeout |
-| `05-decoded-label` | 1.843ms | 64.406ms | 99.493ms |
-| `06-resolver-records` | 10.922ms | 94.708ms | 216.811ms |
-| `07-registrations` | 9.260ms | 1079.505ms | 233.749ms |
-| `08-name-history` | 5.777ms | <1ms | 95.292ms |
-| `09-event-scan` | 28.043ms | unsupported | 6506.291ms |
-| `10-relationship-filter` | 6.828ms | unsupported | 233.165ms |
-| `11-text-search` | 172.538ms | 642.963ms | 144.134ms |
+| `01-domain-batch` | 5.985ms (13.5x faster, 92.6% lower) | 12.836ms (6.3x faster, 84.1% lower) | 80.771ms (slowest) |
+| `02-names-for-address` | 18.722ms (10.8x faster, 90.7% lower) | 13.398ms (15.0x faster, 93.4% lower) | 201.511ms (slowest) |
+| `03-eth-subnames` | 31.281ms (60.9x faster, 98.4% lower) | 1903.604ms (slowest) | 234.277ms (8.1x faster, 87.7% lower) |
+| `04-subnames-search` | 161.328ms (10.7x faster, 90.6% lower) | 1724.506ms (slowest) | 504 timeout |
+| `05-decoded-label` | 1.843ms (54.0x faster, 98.1% lower) | 64.406ms (1.5x faster, 35.3% lower) | 99.493ms (slowest) |
+| `06-resolver-records` | 10.922ms (19.9x faster, 95.0% lower) | 94.708ms (2.3x faster, 56.3% lower) | 216.811ms (slowest) |
+| `07-registrations` | 9.260ms (116.6x faster, 99.1% lower) | 1079.505ms (slowest) | 233.749ms (4.6x faster, 78.3% lower) |
+| `08-name-history` | 5.777ms (16.5x faster, 93.9% lower) | 2.440ms (39.1x faster, 97.4% lower) | 95.292ms (slowest) |
+| `09-event-scan` | 28.043ms (232.0x faster, 99.6% lower) | unsupported | 6506.291ms (slowest) |
+| `10-relationship-filter` | 6.828ms (34.1x faster, 97.1% lower) | unsupported | 233.165ms (slowest) |
+| `11-text-search` | 172.538ms (3.7x faster, 73.2% lower) | 642.963ms (slowest) | 144.134ms (4.5x faster, 77.6% lower) |
 
 Benchmark notes:
 
 - [x] The Graph hosted gateway benchmark ran with a measured `_meta` baseline median of roughly 381ms.
 - [x] ENSNode hosted benchmark ran with a measured `_meta` baseline median of roughly 361ms.
+- [x] ENSNode `08-name-history` was rerun with 20 iterations and 5 warmups; adjusted median is 2.440ms, but raw wall and baseline medians are both roughly 350ms, so this should be treated as near-baseline hosted timing noise.
 - [x] ENSNode-only benchmark compatibility rewrites are isolated in the CLI benchmark runner; canonical local fixtures remain aligned with this indexer's schema/source of truth.
 - [x] ENSNode `09-event-scan` and `10-relationship-filter` are recorded as unsupported because its public alpha schema does not expose those official-compatible query shapes.
 - [x] The Graph `04-subnames-search` is recorded as `504 timeout` for this production run, not unsupported; the provider can run nearby queries but timed out under the chosen release benchmark settings.
