@@ -32,7 +32,7 @@ sequenceDiagram
 
 This crate does not project chain events. It consumes the projection results produced by `projection` and persisted by `storage`. For current reads, resolvers query current-state tables such as `domains`, `registrations`, `wrapped_domains`, `resolvers`, and `accounts`. For historical `block` reads, mutable entity roots query snapshot tables and event roots clamp rows by `block_number`.
 
-Relationship fields are intentionally implemented as read-time joins, batched loads, or follow-up repository calls. Hot `Domain` account/resolver relationships use `async-graphql` DataLoader batching to avoid one SQL roundtrip per nested field in common search and profile queries. Other relationships such as `Registration.domain`, `WrappedDomain.owner`, `Resolver.domain`, and event parent links are still resolved from storage and are candidates for the same batching pattern. Derived collections such as `Domain.events`, `Registration.events`, `Resolver.events`, and account-derived domains/registrations/wrapped domains are also resolved from storage.
+Relationship fields are intentionally implemented as read-time joins, batched loads, or follow-up repository calls. Hot `Domain` account, resolver, registration, and wrapped-domain relationships use `async-graphql` DataLoader batching to avoid one SQL roundtrip per nested field in common search and profile queries. Other relationships such as `Registration.domain`, `WrappedDomain.owner`, `Resolver.domain`, and event parent links are still resolved from storage and are candidates for the same batching pattern. Derived collections such as `Domain.events`, `Registration.events`, `Resolver.events`, and account-derived domains/registrations/wrapped domains are also resolved from storage.
 
 ## Storage Shape Used
 
@@ -67,7 +67,7 @@ The API should never mutate indexed data. Mutations belong to ingestion/projecti
 - Snapshot-backed historical mutable entity queries.
 - Event clamping for historical event reads.
 - Relationship filters, `_change_block`, scalar operators, list operators, and ordering fields.
-- DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, and `Domain.resolver`.
+- DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, `Domain.resolver`, `Domain.registration`, and `Domain.wrappedDomain`.
 - GraphQL schema diff support through the CLI.
 
 ## Future Improvements

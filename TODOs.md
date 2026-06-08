@@ -41,6 +41,7 @@ Benchmark notes:
 - [x] ENSNode `09-event-scan` and `10-relationship-filter` are recorded as unsupported because its public alpha schema does not expose those official-compatible query shapes.
 - [x] The Graph `04-subnames-search` is recorded as `504 timeout` for this production run, not unsupported; the provider can run nearby queries but timed out under the chosen release benchmark settings.
 - [x] After API DataLoader batching for `Domain` account/resolver relationships, local release benchmark slices improved `04-subnames-search` from roughly 161ms to 138ms median and `11-text-search` from roughly 173ms to 166ms median. This reduces N+1 relationship hydration but does not fully solve broad substring search cost.
+- [x] After expanding API DataLoader batching to `Domain.registration` and `Domain.wrappedDomain`, local release slices measured `01-domain-batch` at roughly 5.1ms, `02-names-for-address` at roughly 5.4ms, and `03-eth-subnames` at roughly 7.3ms.
 
 ## Completed
 
@@ -192,8 +193,8 @@ Benchmark notes:
 - [x] Benchmark runner records per-provider unsupported/errors per operation instead of aborting the whole comparison.
 - [x] Benchmark runner keeps ENSNode schema quirks isolated to endpoint-only rewrites for the public alpha endpoint.
 - [x] Production benchmark report is documented in `benchmarks/README.md` and this TODO file with the requested `operation | ensindexer-rs | ensnode | the graph indexer` table.
-- [x] Added API DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, and `Domain.resolver`.
-- [x] Added storage batch lookup helpers for accounts and resolvers.
+- [x] Added API DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, `Domain.resolver`, `Domain.registration`, and `Domain.wrappedDomain`.
+- [x] Added storage batch lookup helpers for accounts, resolvers, registrations, and wrapped domains.
 
 ### API And Server
 
@@ -242,7 +243,7 @@ Benchmark notes:
 
 ### Performance And API Quality
 
-- [ ] Expand DataLoader or batched repository loading to registration, wrapped-domain, resolver-domain, and event-parent hydration paths.
+- [ ] Expand DataLoader or batched repository loading to resolver-domain, registration-domain, wrapped-domain owner, and event-parent hydration paths.
 - [ ] Add integration tests with seeded Postgres fixtures for common GraphQL query shapes.
 - [ ] Add pagination stress tests for large event-interface unions.
 - [ ] Add query-plan checks for expensive relationship filters and order fields.

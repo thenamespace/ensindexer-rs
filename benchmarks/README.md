@@ -142,6 +142,18 @@ After adding API DataLoader batching for hot `Domain` account/resolver relations
 
 This optimization reduces nested relationship roundtrips. It does not remove the main broad-search cost, which is still matching and sorting tens of thousands of domain rows for common substrings such as `art`.
 
+After expanding the same DataLoader layer to `Domain.registration` and `Domain.wrappedDomain`, local release slices measured:
+
+| operation | production baseline | latest slice |
+| --- | ---: | ---: |
+| `01-domain-batch` | 5.985ms | 5.143ms |
+| `02-names-for-address` | 18.722ms | 5.366ms |
+| `03-eth-subnames` | 31.281ms | 7.258ms |
+| `04-subnames-search` | 161.328ms | 158.942ms |
+| `11-text-search` | 172.538ms | 168.660ms |
+
+The largest wins are relationship-heavy domain result sets that request registration or wrapped-domain fields for many rows.
+
 ## Adding Queries
 
 Add a new pair:

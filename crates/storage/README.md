@@ -106,7 +106,7 @@ domains(where: {
 
 That path keeps the same GraphQL semantics but emits direct indexed predicates over the four address columns. On the local full-mainnet database this changed warm `/subgraph` latency from multi-second plans to roughly 18-22ms.
 
-The account and resolver repositories also expose batch lookup methods used by the API DataLoader layer. These methods keep nested GraphQL relationship hydration from issuing one point-query per returned domain row.
+The account, resolver, registration, and wrapped-domain repositories also expose batch lookup methods used by the API DataLoader layer. These methods keep nested GraphQL relationship hydration from issuing one point-query per returned domain row.
 
 ## Main Files
 
@@ -139,7 +139,7 @@ The account and resolver repositories also expose batch lookup methods used by t
 - Hash-backed domain lookup indexes for exact `name` and `labelName` GraphQL filters.
 - ENSNode/Ponder-inspired trigram, relation, sort, and derived-event compound indexes.
 - Fast indexed address lookup for high-volume ENSJS names-for-address queries.
-- Batch account and resolver lookup helpers for GraphQL relationship DataLoader hydration.
+- Batch account, resolver, registration, and wrapped-domain lookup helpers for GraphQL relationship DataLoader hydration.
 - Query-builder tests for scalar, relation, order, and event predicates.
 
 ## Future Improvements

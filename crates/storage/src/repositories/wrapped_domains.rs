@@ -1,6 +1,9 @@
 #![allow(clippy::collapsible_if)]
 
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use bigdecimal::BigDecimal;
 use sqlx::{PgPool, Postgres, QueryBuilder};
@@ -195,6 +198,29 @@ impl WrappedDomainsRepo<'_> {
         .bind(domain_id)
         .fetch_optional(self.pool)
         .await?)
+    }
+
+    pub async fn find_by_domain_ids(
+        &self,
+        domain_ids: &[String],
+    ) -> StorageResult<HashMap<String, WrappedDomainRow>> {
+        if domain_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query_as::<_, WrappedDomainRow>(
+            r#"
+            select id, domain_id, expiry_date, fuses, owner_id, name
+            from wrapped_domains
+            where domain_id = any($1)
+            "#,
+        )
+        .bind(domain_ids)
+        .fetch_all(self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| (row.domain_id.clone(), row))
+            .collect())
     }
 
     pub async fn list(

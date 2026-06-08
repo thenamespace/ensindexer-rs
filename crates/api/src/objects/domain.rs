@@ -3,7 +3,9 @@ use storage::{DomainRow, Storage};
 
 use super::{Account, DomainEvent, Registration, Resolver, WrappedDomain, hydrate_domain_event};
 use crate::filters::{DomainFilter, DomainOrderBy, OrderDirection};
-use crate::loaders::{AccountKey, EntityLoader, ResolverKey};
+use crate::loaders::{
+    AccountKey, EntityLoader, RegistrationByDomainKey, ResolverKey, WrappedDomainByDomainKey,
+};
 use crate::pagination::{normalize_first, normalize_skip};
 
 #[derive(Debug, Clone, SimpleObject)]
@@ -138,20 +140,20 @@ impl Domain {
     }
 
     async fn registration(&self, ctx: &Context<'_>) -> Result<Option<Registration>> {
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .registrations()
-            .find_by_domain_id(&self.id)
-            .await?
+        Ok(ctx
+            .data::<DataLoader<EntityLoader>>()?
+            .load_one(RegistrationByDomainKey(self.id.clone()))
+            .await
+            .map_err(Error::new)?
             .map(Into::into))
     }
 
     async fn wrapped_domain(&self, ctx: &Context<'_>) -> Result<Option<WrappedDomain>> {
-        let storage = ctx.data::<Storage>()?;
-        Ok(storage
-            .wrapped_domains()
-            .find_by_domain_id(&self.id)
-            .await?
+        Ok(ctx
+            .data::<DataLoader<EntityLoader>>()?
+            .load_one(WrappedDomainByDomainKey(self.id.clone()))
+            .await
+            .map_err(Error::new)?
             .map(Into::into))
     }
 
