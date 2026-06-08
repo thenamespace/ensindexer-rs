@@ -43,6 +43,7 @@ impl MaintenanceRepo<'_> {
               registration_snapshots,
               wrapped_domain_snapshots,
               resolver_snapshots,
+              label_preimages,
               entity_changes,
               wrapped_domains,
               registrations,

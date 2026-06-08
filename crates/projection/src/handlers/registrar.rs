@@ -8,8 +8,8 @@ use crate::{
     ProjectionResult,
     support::{
         block_number, decimal_from_i64, decimal_from_u256, ensure_account, ensure_domain,
-        ensure_eth_parent, eth_2ld_domain_id, expiry_with_grace, known_label, mark_domain_changed,
-        mark_registration_changed,
+        ensure_eth_parent, eth_2ld_domain_id, expiry_with_grace, label_preimage,
+        mark_domain_changed, mark_registration_changed,
     },
 };
 
@@ -47,15 +47,15 @@ pub(crate) async fn base_name_registered(
         )
         .await?;
     mark_registration_changed(storage, &registration_id, block_number(ctx)?).await?;
-    if let Some(label) = known_label(labelhash) {
+    if let Some(label) = label_preimage(storage, labelhash).await? {
         let name = format!("{label}.eth");
         storage
             .domains()
-            .set_name(&domain_id, Some(label), Some(&name))
+            .set_name(&domain_id, Some(&label), Some(&name))
             .await?;
         storage
             .registrations()
-            .set_label_name(&registration_id, label)
+            .set_label_name(&registration_id, &label)
             .await?;
     }
     storage
@@ -168,6 +168,10 @@ pub(crate) async fn controller_name_preimage(
     let registration_id = LabelHash(labelhash).as_subgraph_id();
     let domain_id = eth_2ld_domain_id(labelhash)?;
     let name = format!("{label}.eth");
+    storage
+        .label_preimages()
+        .upsert(&registration_id, &label)
+        .await?;
 
     ensure_eth_parent(storage, ctx.block_timestamp, block_number(ctx)?).await?;
     ensure_domain(

@@ -11,8 +11,8 @@ use types::{
 use crate::{
     ProjectionResult,
     support::{
-        block_number, decimal_from_u256, ensure_account, ensure_domain, known_label,
-        label_from_hash, mark_domain_changed, mark_resolver_changed,
+        block_number, decimal_from_u256, ensure_account, ensure_domain,
+        label_from_preimage_or_hash, label_preimage, mark_domain_changed, mark_resolver_changed,
     },
 };
 
@@ -102,14 +102,14 @@ pub(crate) async fn registry_new_owner(
         mark_domain_changed(storage, &parent_id, block_number(ctx)?).await?;
     }
 
-    let known_label = known_label(labelhash);
+    let label_preimage = label_preimage(storage, labelhash).await?;
     if existing
         .as_ref()
         .and_then(|domain| domain.name.as_ref())
         .is_none()
-        || known_label.is_some()
+        || label_preimage.is_some()
     {
-        let label = label_from_hash(labelhash);
+        let label = label_from_preimage_or_hash(storage, labelhash).await?;
         let parent = storage.domains().find_by_id(&parent_id).await?;
         let name = if parent_id == ROOT_NODE {
             Some(label.clone())
@@ -118,10 +118,10 @@ pub(crate) async fn registry_new_owner(
                 .and_then(|parent| parent.name)
                 .map(|parent_name| format!("{label}.{parent_name}"))
         };
-        if let Some(known_label) = known_label {
+        if let Some(label_preimage) = label_preimage {
             storage
                 .domains()
-                .set_name(&domain_id, Some(known_label), name.as_deref())
+                .set_name(&domain_id, Some(&label_preimage), name.as_deref())
                 .await?;
         } else {
             storage

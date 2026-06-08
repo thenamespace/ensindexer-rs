@@ -23,10 +23,30 @@ macro_rules! index {
     };
 }
 
+macro_rules! expression_index {
+    ($name:literal, $table:literal, $expression:literal) => {
+        ReplayIndex {
+            name: $name,
+            create_sql: concat!(
+                "create index if not exists ",
+                $name,
+                " on ",
+                $table,
+                "(",
+                $expression,
+                ")"
+            ),
+        }
+    };
+}
+
 pub(super) const BULK_REPLAY_INDEXES: &[ReplayIndex] = &[
     index!("domains_parent_idx", "domains", "parent_id"),
     index!("domains_owner_idx", "domains", "owner_id"),
     index!("domains_resolver_idx", "domains", "resolver_id"),
+    index!("domains_labelhash_idx", "domains", "labelhash"),
+    expression_index!("domains_name_md5_idx", "domains", "md5(name)"),
+    expression_index!("domains_label_name_md5_idx", "domains", "md5(label_name)"),
     index!("registrations_domain_idx", "registrations", "domain_id"),
     index!(
         "registrations_registrant_idx",

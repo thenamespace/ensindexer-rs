@@ -1,9 +1,9 @@
-use alloy_primitives::{Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, keccak256};
 use storage::{
     ExpiryExtendedEventInsert, FusesSetEventInsert, NameUnwrappedEventInsert,
     NameWrappedEventInsert, Storage, WrappedTransferEventInsert,
 };
-use types::{DomainId, constants::ETH_NODE};
+use types::{DomainId, LabelHash, constants::ETH_NODE};
 
 use crate::{
     ProjectionResult,
@@ -35,6 +35,15 @@ pub(crate) async fn name_wrapped(
 
     let decoded = decode_wrapped_name(&dns_name);
     if let Some((label, name)) = decoded.as_ref() {
+        if !label.is_empty() {
+            storage
+                .label_preimages()
+                .upsert(
+                    &LabelHash(keccak256(label.as_bytes())).as_subgraph_id(),
+                    label,
+                )
+                .await?;
+        }
         storage
             .domains()
             .set_name_if_unknown(&domain_id, Some(label), Some(name))

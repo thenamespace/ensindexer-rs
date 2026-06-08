@@ -186,10 +186,28 @@ pub(crate) fn known_label(labelhash: B256) -> Option<&'static str> {
         .find(|label| keccak256(label.as_bytes()) == labelhash)
 }
 
-pub(crate) fn label_from_hash(labelhash: B256) -> String {
-    known_label(labelhash)
-        .map(str::to_owned)
-        .unwrap_or_else(|| bracketed_labelhash(labelhash))
+pub(crate) async fn label_preimage(
+    storage: &Storage,
+    labelhash: B256,
+) -> ProjectionResult<Option<String>> {
+    if let Some(label) = known_label(labelhash) {
+        return Ok(Some(label.to_owned()));
+    }
+
+    storage
+        .label_preimages()
+        .find(&LabelHash(labelhash).as_subgraph_id())
+        .await
+        .map_err(Into::into)
+}
+
+pub(crate) async fn label_from_preimage_or_hash(
+    storage: &Storage,
+    labelhash: B256,
+) -> ProjectionResult<String> {
+    Ok(label_preimage(storage, labelhash)
+        .await?
+        .unwrap_or_else(|| bracketed_labelhash(labelhash)))
 }
 
 pub(crate) fn decode_wrapped_name(bytes: &[u8]) -> Option<(String, String)> {

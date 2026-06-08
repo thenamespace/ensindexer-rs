@@ -55,7 +55,7 @@ pub(super) fn push_primary_text_fields<'qb>(
     has_where: &mut bool,
     filter: &mut DomainFilter,
 ) {
-    push_text_field_filters(
+    push_text_field_filters_hashed_exact(
         separated,
         has_where,
         "name",
@@ -82,7 +82,7 @@ pub(super) fn push_primary_text_fields<'qb>(
             not_ends_with_nocase: name_not_ends_with_nocase,
         }),
     );
-    push_text_field_filters(
+    push_text_field_filters_hashed_exact(
         separated,
         has_where,
         "label_name",

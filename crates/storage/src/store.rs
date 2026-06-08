@@ -1,11 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::{
     AccountsRepo, BlocksRepo, CheckpointsRepo, DomainsRepo, EntityChangesRepo, EventsRepo,
-    MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo, StorageResult,
-    WrappedDomainsRepo, change_buffer::ChangeBuffer, entity_cache::EntityCache,
+    LabelPreimagesRepo, MaintenanceRepo, RegistrationsRepo, ResolversRepo, SnapshotsRepo,
+    StorageResult, WrappedDomainsRepo, change_buffer::ChangeBuffer, entity_cache::EntityCache,
     event_buffer::EventBuffer,
 };
 
@@ -15,6 +18,7 @@ pub struct Storage {
     pub(crate) change_buffer: Arc<Mutex<Option<ChangeBuffer>>>,
     pub(crate) event_buffer: Arc<Mutex<Option<EventBuffer>>>,
     pub(crate) entity_cache: Arc<Mutex<Option<EntityCache>>>,
+    label_preimage_cache: Arc<Mutex<HashMap<String, Option<String>>>>,
 }
 
 impl Storage {
@@ -40,6 +44,7 @@ impl Storage {
             change_buffer: Arc::new(Mutex::new(None)),
             event_buffer: Arc::new(Mutex::new(None)),
             entity_cache: Arc::new(Mutex::new(None)),
+            label_preimage_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -91,6 +96,13 @@ impl Storage {
         EventsRepo {
             pool: &self.pool,
             event_buffer: Arc::clone(&self.event_buffer),
+        }
+    }
+
+    pub fn label_preimages(&self) -> LabelPreimagesRepo<'_> {
+        LabelPreimagesRepo {
+            pool: &self.pool,
+            cache: Arc::clone(&self.label_preimage_cache),
         }
     }
 

@@ -5,7 +5,7 @@ use super::{
     push_text_filter, push_text_not_array_filter, push_text_not_contains_filter,
     push_text_not_filter, push_text_not_prefix_filter, push_text_not_suffix_filter,
     push_text_prefix_filter, push_text_prefix_nocase_filter, push_text_suffix_filter,
-    push_text_suffix_nocase_filter,
+    push_text_suffix_nocase_filter, push_where_prefix,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -38,7 +38,30 @@ pub(crate) fn push_text_field_filters<'qb>(
     column: &'static str,
     filter: TextFieldFilter,
 ) {
-    push_text_filter(separated, has_where, column, filter.exact);
+    push_text_field_filters_inner(separated, has_where, column, filter, false);
+}
+
+pub(crate) fn push_text_field_filters_hashed_exact<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: TextFieldFilter,
+) {
+    push_text_field_filters_inner(separated, has_where, column, filter, true);
+}
+
+fn push_text_field_filters_inner<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    filter: TextFieldFilter,
+    hashed_exact: bool,
+) {
+    if hashed_exact {
+        push_text_hashed_exact_filter(separated, has_where, column, filter.exact);
+    } else {
+        push_text_filter(separated, has_where, column, filter.exact);
+    }
     push_text_not_filter(separated, has_where, column, filter.not);
     push_text_comparison_filters(
         separated, has_where, column, filter.gt, filter.lt, filter.gte, filter.lte,
@@ -75,4 +98,24 @@ pub(crate) fn push_text_field_filters<'qb>(
         filter.not_ends_with_nocase,
         true,
     );
+}
+
+fn push_text_hashed_exact_filter<'qb>(
+    separated: &mut Separated<'qb, Postgres, &'static str>,
+    has_where: &mut bool,
+    column: &'static str,
+    value: Option<String>,
+) {
+    if let Some(value) = value {
+        push_where_prefix(separated, has_where);
+        separated
+            .push("md5(")
+            .push_unseparated(column)
+            .push_unseparated(") = md5(")
+            .push_bind_unseparated(value.clone())
+            .push_unseparated(") and ")
+            .push_unseparated(column)
+            .push_unseparated(" = ")
+            .push_bind_unseparated(value);
+    }
 }

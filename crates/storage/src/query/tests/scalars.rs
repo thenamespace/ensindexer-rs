@@ -26,6 +26,33 @@ fn scalar_filter_fragments_do_not_inject_separators_inside_predicates() {
 }
 
 #[test]
+fn hashed_exact_text_filter_keeps_exact_recheck() {
+    let mut query = QueryBuilder::<Postgres>::new("select id from domains");
+    {
+        let mut separated = query.separated(" and ");
+        let mut has_where = false;
+
+        push_text_field_filters_hashed_exact(
+            &mut separated,
+            &mut has_where,
+            "name",
+            TextFieldFilter {
+                exact: Some("vitalik.eth".into()),
+                contains: Some("eth".into()),
+                ..TextFieldFilter::default()
+            },
+        );
+        separated.push_unseparated(" ");
+    }
+
+    let built = query.build();
+    assert_eq!(
+        built.sql(),
+        "select id from domains where md5(name) = md5($1) and name = $2 and name like $3 "
+    );
+}
+
+#[test]
 fn negated_text_like_filters_keep_predicates_grouped() {
     let mut query = QueryBuilder::<Postgres>::new("select id from registrations");
     {

@@ -38,6 +38,7 @@ Operational tables:
 - `blocks(number, hash, parent_hash, timestamp)`.
 - `source_checkpoints(source, block_number, block_hash)`.
 - `entity_changes(entity_type, entity_id, block_number)`.
+- `label_preimages(labelhash, label_name)` for persisted `ens.nameByHash`-style label healing observed from registrar/controller and wrapper events.
 
 Snapshot tables:
 
@@ -66,6 +67,8 @@ Storage receives projected writes from `projection` through an ingest transactio
 - entity changes and snapshots through `ChangeBuffer`
 
 Dirty current rows are flushed before snapshots, with domains flushed parent-first to satisfy the `domains.parent_id` foreign key. Replay maintenance can drop and recreate secondary query indexes around bulk raw archive replay.
+
+Domain exact `name` and `label_name` filters use MD5 expression indexes plus exact text rechecks so lookups stay fast without unsafe btree indexes over arbitrarily large on-chain strings. `labelhash` has a normal btree index because it is fixed-size hex text.
 
 ## Query Support
 
@@ -106,12 +109,15 @@ Storage query builders map official GraphQL filters into SQL:
 - Official filter/order SQL generation for entities and events.
 - Derived relationship filters and event-interface filters.
 - Replay index drop/recreate maintenance.
+- Label-preimage persistence and cache-backed reads for projection-time label healing.
+- Hash-backed domain lookup indexes for exact `name` and `labelName` GraphQL filters.
 - Query-builder tests for scalar, relation, order, and event predicates.
 
 ## Future Improvements
 
 - Add query plan regression tests for expensive GraphQL filters.
 - Add more indexes based on full mainnet workload profiling.
+- Add an external ENSRainbow/nameByHash label dictionary import path for labels not inferable from indexed events.
 - Add partitioning or hypertable-style strategies for very large event tables if Postgres plans degrade.
 - Add common-ancestor rollback primitives.
 - Add migration checks that compare DB schema against generated documentation.

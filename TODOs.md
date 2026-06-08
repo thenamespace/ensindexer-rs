@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after the range-wide snapshot buffering and entity-cache module split. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after hash-backed domain lookup indexes and label-preimage projection/cache work. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database.
 
 ## Completed
 
@@ -135,6 +135,10 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Mutable entity filters support `_change_block: { number_gte }` through projection-maintained `entity_changes` records for `Account`, `Domain`, `Registration`, `WrappedDomain`, and `Resolver`.
 - [x] Relationship order fields map to explicit static SQL expressions for entity queries, concrete event queries, and event-interface queries.
 - [x] Query-builder SQL-shape tests cover scalar filters, relationship filters, ordering, and event filter composition.
+- [x] Domain exact `name` and `labelName` filters use hash-backed equality predicates with exact rechecks, avoiding unsafe large-text btree indexes while keeping official GraphQL semantics.
+- [x] Domain lookup indexes include fixed-size `labelhash` and MD5 expression indexes for high-volume ENSJS-style decoded-name queries.
+- [x] Registrar/controller and NameWrapper projection persist valid label preimages in `label_preimages` so later registry subdomains can decode labels beyond the hardcoded core names.
+- [x] Existing full-mainnet local DB was repaired from observed label preimages, changing common ENSJS decoded-name lookups such as `labelhash(vitalik)` from bracketed labels to decoded labels.
 
 ### API And Server
 
@@ -154,6 +158,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Audit list-field edge cases against Graph Node behavior.
 - [ ] Add compatibility tests that execute the same representative GraphQL queries against the local API and the official hosted ENS subgraph.
 - [ ] Compare local and official JSON response shapes and values after real mainnet backfill ranges.
+- [ ] Add an ENSRainbow or equivalent `ens.nameByHash` label dictionary source for labels that are not inferable from indexed ENS events alone, such as official-decoded numeric labels.
 
 ### Indexing Correctness And Production Hardening
 
@@ -165,7 +170,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Extend snapshot use to efficient common-ancestor rollback or add reversible change payloads for rollback without full replay.
 - [ ] Add stronger live indexing observability: structured metrics, lag reporting, source checkpoint summaries, and failure counters.
 - [ ] Add retry/backoff policy hardening for RPC, HyperSync, database, and archive IO failures.
-- [ ] Add database indexes tuned from real query plans after representative backfills.
+- [x] Add first database indexes tuned from full-mainnet query timings: exact `Domain.name`, exact `Domain.labelName`, and exact `Domain.labelhash`.
+- [ ] Continue adding database indexes from real query plans after representative official/ENSJS query audits.
 - [ ] Profile historical fills with a real flamegraph or `tokio-console` style instrumentation on dense 250k+ log ranges and record top CPU/SQL paths.
 - [ ] Audit range-wide buffered historical snapshots against seeded fixtures for block-boundary correctness across repeated mutations in the same range.
 - [ ] Benchmark the upcoming 250k+ and 500k+ log ranges after range-wide snapshot batching; current measured throughput is still short of the 3-hour target for 150M raw logs.
@@ -180,6 +186,7 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Add integration tests with seeded Postgres fixtures for common GraphQL query shapes.
 - [ ] Add pagination stress tests for large event-interface unions.
 - [ ] Add query-plan checks for expensive relationship filters and order fields.
+- [ ] Add query-plan checks for exact domain-name, labelhash decoded-name, and parent subdomain traversal queries.
 - [ ] Add production Docker image build and serve verification.
 
 ### Documentation Maintenance
