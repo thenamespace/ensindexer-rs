@@ -25,7 +25,6 @@ sequenceDiagram
 - `ETH_WS_URL`: WebSocket endpoint for `INDEXING_SOURCE=wss`.
 - `ENVIO_API_KEY`: HyperSync API key for `BACKFILL_SOURCE=hypersync`.
 - `HYPERSYNC_URL`: HyperSync endpoint, defaulting to Ethereum mainnet HyperSync.
-- `ENSRAINBOW_URL`: ENSRainbow endpoint used by `labels-heal`, defaulting to `https://api.ensrainbow.io`.
 - `ENABLE_BACKFILL`: serve-time historical indexing toggle.
 - `ENABLE_LIVE_INDEXING`: serve-time live indexing toggle.
 - `BACKFILL_SOURCE`: strict enum `rpc|hypersync|raw`.

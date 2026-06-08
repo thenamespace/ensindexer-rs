@@ -40,12 +40,28 @@ cargo run -p cli -- backfill
 cargo run -p cli -- archive
 cargo run -p cli -- replay
 cargo run -p cli -- index
+make labels-import
 make labels-heal
 make reset
 make check
 ```
 
-`make labels-heal` calls ENSRainbow through `ENSRAINBOW_URL` to repair unknown `Domain.labelName` values after a backfill. Use `LABEL_HEAL_LIMIT` and `LABEL_HEAL_CONCURRENCY` to tune one repair batch without resetting the database.
+`scripts/ens-heal.sh` can download a local ENSRainbow dataset for offline use. The indexer does not call ENSRainbow APIs at runtime: `make labels-import` loads a local ENSRainbow streamed protobuf `.ensrainbow` file or TSV `labelhash<TAB>label` file into Postgres, and `make labels-heal` repairs unknown `Domain.labelName` values from that local dictionary without external API calls, database reset, or replay. Use `LABELS_FILE` for import and `LABEL_HEAL_LIMIT` for one repair batch.
+
+Local label healing workflow:
+
+```bash
+# Download and verify ENSRainbow locally, then extract healed-names/ens_names.tsv.
+./scripts/ens-heal.sh
+
+# Import the local TSV into label_preimages.
+LABELS_FILE=healed-names/ens_names.tsv make labels-import
+
+# Repair already-indexed domain labels/names from imported preimages.
+LABEL_HEAL_LIMIT=100000 make labels-heal
+```
+
+For the cleanest first full backfill, import labels before replay/backfill so projection can resolve known labelhashes as rows are created. If the database is already backfilled, import labels and run `labels-heal` after the backfill finishes. Avoid running large heal batches concurrently with dense backfill ranges because both compete for Postgres write and index IO.
 
 Archive workflow for repeatable projection testing:
 

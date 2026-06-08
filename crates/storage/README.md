@@ -39,7 +39,6 @@ Operational tables:
 - `source_checkpoints(source, block_number, block_hash)`.
 - `entity_changes(entity_type, entity_id, block_number)`.
 - `label_preimages(labelhash, label_name)` for persisted `ens.nameByHash`-style label healing observed from registrar/controller and wrapper events or imported from ENSRainbow.
-- `label_preimage_misses(labelhash, checked_at)` to avoid repeatedly asking ENSRainbow for known-missing labelhashes.
 
 Snapshot tables:
 
@@ -110,7 +109,7 @@ Storage query builders map official GraphQL filters into SQL:
 - Official filter/order SQL generation for entities and events.
 - Derived relationship filters and event-interface filters.
 - Replay index drop/recreate maintenance.
-- Label-preimage persistence and cache-backed reads for projection-time label healing.
+- Label-preimage persistence, local ENSRainbow imports, and cache-backed reads for projection-time label healing.
 - Hash-backed domain lookup indexes for exact `name` and `labelName` GraphQL filters.
 - Query-builder tests for scalar, relation, order, and event predicates.
 
@@ -118,7 +117,7 @@ Storage query builders map official GraphQL filters into SQL:
 
 - Add query plan regression tests for expensive GraphQL filters.
 - Add more indexes based on full mainnet workload profiling.
-- Add automated scheduling/metrics around ENSRainbow label repair for production deployments that need continuous dictionary parity.
+- Add automated scheduling/metrics around local dictionary label repair for production deployments that need continuous dictionary parity.
 - Add partitioning or hypertable-style strategies for very large event tables if Postgres plans degrade.
 - Add common-ancestor rollback primitives.
 - Add migration checks that compare DB schema against generated documentation.

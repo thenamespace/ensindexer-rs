@@ -45,9 +45,13 @@ enum Command {
         #[arg(long, default_value_t = 1_000)]
         limit: i64,
         #[arg(long, default_value_t = 16)]
-        concurrency: usize,
-        #[arg(long, default_value_t = 16)]
         repair_passes: usize,
+    },
+    LabelsImport {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long, default_value_t = 10_000)]
+        chunk_size: usize,
     },
     Index,
     Compare {
@@ -153,23 +157,26 @@ pub async fn run() -> anyhow::Result<()> {
         Command::LabelsHeal {
             labelhash,
             limit,
-            concurrency,
             repair_passes,
         } => {
             let config = AppConfig::from_env()?;
             let storage = Storage::connect(&config.database_url).await?;
             storage.run_migrations().await?;
             label_heal::run(
-                config,
                 storage,
                 label_heal::HealOptions {
                     labelhashes: labelhash,
                     limit,
-                    concurrency,
                     repair_passes,
                 },
             )
             .await?;
+        }
+        Command::LabelsImport { input, chunk_size } => {
+            let config = AppConfig::from_env()?;
+            let storage = Storage::connect(&config.database_url).await?;
+            storage.run_migrations().await?;
+            label_heal::import(storage, label_heal::ImportOptions { input, chunk_size }).await?;
         }
         Command::Index => {
             let config = AppConfig::from_env()?;

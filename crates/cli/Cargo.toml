@@ -18,7 +18,6 @@ config.workspace = true
 dotenvy.workspace = true
 ingest.workspace = true
 reqwest.workspace = true
-serde.workspace = true
 serde_json.workspace = true
 server.workspace = true
 storage.workspace = true

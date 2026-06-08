@@ -29,7 +29,6 @@ impl LabelPreimagesRepo<'_> {
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?
             .insert(labelhash.to_owned(), Some(label_name.to_owned()));
-        self.delete_miss(labelhash).await?;
         Ok(())
     }
 
@@ -61,20 +60,16 @@ impl LabelPreimagesRepo<'_> {
         Ok(label_name)
     }
 
-    pub async fn candidate_labelhashes(&self, limit: i64) -> StorageResult<Vec<String>> {
+    pub async fn repairable_labelhashes(&self, limit: i64) -> StorageResult<Vec<String>> {
         Ok(sqlx::query_scalar(
             r#"
             select distinct domain.labelhash
             from domains as domain
+            join label_preimages as preimage on preimage.labelhash = domain.labelhash
             where domain.labelhash is not null
-              and domain.label_name is null
-              and not exists (
-                select 1 from label_preimages as preimage
-                where preimage.labelhash = domain.labelhash
-              )
-              and not exists (
-                select 1 from label_preimage_misses as miss
-                where miss.labelhash = domain.labelhash
+              and (
+                domain.label_name is distinct from preimage.label_name
+                or domain.name like '[%'
               )
             order by domain.labelhash
             limit $1
@@ -105,30 +100,6 @@ impl LabelPreimagesRepo<'_> {
             for (labelhash, label_name) in labels {
                 cache.insert(labelhash.clone(), Some(label_name.clone()));
             }
-        }
-        self.delete_misses(labels.iter().map(|(labelhash, _)| labelhash.as_str()))
-            .await?;
-        Ok(())
-    }
-
-    pub async fn record_misses(&self, labelhashes: &[String]) -> StorageResult<()> {
-        if labelhashes.is_empty() {
-            return Ok(());
-        }
-
-        let mut query = sqlx::QueryBuilder::new("insert into label_preimage_misses (labelhash) ");
-        query.push_values(labelhashes, |mut row, labelhash| {
-            row.push_bind(labelhash);
-        });
-        query.push(" on conflict (labelhash) do update set checked_at = now()");
-        query.build().execute(self.pool).await?;
-
-        let mut cache = self
-            .cache
-            .lock()
-            .map_err(|_| StorageError::EntityCachePoisoned)?;
-        for labelhash in labelhashes {
-            cache.insert(labelhash.clone(), None);
         }
         Ok(())
     }
@@ -196,28 +167,5 @@ impl LabelPreimagesRepo<'_> {
             }
         }
         Ok(total)
-    }
-
-    async fn delete_miss(&self, labelhash: &str) -> StorageResult<()> {
-        sqlx::query("delete from label_preimage_misses where labelhash = $1")
-            .bind(labelhash)
-            .execute(self.pool)
-            .await?;
-        Ok(())
-    }
-
-    async fn delete_misses<'a>(
-        &self,
-        labelhashes: impl Iterator<Item = &'a str>,
-    ) -> StorageResult<()> {
-        let labelhashes = labelhashes.collect::<Vec<_>>();
-        if labelhashes.is_empty() {
-            return Ok(());
-        }
-        sqlx::query("delete from label_preimage_misses where labelhash = any($1)")
-            .bind(labelhashes)
-            .execute(self.pool)
-            .await?;
-        Ok(())
     }
 }
