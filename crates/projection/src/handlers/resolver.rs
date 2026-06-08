@@ -10,8 +10,8 @@ use types::{DomainId, hex_address, hex_bytes};
 use crate::{
     ProjectionResult,
     support::{
-        block_number, decimal_from_u256, ensure_account, ensure_resolver, mark_domain_changed,
-        mark_resolver_changed,
+        block_number, contains_postgres_null, decimal_from_u256, ensure_account, ensure_resolver,
+        mark_domain_changed, mark_resolver_changed,
     },
 };
 
@@ -105,7 +105,7 @@ pub(crate) async fn resolver_name_changed(
     node: B256,
     name: String,
 ) -> ProjectionResult<()> {
-    if name.contains('\0') {
+    if contains_postgres_null(&name) {
         return Ok(());
     }
 
@@ -196,6 +196,10 @@ pub(crate) async fn resolver_text_changed(
     key: String,
     value: Option<String>,
 ) -> ProjectionResult<()> {
+    if contains_postgres_null(&key) {
+        return Ok(());
+    }
+    let value = value.filter(|value| !contains_postgres_null(value));
     let resolver_id = ensure_resolver(
         storage,
         resolver,

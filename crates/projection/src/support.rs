@@ -198,8 +198,20 @@ pub(crate) fn decode_wrapped_name(bytes: &[u8]) -> Option<(String, String)> {
     }
 
     let name = decode_dns_name(bytes).ok()?;
-    let label = name.split('.').next().unwrap_or_default().to_owned();
+    let mut labels = name.split('.');
+    let label = labels.next().unwrap_or_default().to_owned();
+    if is_invalid_wrapped_label(&label) || labels.any(is_invalid_wrapped_label) {
+        return None;
+    }
     Some((label, name))
+}
+
+pub(crate) fn contains_postgres_null(value: &str) -> bool {
+    value.contains('\0')
+}
+
+fn is_invalid_wrapped_label(label: &str) -> bool {
+    types::validate_label(label).is_err()
 }
 
 pub(crate) fn check_pcc_burned(fuses: i32) -> bool {
@@ -298,6 +310,20 @@ mod tests {
             decode_wrapped_name(&[0]),
             Some((String::new(), ".".to_owned()))
         );
+    }
+
+    #[test]
+    fn rejects_wrapped_names_with_postgres_null_bytes() {
+        assert_eq!(
+            decode_wrapped_name(&[2, b'a', 0, 3, b'e', b't', b'h', 0]),
+            None
+        );
+    }
+
+    #[test]
+    fn detects_postgres_null_bytes() {
+        assert!(contains_postgres_null("abc\0def"));
+        assert!(!contains_postgres_null("abcdef"));
     }
 
     #[test]

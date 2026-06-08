@@ -3,6 +3,9 @@ pub(super) struct ReplayIndex {
     pub(super) create_sql: &'static str,
 }
 
+pub(super) const DEPRECATED_BULK_REPLAY_INDEXES: &[&str] =
+    &["domains_name_lower_idx", "domains_label_name_lower_idx"];
+
 macro_rules! index {
     ($name:literal, $table:literal, $column:literal) => {
         ReplayIndex {
@@ -24,14 +27,6 @@ pub(super) const BULK_REPLAY_INDEXES: &[ReplayIndex] = &[
     index!("domains_parent_idx", "domains", "parent_id"),
     index!("domains_owner_idx", "domains", "owner_id"),
     index!("domains_resolver_idx", "domains", "resolver_id"),
-    ReplayIndex {
-        name: "domains_name_lower_idx",
-        create_sql: "create index if not exists domains_name_lower_idx on domains(lower(name))",
-    },
-    ReplayIndex {
-        name: "domains_label_name_lower_idx",
-        create_sql: "create index if not exists domains_label_name_lower_idx on domains(lower(label_name))",
-    },
     index!("registrations_domain_idx", "registrations", "domain_id"),
     index!(
         "registrations_registrant_idx",
