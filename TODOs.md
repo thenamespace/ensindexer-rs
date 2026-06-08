@@ -2,7 +2,7 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after hash-backed domain lookup indexes and label-preimage projection/cache work. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database.
+Last full verification: `cargo run -p cli -- schema-diff --output target/official-subgraph-schema.json && make check` passed after ENSRainbow-backed label repair CLI work. Schema diff has no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database.
 
 ## Completed
 
@@ -139,6 +139,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [x] Domain lookup indexes include fixed-size `labelhash` and MD5 expression indexes for high-volume ENSJS-style decoded-name queries.
 - [x] Registrar/controller and NameWrapper projection persist valid label preimages in `label_preimages` so later registry subdomains can decode labels beyond the hardcoded core names.
 - [x] Existing full-mainnet local DB was repaired from observed label preimages, changing common ENSJS decoded-name lookups such as `labelhash(vitalik)` from bracketed labels to decoded labels.
+- [x] `labels-heal` CLI command calls ENSRainbow, persists successful label preimages and misses, and repairs affected domain names without resetting or replaying the database.
+- [x] Verified local `labelhash(7261111)` response matches the official subgraph after ENSRainbow repair: `7261111.eth` in ~17ms local vs ~595ms official.
 
 ### API And Server
 
@@ -158,7 +160,8 @@ Last full verification: `cargo run -p cli -- schema-diff --output target/officia
 - [ ] Audit list-field edge cases against Graph Node behavior.
 - [ ] Add compatibility tests that execute the same representative GraphQL queries against the local API and the official hosted ENS subgraph.
 - [ ] Compare local and official JSON response shapes and values after real mainnet backfill ranges.
-- [ ] Add an ENSRainbow or equivalent `ens.nameByHash` label dictionary source for labels that are not inferable from indexed ENS events alone, such as official-decoded numeric labels.
+- [ ] Run larger ENSRainbow healing batches across remaining unknown labelhashes and measure how many `[hash]` names remain after repair.
+- [ ] Add periodic/serve-time optional label healing if production requires automatic `ens.nameByHash` parity during live indexing.
 
 ### Indexing Correctness And Production Hardening
 

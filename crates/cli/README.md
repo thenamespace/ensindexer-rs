@@ -30,6 +30,7 @@ sequenceDiagram
 - `archive [--archive-dir <dir>]`: archive-only mode. It fetches raw logs/blocks to `.bin` range files without projecting to Postgres.
 - `replay [--archive-dir <dir>]`: replays binary archive ranges into Postgres.
 - `archive-status [--archive-dir <dir>] [--verify]`: reports binary archive coverage and optionally verifies checksums.
+- `labels-heal [--limit <n>] [--concurrency <n>] [--labelhash <hash>]`: calls ENSRainbow to repair unknown labelhashes in the already-indexed database.
 - `index`: runs live indexing only.
 - `compare`: runs one GraphQL query against local and official subgraph endpoints and diffs JSON responses.
 - `schema-local`: prints local GraphQL SDL.
@@ -42,6 +43,7 @@ The CLI does not project events itself. It chooses which runtime path to invoke:
 - `backfill` uses `ingest` to fetch, decode, project, batch-flush, and checkpoint.
 - `archive` uses `ingest` to fetch raw data and write binary archive ranges plus metadata.
 - `replay` uses `ingest` to read binary archive ranges and run the same projection apply path without RPC or HyperSync credits.
+- `labels-heal` uses `storage` plus ENSRainbow to fill `label_preimages`, remember misses, and recompute affected domain names without resetting or replaying.
 - `serve` delegates the always-on API to `server` and optional indexing to `server::runtime`.
 
 ## Storage Shape Used
@@ -52,6 +54,7 @@ The CLI opens Postgres through `storage`, runs migrations, and then delegates ta
 
 - `src/app.rs`: Clap command definitions and command dispatch.
 - `src/compare.rs`: local-vs-official GraphQL comparison helper.
+- `src/label_heal.rs`: ENSRainbow-backed label repair command.
 - `src/schema.rs` and `src/schema/*`: local SDL generation, official introspection, and schema compatibility diffing.
 - `src/main.rs`: Tokio entrypoint.
 
@@ -66,6 +69,7 @@ The CLI opens Postgres through `storage`, runs migrations, and then delegates ta
 - Strict live source selection: `http_rpc` or `wss`.
 - Binary archive-only, archive replay, and archive inspection commands.
 - Schema diff and data compare commands for official subgraph compatibility.
+- ENSRainbow-backed label healing for post-backfill database repair.
 - Dev helpers for migrations, status, reset, and live indexing.
 
 ## Future Improvements

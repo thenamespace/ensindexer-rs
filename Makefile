@@ -1,4 +1,4 @@
-.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-only archive-backfill raw-backfill archive-status archive-status-verify test lint check
+.PHONY: db-up db-down db-reset db-logs docker-build docker-run migrate serve sandbox status reset backfill archive-only archive-backfill raw-backfill archive-status archive-status-verify labels-heal test lint check
 
 RAW_ARCHIVE_DIR ?= .raw-archive
 IMAGE ?= ensindexer:local
@@ -58,6 +58,9 @@ archive-status:
 
 archive-status-verify:
 	RAW_ARCHIVE_DIR=$(RAW_ARCHIVE_DIR) cargo run -p cli -- archive-status --verify
+
+labels-heal:
+	cargo run -p cli -- labels-heal --limit $${LABEL_HEAL_LIMIT:-1000} --concurrency $${LABEL_HEAL_CONCURRENCY:-16}
 
 test:
 	cargo test --workspace

@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub eth_ws_url: Option<Url>,
     pub envio_api_key: Option<String>,
     pub hypersync_url: Url,
+    pub ensrainbow_url: Url,
     pub enable_backfill: bool,
     pub enable_live_indexing: bool,
     pub backfill_source: BackfillSource,
@@ -38,6 +39,12 @@ impl AppConfig {
                 "https://eth.hypersync.xyz"
                     .parse()
                     .expect("default hypersync url is valid"),
+            )?,
+            ensrainbow_url: optional(
+                "ENSRAINBOW_URL",
+                "https://api.ensrainbow.io"
+                    .parse()
+                    .expect("default ensrainbow url is valid"),
             )?,
             enable_backfill: optional("ENABLE_BACKFILL", false)?,
             enable_live_indexing: optional("ENABLE_LIVE_INDEXING", false)?,

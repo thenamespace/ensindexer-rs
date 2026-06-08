@@ -40,9 +40,12 @@ cargo run -p cli -- backfill
 cargo run -p cli -- archive
 cargo run -p cli -- replay
 cargo run -p cli -- index
+make labels-heal
 make reset
 make check
 ```
+
+`make labels-heal` calls ENSRainbow through `ENSRAINBOW_URL` to repair unknown `Domain.labelName` values after a backfill. Use `LABEL_HEAL_LIMIT` and `LABEL_HEAL_CONCURRENCY` to tune one repair batch without resetting the database.
 
 Archive workflow for repeatable projection testing:
 

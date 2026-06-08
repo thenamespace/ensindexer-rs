@@ -29,6 +29,7 @@ impl LabelPreimagesRepo<'_> {
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?
             .insert(labelhash.to_owned(), Some(label_name.to_owned()));
+        self.delete_miss(labelhash).await?;
         Ok(())
     }
 
@@ -60,25 +61,163 @@ impl LabelPreimagesRepo<'_> {
         Ok(label_name)
     }
 
+    pub async fn candidate_labelhashes(&self, limit: i64) -> StorageResult<Vec<String>> {
+        Ok(sqlx::query_scalar(
+            r#"
+            select distinct domain.labelhash
+            from domains as domain
+            where domain.labelhash is not null
+              and domain.label_name is null
+              and not exists (
+                select 1 from label_preimages as preimage
+                where preimage.labelhash = domain.labelhash
+              )
+              and not exists (
+                select 1 from label_preimage_misses as miss
+                where miss.labelhash = domain.labelhash
+              )
+            order by domain.labelhash
+            limit $1
+            "#,
+        )
+        .bind(limit)
+        .fetch_all(self.pool)
+        .await?)
+    }
+
     pub async fn upsert_many(&self, labels: &[(String, String)]) -> StorageResult<()> {
         if labels.is_empty() {
             return Ok(());
         }
 
         let mut query =
-            sqlx::QueryBuilder::new("insert into label_preimages (labelhash, label_name) values ");
+            sqlx::QueryBuilder::new("insert into label_preimages (labelhash, label_name) ");
         query.push_values(labels, |mut row, (labelhash, label_name)| {
             row.push_bind(labelhash).push_bind(label_name);
         });
         query.push(" on conflict (labelhash) do update set label_name = excluded.label_name");
         query.build().execute(self.pool).await?;
+        {
+            let mut cache = self
+                .cache
+                .lock()
+                .map_err(|_| StorageError::EntityCachePoisoned)?;
+            for (labelhash, label_name) in labels {
+                cache.insert(labelhash.clone(), Some(label_name.clone()));
+            }
+        }
+        self.delete_misses(labels.iter().map(|(labelhash, _)| labelhash.as_str()))
+            .await?;
+        Ok(())
+    }
+
+    pub async fn record_misses(&self, labelhashes: &[String]) -> StorageResult<()> {
+        if labelhashes.is_empty() {
+            return Ok(());
+        }
+
+        let mut query = sqlx::QueryBuilder::new("insert into label_preimage_misses (labelhash) ");
+        query.push_values(labelhashes, |mut row, labelhash| {
+            row.push_bind(labelhash);
+        });
+        query.push(" on conflict (labelhash) do update set checked_at = now()");
+        query.build().execute(self.pool).await?;
+
         let mut cache = self
             .cache
             .lock()
             .map_err(|_| StorageError::EntityCachePoisoned)?;
-        for (labelhash, label_name) in labels {
-            cache.insert(labelhash.clone(), Some(label_name.clone()));
+        for labelhash in labelhashes {
+            cache.insert(labelhash.clone(), None);
         }
+        Ok(())
+    }
+
+    pub async fn repair_domain_names_for_labelhashes(
+        &self,
+        labelhashes: &[String],
+        max_passes: usize,
+    ) -> StorageResult<u64> {
+        if labelhashes.is_empty() {
+            return Ok(0);
+        }
+
+        let mut total = 0;
+        for _ in 0..max_passes {
+            let changed = sqlx::query(
+                r#"
+                with recursive affected(id) as (
+                  select id
+                  from domains
+                  where labelhash = any($1)
+                  union
+                  select child.id
+                  from domains as child
+                  join affected on affected.id = child.parent_id
+                )
+                update domains as domain
+                set
+                  label_name = preimage.label_name,
+                  name = case
+                    when domain.parent_id is not null then preimage.label_name || '.' || (
+                      select parent.name from domains as parent where parent.id = domain.parent_id
+                    )
+                    else preimage.label_name
+                  end
+                from label_preimages as preimage
+                where domain.labelhash = preimage.labelhash
+                  and domain.id in (select id from affected)
+                  and (
+                    domain.label_name is distinct from preimage.label_name
+                    or domain.name is distinct from case
+                      when domain.parent_id is not null then preimage.label_name || '.' || (
+                        select parent.name from domains as parent where parent.id = domain.parent_id
+                      )
+                      else preimage.label_name
+                    end
+                  )
+                  and (
+                    domain.parent_id is null
+                    or exists (
+                      select 1 from domains as parent
+                      where parent.id = domain.parent_id
+                        and parent.name is not null
+                    )
+                  )
+                "#,
+            )
+            .bind(labelhashes)
+            .execute(self.pool)
+            .await?
+            .rows_affected();
+            total += changed;
+            if changed == 0 {
+                break;
+            }
+        }
+        Ok(total)
+    }
+
+    async fn delete_miss(&self, labelhash: &str) -> StorageResult<()> {
+        sqlx::query("delete from label_preimage_misses where labelhash = $1")
+            .bind(labelhash)
+            .execute(self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn delete_misses<'a>(
+        &self,
+        labelhashes: impl Iterator<Item = &'a str>,
+    ) -> StorageResult<()> {
+        let labelhashes = labelhashes.collect::<Vec<_>>();
+        if labelhashes.is_empty() {
+            return Ok(());
+        }
+        sqlx::query("delete from label_preimage_misses where labelhash = any($1)")
+            .bind(labelhashes)
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 }

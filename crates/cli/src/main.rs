@@ -1,5 +1,6 @@
 mod app;
 mod compare;
+mod label_heal;
 mod schema;
 
 const WORKER_STACK_SIZE: usize = 16 * 1024 * 1024;
