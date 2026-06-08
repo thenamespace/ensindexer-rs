@@ -1,9 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Downloads a local ENSRainbow dataset and extracts TSV for offline label healing.
-# This script is an operator helper only; the indexer runtime never calls ENSRainbow APIs.
-
+DATA_VERSION="v2"
 OUT_DIR="${ENSRAINBOW_OUT_DIR:-./healed-names}"
 BASE_URL="https://bucket.ensrainbow.io"
 

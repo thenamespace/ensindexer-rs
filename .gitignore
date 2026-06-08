@@ -6,7 +6,9 @@ rustc-ice-*.txt
 
 .repos
 .raw-archive
+.raw-archive*
 
 .env
 .env.*
 !.env.example
+healed-names
