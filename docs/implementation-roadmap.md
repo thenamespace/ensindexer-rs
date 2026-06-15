@@ -35,7 +35,7 @@ Recommended crate responsibilities:
 | `ingest`     | HyperSync/RPC historical fetching, live tailing, checkpointing, reorg detection, event dispatch | `alloy`, `hypersync-client`, `tokio`, `contracts`, `projection` |
 | `api`        | `async-graphql` objects, interfaces, filters, order enums, pagination, resolvers             | `async-graphql`, `storage`, `serde`                 |
 | `server`     | Axum HTTP app, GraphQL endpoint, health/readiness, CORS, compression, tracing                | `axum`, `tower`, `tower-http`, `async-graphql-axum` |
-| `cli`        | operational commands: migrate, backfill, serve, index, reset, validate, compare              | `clap`, `tokio`, workspace crates                   |
+| `cli`        | production command shell for `start` and `status`, with strict runtime validation             | `clap`, `tokio`, workspace crates                   |
 
 Keep `projection` free of RPC and HTTP concerns. Projection tests should be able to create a transaction, apply synthetic decoded events, and inspect storage.
 

@@ -68,11 +68,11 @@ The API should never mutate indexed data. Mutations belong to ingestion/projecti
 - Event clamping for historical event reads.
 - Relationship filters, `_change_block`, scalar operators, list operators, and ordering fields.
 - DataLoader batching for `Domain.owner`, `Domain.resolvedAddress`, `Domain.registrant`, `Domain.wrappedOwner`, `Domain.resolver`, `Domain.registration`, and `Domain.wrappedDomain`.
-- GraphQL schema diff support through the CLI.
+- Official-compatible schema wiring for root fields, filters, ordering, relationships, block arguments, and `_meta`.
 
 ## Future Improvements
 
-- Expand DataLoader-style batching to registration, wrapped-domain, resolver-domain, and event-parent hydration paths.
+- Expand DataLoader-style batching to resolver-domain and event-parent hydration paths if profiling shows those paths becoming hot.
 - Expand official/local differential tests with real mainnet fixtures.
 - Add query complexity and depth controls before public deployment.
 - Profile expensive derived relationships and add targeted storage indexes.

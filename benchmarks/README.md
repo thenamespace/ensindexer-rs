@@ -83,21 +83,21 @@ internal-benchmark-runner \
 
 | operation                | ensindexer-rs |     ensnode | the graph indexer |
 | ------------------------ | ------------: | ----------: | ----------------: |
-| `01-domain-batch`        | 5.985ms (13.5x faster, 92.6% lower) | 12.836ms (6.3x faster, 84.1% lower) | 80.771ms (slowest) |
-| `02-names-for-address`   | 18.722ms (10.8x faster, 90.7% lower) | 13.398ms (15.0x faster, 93.4% lower) | 201.511ms (slowest) |
-| `03-eth-subnames`        | 31.281ms (60.9x faster, 98.4% lower) | 1903.604ms (slowest) | 234.277ms (8.1x faster, 87.7% lower) |
-| `04-subnames-search`     | 161.328ms (10.7x faster, 90.6% lower) | 1724.506ms (slowest) | 504 timeout |
-| `05-decoded-label`       | 1.843ms (54.0x faster, 98.1% lower) | 64.406ms (1.5x faster, 35.3% lower) | 99.493ms (slowest) |
-| `06-resolver-records`    | 10.922ms (19.9x faster, 95.0% lower) | 94.708ms (2.3x faster, 56.3% lower) | 216.811ms (slowest) |
-| `07-registrations`       | 9.260ms (116.6x faster, 99.1% lower) | 1079.505ms (slowest) | 233.749ms (4.6x faster, 78.3% lower) |
-| `08-name-history`        | 5.777ms (16.5x faster, 93.9% lower) | 2.440ms (39.1x faster, 97.4% lower) | 95.292ms (slowest) |
-| `09-event-scan`          | 28.043ms (232.0x faster, 99.6% lower) | unsupported | 6506.291ms (slowest) |
-| `10-relationship-filter` | 6.828ms (34.1x faster, 97.1% lower) | unsupported | 233.165ms (slowest) |
-| `11-text-search`         | 172.538ms (3.7x faster, 73.2% lower) | 642.963ms (slowest) | 144.134ms (4.5x faster, 77.6% lower) |
+| `01-domain-batch`        | 5.985ms (13.5x faster than slowest, 92.6% lower) | 12.836ms (6.3x faster than slowest, 84.1% lower) | 80.771ms (slowest) |
+| `02-names-for-address`   | 18.722ms (10.8x faster than slowest, 90.7% lower) | 13.398ms (15.0x faster than slowest, 93.4% lower) | 201.511ms (slowest) |
+| `03-eth-subnames`        | 31.281ms (60.9x faster than slowest, 98.4% lower) | 1903.604ms (slowest) | 234.277ms (8.1x faster than slowest, 87.7% lower) |
+| `04-subnames-search`     | 161.328ms (10.7x faster than slowest, 90.6% lower) | 1724.506ms (slowest) | 504 timeout |
+| `05-decoded-label`       | 1.843ms (54.0x faster than slowest, 98.1% lower) | 64.406ms (1.5x faster than slowest, 35.3% lower) | 99.493ms (slowest) |
+| `06-resolver-records`    | 10.922ms (19.9x faster than slowest, 95.0% lower) | 94.708ms (2.3x faster than slowest, 56.3% lower) | 216.811ms (slowest) |
+| `07-registrations`       | 9.260ms (116.6x faster than slowest, 99.1% lower) | 1079.505ms (slowest) | 233.749ms (4.6x faster than slowest, 78.3% lower) |
+| `08-name-history`        | 5.777ms (16.5x faster than slowest, 93.9% lower) | 11.905ms (near-baseline/noisy; 8.0x faster than slowest, 87.5% lower) | 95.292ms (slowest) |
+| `09-event-scan`          | 28.043ms (232.0x faster than slowest, 99.6% lower) | unsupported | 6506.291ms (slowest) |
+| `10-relationship-filter` | 6.828ms (34.1x faster than slowest, 97.1% lower) | unsupported | 233.165ms (slowest) |
+| `11-text-search`         | 172.538ms (3.7x faster than slowest, 73.2% lower) | 642.963ms (slowest) | 144.134ms (4.5x faster than slowest, 77.6% lower) |
 
 Relative speed is calculated against the slowest supported numeric result in each row. Timeout and unsupported cells are excluded from the numeric baseline.
 
-The hosted The Graph column uses `baseline_adjusted_ms.median` because the gateway response did not expose provider execution timing. Raw hosted `wall_ms.median` was about 381ms higher per query in this release run, matching the measured `_meta` baseline median. The hosted ENSNode column also uses `baseline_adjusted_ms.median`; its measured `_meta` baseline median was about 361ms in the full run. `07-registrations` is from an immediate single-query ENSNode retry after the full hosted run hit a transient send failure for that one operation. `08-name-history` was rerun separately with 20 iterations and 5 warmups; its ENSNode raw wall median was about 356ms and baseline median was about 354ms, so the 2.440ms adjusted value should be read as near-baseline rather than precise provider compute.
+The hosted The Graph column uses `baseline_adjusted_ms.median` because the gateway response did not expose provider execution timing. Raw hosted `wall_ms.median` was about 381ms higher per query in this release run, matching the measured `_meta` baseline median. The hosted ENSNode column also uses `baseline_adjusted_ms.median`; its measured `_meta` baseline median was about 361ms in the full run. `07-registrations` is from an immediate single-query ENSNode retry after the full hosted run hit a transient send failure for that one operation. `08-name-history` was rerun again with 25 baseline samples and 25 query samples after a suspicious near-1ms adjusted result; the rerun measured a raw wall median of 656.481ms, baseline median of 644.576ms, and adjusted median of 11.905ms. That value is still close enough to the hosted timing floor that it should be read as baseline-subtraction noise, not precise provider compute.
 
 ENSNode is not treated as the schema source of truth here. The historical benchmark runner applied ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` was sent as `BigInt!`, `ID!` was sent as `String!`, and `*_contains_nocase` filters were downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
 
