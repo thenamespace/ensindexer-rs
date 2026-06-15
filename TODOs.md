@@ -170,9 +170,9 @@ Benchmark notes:
 - [x] Domain lookup indexes include fixed-size `labelhash` and MD5 expression indexes for high-volume ENSJS-style decoded-name queries.
 - [x] Registrar/controller and NameWrapper projection persist valid label preimages in `label_preimages` so later registry subdomains can decode labels beyond the hardcoded core names.
 - [x] Existing full-mainnet local DB was repaired from observed label preimages, changing common ENSJS decoded-name lookups such as `labelhash(vitalik)` from bracketed labels to decoded labels.
-- [x] Local ENSRainbow streamed protobuf or TSV label dictionaries can be imported into `label_preimages` without external API calls by internal tooling.
-- [x] Affected domain names can be repaired from the local `label_preimages` dictionary without resetting or replaying the database by internal tooling.
-- [x] Removed runtime external ENSRainbow repair probing; label healing is now local file import plus local Postgres repair only.
+- [x] Local ENSRainbow streamed protobuf or TSV label dictionaries can be prepared offline without external API calls for future external healing tooling.
+- [x] Removed unused storage import/repair helpers after the production CLI healing commands were deleted.
+- [x] Removed runtime external ENSRainbow repair probing; any future label healing should stay local-file based and outside the production CLI until intentionally supported.
 - [x] Verified local `labelhash(7261111)` response matches the official subgraph after label repair: `7261111.eth` in ~17ms local vs ~595ms official.
 - [x] Audited ENSNode/Ponder subgraph indexes and added matching production query indexes: domain trigram/fuzzy name indexes, domain relation indexes, registration date indexes, wrapped-domain domain index, and compound derived-event parent indexes.
 - [x] Added ENSJS-oriented address/sort indexes for `owner`, `registrant`, `wrappedOwner`, and `resolvedAddress` ordered by `expiryDate` and `createdAt`.
@@ -221,6 +221,7 @@ Benchmark notes:
 - [x] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate.
 - [x] Run strict workspace clippy and fix production cleanup warnings in storage and CLI.
 - [x] Remove broad storage `clippy::collapsible_if` suppressions by simplifying cache-update control flow.
+- [x] Remove unused label-preimage bulk import and repair methods from the production storage API.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.

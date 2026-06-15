@@ -51,7 +51,7 @@ Local label healing workflow:
 # For now, keep this script output as an offline dataset for future healing jobs.
 ```
 
-For the cleanest first full backfill, import labels through the future internal healing workflow before replay/backfill so projection can resolve known labelhashes as rows are created. Avoid running large heal batches concurrently with dense backfill ranges because both compete for Postgres write and index IO.
+For the cleanest first full backfill, prepare labels through a future external healing tool before replay/backfill so projection can resolve known labelhashes as rows are created. Keep that tooling outside the production binary and storage API unless it becomes part of the supported runtime surface.
 
 GraphQL benchmark fixtures and historical reports live in [benchmarks](benchmarks). The benchmark runner is internal tooling and is no longer part of the production CLI surface.
 

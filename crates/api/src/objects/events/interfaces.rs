@@ -12,6 +12,8 @@ use super::resolver::{
 };
 use crate::objects::{Domain, Registration, Resolver};
 
+// async-graphql interface metadata repeats `ty` per field; clippy reads that as
+// duplicate attributes even though the macro requires this shape.
 #[allow(clippy::duplicated_attributes)]
 #[derive(Interface)]
 #[graphql(
@@ -33,6 +35,8 @@ pub enum DomainEvent {
     ExpiryExtendedEvent(ExpiryExtendedEvent),
 }
 
+// async-graphql interface metadata repeats `ty` per field; clippy reads that as
+// duplicate attributes even though the macro requires this shape.
 #[allow(clippy::duplicated_attributes)]
 #[derive(Interface)]
 #[graphql(
@@ -52,6 +56,8 @@ pub enum RegistrationEvent {
     NameTransferredEvent(NameTransferredEvent),
 }
 
+// async-graphql interface metadata repeats `ty` per field; clippy reads that as
+// duplicate attributes even though the macro requires this shape.
 #[allow(clippy::duplicated_attributes)]
 #[derive(Interface)]
 #[graphql(
