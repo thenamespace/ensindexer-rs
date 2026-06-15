@@ -204,6 +204,7 @@ Benchmark notes:
 - [x] Public production CLI is reduced to `ensindexer start` and `ensindexer status`.
 - [x] `ensindexer start` exposes strict env/arg controls for backfill, live indexing, archive writes, RPC/WSS, HyperSync, raw archive path, chain ID, bind address, batch size, confirmation depth, and polling interval.
 - [x] Docker image builds and runs the `ensindexer` binary with `start` as the default command.
+- [x] Split the bulk replay index registry into smaller current-state and event-index modules.
 
 ## Pending
 
