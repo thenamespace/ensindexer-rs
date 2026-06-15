@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, str::FromStr};
 
 use clap::{Args, Parser, Subcommand};
 use config::{AppConfig, BackfillSource, IndexingSource};
@@ -42,13 +42,13 @@ struct StartArgs {
 
     #[arg(long)]
     enable_backfill: Option<bool>,
-    #[arg(long)]
+    #[arg(long, value_name = "rpc|hypersync|raw", value_parser = parse_backfill_source)]
     backfill_source: Option<BackfillSource>,
     #[arg(long)]
     enable_live_indexing: Option<bool>,
-    #[arg(long)]
+    #[arg(long, value_name = "rpc|wss", value_parser = parse_indexing_source)]
     live_indexing_source: Option<IndexingSource>,
-    #[arg(long)]
+    #[arg(long = "archive-backfill", visible_alias = "archive-backfills")]
     archive_backfills: Option<bool>,
 
     #[arg(long)]
@@ -161,6 +161,14 @@ fn set_option_if_some<T>(target: &mut Option<T>, value: Option<T>) {
     if let Some(value) = value {
         *target = Some(value);
     }
+}
+
+fn parse_backfill_source(value: &str) -> Result<BackfillSource, String> {
+    BackfillSource::from_str(value).map_err(|error| error.to_string())
+}
+
+fn parse_indexing_source(value: &str) -> Result<IndexingSource, String> {
+    IndexingSource::from_str(value).map_err(|error| error.to_string())
 }
 
 async fn print_status(storage: &Storage) -> anyhow::Result<()> {

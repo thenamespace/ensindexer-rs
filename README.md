@@ -26,10 +26,10 @@ cargo make start
 
 Configuration is loaded from `.env` via `config`.
 Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox. The Sandbox is always available in dev and prod.
-`cargo make start` runs `ensindexer start`, which starts the GraphQL API. Set `ENABLE_BACKFILL=true` to run a startup catchup backfill in the same process, and set `ENABLE_LIVE_INDEXING=true` to keep indexing confirmed live ranges after startup. If both toggles are enabled, startup backfill runs before live indexing.
+`cargo make start` runs `ensindexer start`, which starts the GraphQL API. Set `ENABLE_BACKFILL=true` or pass `--enable-backfill=true` to run a startup catchup backfill in the same process, and set `ENABLE_LIVE_INDEXING=true` or pass `--enable-live-indexing=true` to keep indexing confirmed live ranges after startup. If both toggles are enabled, startup backfill runs before live indexing.
 
 `BACKFILL_SOURCE` is strict: `rpc`, `hypersync`, or `raw`. There is no automatic transport selection and there are no `BACKFILL_FROM` or `BACKFILL_TO` controls. RPC and HyperSync backfills resume from database checkpoints, and raw replay uses archive bounds plus database checkpoints.
-Set `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as binary `.bin` range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `LIVE_INDEXING_SOURCE` controls live indexing and must be `rpc` or `wss`; `wss` requires `ETH_WS_URL`.
+Set `ARCHIVE_BACKFILLS=true` or pass `--archive-backfill=true` with `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as binary `.bin` range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `LIVE_INDEXING_SOURCE` controls live indexing and must be `rpc` or `wss`; `wss` requires `ETH_WS_URL`.
 
 Production commands:
 

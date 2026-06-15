@@ -219,6 +219,7 @@ Benchmark notes:
 - [x] Run a real 1,000 block mainnet fill with configured HyperSync credentials.
 - [x] Consolidate all migrations into one final initial migration for external project setup.
 - [x] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate.
+- [x] Make `ensindexer start --help` show strict source-selector values and support the requested `--archive-backfill` flag name.
 - [x] Run strict workspace clippy and fix production cleanup warnings in storage and CLI.
 - [x] Remove broad storage `clippy::collapsible_if` suppressions by simplifying cache-update control flow.
 - [x] Remove unused label-preimage bulk import and repair methods from the production storage API.

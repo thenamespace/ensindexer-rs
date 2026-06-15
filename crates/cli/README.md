@@ -26,7 +26,7 @@ sequenceDiagram
 - `ensindexer start`: starts health routes, GraphQL API, Apollo Sandbox, and optional indexing workers.
 - `ensindexer status`: prints the latest indexed block and per-source checkpoints.
 
-`start` accepts env variables and equivalent `--kebab-case` flags for the operational config: database URL, RPC URL, WSS URL, HyperSync URL/API key, raw archive directory, chain ID, bind address, backfill/live toggles, source selectors, archive writes, batch size, confirmation depth, and polling interval.
+`start` accepts env variables and equivalent `--kebab-case` flags for the operational config: database URL, RPC URL, WSS URL, HyperSync URL/API key, raw archive directory, chain ID, bind address, backfill/live toggles, source selectors, archive writes, batch size, confirmation depth, and polling interval. The archive-write flag is `--archive-backfill`; `--archive-backfills` remains accepted as a compatibility alias.
 
 ## Projection Awareness
 
