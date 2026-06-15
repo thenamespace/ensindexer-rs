@@ -19,6 +19,8 @@ use crate::{
 #[derive(Default)]
 pub(crate) struct WrapperDomainEventQueries;
 
+// Concrete event roots intentionally mirror subgraph pagination/filter/order
+// arguments for compatibility with generated GraphQL clients.
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl WrapperDomainEventQueries {

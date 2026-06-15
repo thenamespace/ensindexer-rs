@@ -223,6 +223,9 @@ Benchmark notes:
 - [x] Run strict workspace clippy and fix production cleanup warnings in storage and CLI.
 - [x] Remove broad storage `clippy::collapsible_if` suppressions by simplifying cache-update control flow.
 - [x] Remove unused label-preimage bulk import and repair methods from the production storage API.
+- [x] Document remaining intentional clippy suppressions around GraphQL-compatible resolver signatures and shared SQL helpers.
+- [x] Run full workspace tests after cleanup.
+- [ ] Run unused-dependency audit with a nightly toolchain; `cargo-udeps` is installed but cannot run under the current stable toolchain because it requires `-Z` flags.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.

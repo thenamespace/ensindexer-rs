@@ -16,6 +16,8 @@ use crate::{
 #[derive(Default)]
 pub(crate) struct EntityQueries;
 
+// GraphQL root fields mirror The Graph's generated schema arguments, so these
+// resolver methods intentionally carry pagination, filters, ordering, and block args.
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl EntityQueries {

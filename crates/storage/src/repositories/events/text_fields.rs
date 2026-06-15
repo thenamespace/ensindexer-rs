@@ -253,6 +253,8 @@ fn operator_text_field(exact: Option<String>, ops: &TextOperatorFilter) -> TextF
     }
 }
 
+// The storage filter model mirrors Graph Node's generated text operators. Passing
+// the fields explicitly keeps conversion call sites declarative and type checked.
 #[allow(clippy::too_many_arguments)]
 fn limited_text_field(
     exact: Option<String>,

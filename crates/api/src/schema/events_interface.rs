@@ -18,6 +18,8 @@ use crate::{
 #[derive(Default)]
 pub(crate) struct InterfaceEventQueries;
 
+// Event-interface roots mirror Graph Node arguments for pagination, filters,
+// ordering, block context, and subgraph error policy.
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl InterfaceEventQueries {

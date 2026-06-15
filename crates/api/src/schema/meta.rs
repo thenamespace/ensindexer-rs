@@ -6,6 +6,8 @@ use crate::meta::{BlockHeight, Meta, MetaBlock};
 #[derive(Default)]
 pub(crate) struct MetaQueries;
 
+// Keep the object impl consistent with the other generated-style GraphQL roots;
+// async-graphql expands these methods in a way clippy counts broadly.
 #[allow(clippy::too_many_arguments)]
 #[Object]
 impl MetaQueries {

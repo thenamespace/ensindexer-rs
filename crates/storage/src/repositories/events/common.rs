@@ -38,6 +38,8 @@ impl EventsRepo<'_> {
         Ok(query.build_query_as().fetch_optional(self.pool).await?)
     }
 
+    // Shared event-table list helper keeps table metadata and GraphQL query args
+    // together so concrete event repositories do not duplicate SQL assembly.
     #[allow(clippy::too_many_arguments)]
     pub(super) async fn list_events<T>(
         &self,
