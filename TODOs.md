@@ -178,8 +178,8 @@ Benchmark notes:
 - [x] Domain lookup indexes include fixed-size `labelhash` and MD5 expression indexes for high-volume ENSJS-style decoded-name queries.
 - [x] Registrar/controller and NameWrapper projection persist valid label preimages in `label_preimages` so later registry subdomains can decode labels beyond the hardcoded core names.
 - [x] Existing full-mainnet local DB was repaired from observed label preimages, changing common ENSJS decoded-name lookups such as `labelhash(vitalik)` from bracketed labels to decoded labels.
-- [x] `labels-import` imports local ENSRainbow streamed protobuf `.ensrainbow` files or TSV label dictionaries without external API calls.
-- [x] `labels-heal` repairs affected domain names from the local `label_preimages` dictionary without resetting or replaying the database.
+- [x] Local ENSRainbow streamed protobuf or TSV label dictionaries can be imported into `label_preimages` without external API calls by internal tooling.
+- [x] Affected domain names can be repaired from the local `label_preimages` dictionary without resetting or replaying the database by internal tooling.
 - [x] Removed runtime external ENSRainbow repair probing; label healing is now local file import plus local Postgres repair only.
 - [x] Verified local `labelhash(7261111)` response matches the official subgraph after label repair: `7261111.eth` in ~17ms local vs ~595ms official.
 - [x] Audited ENSNode/Ponder subgraph indexes and added matching production query indexes: domain trigram/fuzzy name indexes, domain relation indexes, registration date indexes, wrapped-domain domain index, and compound derived-event parent indexes.
@@ -223,8 +223,8 @@ Benchmark notes:
 ### Indexing Correctness And Production Hardening
 
 - [x] Run a real 1,000 block mainnet fill with configured HyperSync credentials.
-- [ ] Consolidate all migrations into one final initial migration for external project setup.
-- [ ] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate or move them to internal tooling.
+- [x] Consolidate all migrations into one final initial migration for external project setup.
+- [x] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [ ] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.

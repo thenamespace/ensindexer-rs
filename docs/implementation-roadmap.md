@@ -243,8 +243,8 @@ Prefer normalized hex `text` IDs initially. Use `numeric` for GraphQL `BigInt` f
 create index domains_parent_idx on domains(parent_id);
 create index domains_owner_idx on domains(owner_id);
 create index domains_resolver_idx on domains(resolver_id);
-create index domains_name_lower_idx on domains(lower(name));
-create index domains_label_name_lower_idx on domains(lower(label_name));
+create index domains_name_lower_trgm_idx on domains using gin (lower(name) gin_trgm_ops);
+create index domains_label_name_lower_trgm_idx on domains using gin (lower(label_name) gin_trgm_ops);
 create index registrations_domain_idx on registrations(domain_id);
 create index registrations_registrant_idx on registrations(registrant_id);
 create index wrapped_domains_owner_idx on wrapped_domains(owner_id);
@@ -585,13 +585,13 @@ Runtime config:
 | ---------------------------- | ----------------------------------------------------------- |
 | `DATABASE_URL`               | Postgres connection string                                  |
 | `ETH_RPC_URL`                | Ethereum JSON-RPC endpoint                                  |
-| `ETH_WS_URL`                 | Ethereum websocket endpoint, required when `INDEXING_SOURCE=wss` |
+| `ETH_WS_URL`                 | Ethereum websocket endpoint, required when `LIVE_INDEXING_SOURCE=wss` |
 | `ENVIO_API_KEY`              | Envio HyperSync API key for fast historical backfills       |
 | `HYPERSYNC_URL`              | HyperSync endpoint, default `https://eth.hypersync.xyz`     |
-| `ENABLE_BACKFILL`            | run configured startup backfill in `serve`                  |
-| `ENABLE_LIVE_INDEXING`       | run live confirmed-block indexing in `serve`                |
+| `ENABLE_BACKFILL`            | run configured startup backfill in `ensindexer start`       |
+| `ENABLE_LIVE_INDEXING`       | run live confirmed-block indexing in `ensindexer start`     |
 | `BACKFILL_SOURCE`            | strict historical source selector: `rpc`, `hypersync`, or `raw` |
-| `INDEXING_SOURCE`            | strict live source selector: `http_rpc` or `wss`            |
+| `LIVE_INDEXING_SOURCE`       | strict live source selector: `rpc` or `wss`                 |
 | `ARCHIVE_BACKFILLS`          | write fetched backfill ranges to `RAW_ARCHIVE_DIR` when true |
 | `RAW_ARCHIVE_DIR`            | archive directory used for backfill writes and raw replay   |
 | `CHAIN_ID`                   | chain selector                                              |
@@ -603,34 +603,25 @@ Runtime config:
 
 ## Step 12: CLI Commands
 
-Implement `cli` so local development and production jobs use the same code paths:
+The production CLI is intentionally small:
 
 ```text
-cli migrate
-cli backfill
-cli index
-cli serve
-cli status
-cli reset --yes
-cli validate --sample-file fixtures/queries.json
-cli compare --subgraph-url <url> --query-file fixtures/domain.graphql
-cli schema-local --output target/local-schema.graphql
-cli schema-diff --output target/official-subgraph-schema.json
+ensindexer start
+ensindexer status
 ```
 
-The current implementation includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, guarded `reset --yes`, `compare`, `schema-local`, and `schema-diff`. `status` prints the latest locally stored block and per-source checkpoints. `reset --yes` truncates indexed projection/event/checkpoint state so a local database can be rebuilt from canonical source start blocks after manual maintenance or coarse reorg recovery.
+`ensindexer start` always runs HTTP, GraphQL, and Apollo Sandbox. Startup backfill, live indexing, historical source selection, live transport selection, and raw archive writes are controlled through strict env values and equivalent startup flags. `ensindexer status` prints the latest locally stored block and per-source checkpoints.
 
-`compare` executes one GraphQL query file against the local Rust API and a reference subgraph endpoint, then compares the parsed JSON responses exactly. It does not require Postgres or indexer config, so it can run in CI against an already-started local server. Keep credentials outside committed files by passing `--subgraph-url`, `--auth-token`, or setting `SUBGRAPH_URL` and `SUBGRAPH_AUTH_TOKEN` in `.env`.
-
-`schema-local` exports the current generated SDL from `async-graphql`. `schema-diff` fetches the official subgraph introspection schema from `SUBGRAPH_URL`, using `SUBGRAPH_AUTH_TOKEN` when set, and compares query root names, query arguments, generated input fields, and enum values. This should run before each compatibility milestone. A non-zero exit means the local API still lacks official schema surface, even if some queries happen to work.
+Schema diffing, reference-subgraph comparisons, benchmark execution, label healing, archive inspection, and destructive reset helpers are internal tooling concerns. They should live in separate development binaries or scripts instead of the public production binary.
 
 Example:
 
 ```text
-SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
-cargo run -p cli -- compare \
-  --local-url http://127.0.0.1:8080/subgraph \
-  --query-file fixtures/domain.graphql
+ENABLE_BACKFILL=true \
+BACKFILL_SOURCE=hypersync \
+ARCHIVE_BACKFILLS=true \
+RAW_ARCHIVE_DIR=.raw-archive \
+ensindexer start
 ```
 
 For authenticated hosted Graph endpoints:

@@ -74,6 +74,6 @@ Projection writes through storage abstractions rather than SQL directly:
 
 - Add dense fixture tests per event family using known mainnet receipts.
 - Add official/local differential projection tests for representative domains.
-- Add optional automatic local-dictionary healing during live projection if production deployments need real-time `ens.nameByHash` parity without running `labels-heal`.
+- Add optional automatic local-dictionary healing during live projection if production deployments need real-time `ens.nameByHash` parity without a separate internal healing job.
 - Audit edge cases around unknown labels, resolver replacement, wrapper unwrap/re-wrap, and same-block repeated mutations.
 - Add structured projection trace output for debugging one entity across a range.

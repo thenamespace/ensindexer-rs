@@ -27,43 +27,13 @@ For strict compute-only comparisons between all three systems, run each implemen
 
 ## Running
 
-Local compute-only benchmark against the current database:
+These fixtures are currently historical/internal benchmark assets. The production `ensindexer` binary no longer exposes the old `benchmark` command; move the deleted runner into a separate internal tool before running this suite again.
 
 ```bash
-make benchmark
+cargo make start
 ```
 
-Equivalent direct command:
-
-```bash
-cargo run -p cli -- benchmark \
-  --query-dir benchmarks/queries \
-  --iterations 20 \
-  --warmup 3 \
-  --output target/benchmark-local.json
-```
-
-Three-way benchmark:
-
-```bash
-SUBGRAPH_URL="https://gateway.thegraph.com/api/subgraphs/id/5XqPmWe6gjyrJtFn9cLy237i4cWw2j9HcUJEXsP5qGtH" \
-SUBGRAPH_AUTH_TOKEN="<the-graph-token>" \
-ENSNODE_SUBGRAPH_URL="https://api.mainnet.ensnode.io/subgraph" \
-make benchmark-all
-```
-
-`make benchmark-all` also records localhost HTTP timing if the Rust server is running on `http://127.0.0.1:8080/subgraph`.
-
-Endpoint-only run, useful when testing a provider with schema quirks:
-
-```bash
-cargo run -p cli -- benchmark \
-  --local-compute false \
-  --ensnode-url https://api.alpha.ensnode.io/subgraph \
-  --iterations 3 \
-  --warmup 1 \
-  --output target/benchmark-ensnode.json
-```
+The production service still exposes `/subgraph`, so external benchmark tools can execute the query files against `http://127.0.0.1:8080/subgraph`.
 
 ## Query Coverage
 
@@ -163,4 +133,4 @@ benchmarks/queries/12-some-workload.graphql
 benchmarks/queries/12-some-workload.variables.json
 ```
 
-Then run `make benchmark`. The CLI discovers all `.graphql` files in lexical order.
+Run them with the internal benchmark tool after it is reintroduced outside the production CLI. Query files should be discovered in lexical order.
