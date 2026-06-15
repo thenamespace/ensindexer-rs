@@ -225,7 +225,7 @@ Benchmark notes:
 - [x] Remove unused label-preimage bulk import and repair methods from the production storage API.
 - [x] Document remaining intentional clippy suppressions around GraphQL-compatible resolver signatures and shared SQL helpers.
 - [x] Run full workspace tests after cleanup.
-- [ ] Run unused-dependency audit with a nightly toolchain; `cargo-udeps` is installed but cannot run under the current stable toolchain because it requires `-Z` flags.
+- [x] Run unused-dependency audit with `cargo +nightly udeps --workspace --all-targets` and remove unused `storage` dependencies.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.

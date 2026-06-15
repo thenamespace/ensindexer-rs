@@ -5514,13 +5514,11 @@ checksum = "d7beae5182595e9a8b683fa98c4317f956c9a2dec3b9716990d20023cc60c766"
 name = "storage"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bigdecimal",
  "serde",
  "sqlx",
  "thiserror 2.0.18",
  "tracing",
- "types",
 ]
 
 [[package]]
