@@ -25,15 +25,15 @@ For strict compute-only comparisons between all three systems, run each implemen
 2. `provider_ms` for `ensnode` or `the graph indexer` when the endpoint returns it.
 3. `baseline_adjusted_ms` for hosted endpoints when provider timing is absent.
 
-## Running
+## Running The Fixtures
 
-These fixtures are currently historical/internal benchmark assets. The production `ensindexer` binary no longer exposes the old `benchmark` command; move the deleted runner into a separate internal tool before running this suite again.
+The production `ensindexer` binary intentionally does not include a benchmark command. Keep benchmarking as external tooling so the public CLI stays focused on operating the indexer.
 
 ```bash
 cargo make start
 ```
 
-The production service still exposes `/subgraph`, so external benchmark tools can execute the query files against `http://127.0.0.1:8080/subgraph`.
+The production service exposes `/subgraph`, so a benchmark runner can load each `benchmarks/queries/*.graphql` file, pair it with the sibling `*.variables.json` file when present, and POST it to `http://127.0.0.1:8080/subgraph`. Use the same files against hosted The Graph and ENSNode endpoints when the schema supports the query. Mark endpoint-specific schema gaps as `unsupported` rather than changing the canonical local fixture.
 
 ## Query Coverage
 
@@ -71,15 +71,7 @@ The Rust indexer should beat hosted endpoints by a clear margin on local compute
 
 ## Current Production Benchmark
 
-Release run on the full local mainnet database at block `25270169`, plus hosted The Graph and ENSNode comparisons with baseline-adjusted timings:
-
-```bash
-ENSNODE_SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
-internal-benchmark-runner \
-  --iterations 10 \
-  --warmup 3 \
-  --output target/benchmark-production.json
-```
+Release run on the full local mainnet database at block `25270169`, plus hosted The Graph and ENSNode comparisons with baseline-adjusted timings. The source queries for the run are the files in `benchmarks/queries`.
 
 | operation                | ensindexer-rs |     ensnode | the graph indexer |
 | ------------------------ | ------------: | ----------: | ----------------: |
@@ -99,7 +91,7 @@ Relative speed is calculated against the slowest supported numeric result in eac
 
 The hosted The Graph column uses `baseline_adjusted_ms.median` because the gateway response did not expose provider execution timing. Raw hosted `wall_ms.median` was about 381ms higher per query in this release run, matching the measured `_meta` baseline median. The hosted ENSNode column also uses `baseline_adjusted_ms.median`; its measured `_meta` baseline median was about 361ms in the full run. `07-registrations` is from an immediate single-query ENSNode retry after the full hosted run hit a transient send failure for that one operation. `08-name-history` was rerun again with 25 baseline samples and 25 query samples after a suspicious near-1ms adjusted result; the rerun measured a raw wall median of 656.481ms, baseline median of 644.576ms, and adjusted median of 11.905ms. That value is still close enough to the hosted timing floor that it should be read as baseline-subtraction noise, not precise provider compute.
 
-ENSNode is not treated as the schema source of truth here. The historical benchmark runner applied ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` was sent as `BigInt!`, `ID!` was sent as `String!`, and `*_contains_nocase` filters were downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
+ENSNode is not treated as the schema source of truth here. The historical benchmark run applied ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` was sent as `BigInt!`, `ID!` was sent as `String!`, and `*_contains_nocase` filters were downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
 
 The two remaining slow local-compute cases are intentionally broad substring searches. Their current GIN trigram plans find matches quickly but still fetch and sort tens of thousands of candidate rows. They need a search-specific optimization rather than another raw btree index over unbounded ENS labels.
 
@@ -133,4 +125,4 @@ benchmarks/queries/12-some-workload.graphql
 benchmarks/queries/12-some-workload.variables.json
 ```
 
-Run them with the internal benchmark tool after it is reintroduced outside the production CLI. Query files should be discovered in lexical order.
+Run them with an external benchmark runner. Query files should be discovered in lexical order, and each run should record warmup count, iteration count, raw wall time, provider-reported execution time when available, and baseline-adjusted timing for hosted endpoints.

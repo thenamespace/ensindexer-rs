@@ -16,7 +16,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Start HTTP, GraphQL, Playground, and optional indexing workers.
-    Start(StartArgs),
+    Start(Box<StartArgs>),
     /// Print latest indexed block and source checkpoints.
     Status,
 }
@@ -64,7 +64,7 @@ pub async fn run() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     match Cli::parse().command {
-        Command::Start(args) => start(args).await,
+        Command::Start(args) => start(*args).await,
         Command::Status => status().await,
     }
 }

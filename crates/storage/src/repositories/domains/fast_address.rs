@@ -133,10 +133,10 @@ fn detect_expiry_filter(filter: &DomainFilter) -> Option<String> {
 
     let mut expiry_gt = None;
     for child in or_filters {
-        if let Some(candidate) = detect_single_expiry_filter(&child) {
-            if expiry_gt.replace(candidate).is_some() {
-                return None;
-            }
+        if let Some(candidate) = detect_single_expiry_filter(&child)
+            && expiry_gt.replace(candidate).is_some()
+        {
+            return None;
         }
     }
     expiry_gt

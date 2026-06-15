@@ -2,19 +2,11 @@
 
 Running implementation and compatibility checklist for the custom Rust ENS indexer. Keep this file updated after each meaningful implementation slice.
 
-Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after adding API DataLoader batching for hot `Domain` account/resolver relationships. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A release-mode benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads with baseline-adjusted hosted timings; the current production run has 9/11 local in-process query medians under 32ms, with broad substring searches still at roughly 161-173ms before DataLoader relationship batching.
+Last full verification: `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p storage`, `cargo test -p api`, and `cargo check --workspace` passed after adding API DataLoader batching for hot `Domain` account/resolver relationships and cleaning the production CLI/docs. Schema diff previously had no missing fields, args, input fields, enum values, or mismatched query arg types; the only extra type remains `Aggregation_current`. Archive backfill and checksum-backed raw replay were validated locally for blocks `9380380..9380390`. A 1,000-block HyperSync archive backfill was run for `9380380..9381380`; archive coverage reports no gaps. Full mainnet raw replay later reached block `25270169`; exact domain-name GraphQL lookup was optimized from roughly 10 seconds to roughly 7-23ms on the local full database. ENSJS-style `getNamesForAddress` over the full local database was optimized from roughly 9-17 seconds to roughly 18-22ms warm through `/subgraph`. A release-mode benchmark suite now covers 11 ENSJS/ENSNode/official-subgraph query workloads with baseline-adjusted hosted timings; the current production run has 9/11 local in-process query medians under 32ms, with broad substring searches still at roughly 161-173ms before DataLoader relationship batching.
 
 ## Latest Production Benchmark
 
-Historical release benchmark command from the removed internal CLI runner:
-
-```bash
-ENSNODE_SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
-internal-benchmark-runner \
-  --iterations 10 \
-  --warmup 3 \
-  --output target/benchmark-production.json
-```
+The production binary intentionally has no benchmark command. The latest benchmark used the query fixtures in `benchmarks/queries` with external tooling against the local `/subgraph`, hosted ENSNode, and hosted The Graph endpoints.
 
 The local column is in-process Rust GraphQL compute time. Hosted columns use provider timing if exposed, otherwise baseline-adjusted wall time; The Graph and ENSNode did not expose provider timing in this run.
 
@@ -227,6 +219,7 @@ Benchmark notes:
 - [x] Run a real 1,000 block mainnet fill with configured HyperSync credentials.
 - [x] Consolidate all migrations into one final initial migration for external project setup.
 - [x] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate.
+- [x] Run strict workspace clippy and fix production cleanup warnings in storage and CLI.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.
