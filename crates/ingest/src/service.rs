@@ -33,14 +33,6 @@ impl IngestService {
         }
     }
 
-    pub async fn run_configured_archive(
-        &self,
-        archive_dir: Option<std::path::PathBuf>,
-    ) -> anyhow::Result<()> {
-        let (from_block, to_block) = self.resolve_archive_fetch_range(&archive_dir).await?;
-        self.archive_range(from_block, to_block, archive_dir).await
-    }
-
     pub(crate) async fn resolve_db_backfill_range(&self) -> anyhow::Result<(u64, u64)> {
         let from_block = self.next_checkpoint_block().await?;
         let to_block = self.latest_rpc_block().await?;
@@ -61,33 +53,11 @@ impl IngestService {
         let from_block = self.next_checkpoint_block().await?;
         anyhow::ensure!(
             from_block <= archived_to,
-            "database checkpoints are already at block {} but archive only covers through {}",
+            "database checkpoints are already at block {} but raw archive covers through {}",
             from_block.saturating_sub(1),
             archived_to
         );
         Ok((from_block, archived_to))
-    }
-
-    async fn resolve_archive_fetch_range(
-        &self,
-        archive_dir: &Option<std::path::PathBuf>,
-    ) -> anyhow::Result<(u64, u64)> {
-        let archive_dir = archive_dir
-            .as_ref()
-            .or(self.config.raw_archive_dir.as_ref())
-            .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required"))?;
-        let from_block = match available_bounds(archive_dir, self.config.chain_id) {
-            Ok((_, archived_to)) => archived_to.saturating_add(1),
-            Err(_) => first_source_start_block()?,
-        };
-        let to_block = self.latest_rpc_block().await?;
-        anyhow::ensure!(
-            from_block <= to_block,
-            "archive is already at block {} but latest block is {}",
-            from_block.saturating_sub(1),
-            to_block
-        );
-        Ok((from_block, to_block))
     }
 
     async fn next_checkpoint_block(&self) -> anyhow::Result<u64> {

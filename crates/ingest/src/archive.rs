@@ -9,7 +9,7 @@ use anyhow::Context;
 pub use coverage::{ArchiveGap, ArchiveStatus, inspect_archive};
 pub use manifest::ArchiveManifestRange;
 pub(crate) use model::ArchivedRange;
-pub(crate) use resolvers::{add_resolver_from_log, load_resolver_cache, write_resolver_cache};
+pub(crate) use resolvers::add_resolver_from_log;
 
 use self::manifest::{load_manifest, upsert_manifest_range, verify_manifest_range_checksum};
 

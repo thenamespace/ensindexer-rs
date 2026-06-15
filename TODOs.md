@@ -6,11 +6,11 @@ Last full verification: `cargo test -p storage`, `cargo test -p api`, and `cargo
 
 ## Latest Production Benchmark
 
-Release benchmark command:
+Historical release benchmark command from the removed internal CLI runner:
 
 ```bash
 ENSNODE_SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
-cargo run --release -p cli -- benchmark \
+internal-benchmark-runner \
   --iterations 10 \
   --warmup 3 \
   --output target/benchmark-production.json
@@ -64,14 +64,14 @@ Benchmark notes:
 - [x] Historical ingestion can fetch from HyperSync when configured.
 - [x] Raw log archive writing is supported.
 - [x] Archive-only fetching is supported through `cli archive`, allowing raw range files to be stored without projection writes.
-- [x] Archive-only resume persists discovered resolver addresses in `resolvers.json`.
+- [x] Raw archive replay no longer depends on resolver-cache side files; binary ranges contain the logs needed for projection replay.
 - [x] Raw archive replay is supported for projection rework without spending RPC or HyperSync credits.
 - [x] Raw archive ranges are binary-only `.bin` files; legacy archive JSON range parsing and conversion helpers were removed after migration.
 - [x] `.raw-archive-full/ranges` contains only binary range files after deleting migrated JSON range payloads.
 - [x] Removed temporary archive conversion and resolver-cache rebuild CLI/Make/script helpers.
 - [x] Raw replay prefetches the next archive range while applying the current range.
 - [x] Raw replay keeps a replay-level current-state projection cache across range files.
-- [x] Backfill and replay ranges are resume-only; RPC/HyperSync/raw replay start from source checkpoints and archive-only starts after the last archived range.
+- [x] Backfill and replay ranges are resume-only; RPC/HyperSync/raw replay start from source checkpoints.
 - [x] Raw archive replay streams one range file at a time and wraps each range in a single Postgres transaction.
 - [x] Raw archive replay drops secondary query indexes before bulk replay and recreates them afterward.
 - [x] Raw archive replay attempts to restore dropped secondary indexes if replay fails.
@@ -205,6 +205,7 @@ Benchmark notes:
 - [x] `ensindexer start` exposes strict env/arg controls for backfill, live indexing, archive writes, RPC/WSS, HyperSync, raw archive path, chain ID, bind address, batch size, confirmation depth, and polling interval.
 - [x] Docker image builds and runs the `ensindexer` binary with `start` as the default command.
 - [x] Split the bulk replay index registry into smaller current-state and event-index modules.
+- [x] Removed dead archive-only ingestion and resolver-cache code after reducing the production CLI.
 
 ## Pending
 

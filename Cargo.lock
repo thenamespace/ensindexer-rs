@@ -1827,11 +1827,9 @@ dependencies = [
  "clap",
  "config",
  "dotenvy",
- "serde",
  "server",
  "storage",
  "tokio",
- "tracing",
  "tracing-subscriber",
  "url",
 ]

@@ -624,15 +624,7 @@ RAW_ARCHIVE_DIR=.raw-archive \
 ensindexer start
 ```
 
-For authenticated hosted Graph endpoints:
-
-```text
-SUBGRAPH_URL=https://gateway.thegraph.com/api/subgraphs/id/<id> \
-SUBGRAPH_AUTH_TOKEN=<token> \
-cargo run -p cli -- compare --query-file fixtures/domain.graphql
-```
-
-Future comparison work should add fixture sets, response normalization for intentionally unordered lists, and a mode that compares many query/variables pairs in one run.
+Future internal comparison work should add fixture sets, response normalization for intentionally unordered lists, and a mode that compares many query/variables pairs in one run.
 
 ## Testing Strategy
 

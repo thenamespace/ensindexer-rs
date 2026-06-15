@@ -75,7 +75,7 @@ Release run on the full local mainnet database at block `25270169`, plus hosted 
 
 ```bash
 ENSNODE_SUBGRAPH_URL=https://api.alpha.ensnode.io/subgraph \
-cargo run --release -p cli -- benchmark \
+internal-benchmark-runner \
   --iterations 10 \
   --warmup 3 \
   --output target/benchmark-production.json
@@ -99,7 +99,7 @@ Relative speed is calculated against the slowest supported numeric result in eac
 
 The hosted The Graph column uses `baseline_adjusted_ms.median` because the gateway response did not expose provider execution timing. Raw hosted `wall_ms.median` was about 381ms higher per query in this release run, matching the measured `_meta` baseline median. The hosted ENSNode column also uses `baseline_adjusted_ms.median`; its measured `_meta` baseline median was about 361ms in the full run. `07-registrations` is from an immediate single-query ENSNode retry after the full hosted run hit a transient send failure for that one operation. `08-name-history` was rerun separately with 20 iterations and 5 warmups; its ENSNode raw wall median was about 356ms and baseline median was about 354ms, so the 2.440ms adjusted value should be read as near-baseline rather than precise provider compute.
 
-ENSNode is not treated as the schema source of truth here. The benchmark runner applies ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` is sent as `BigInt!`, `ID!` is sent as `String!`, and `*_contains_nocase` filters are downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
+ENSNode is not treated as the schema source of truth here. The historical benchmark runner applied ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` was sent as `BigInt!`, `ID!` was sent as `String!`, and `*_contains_nocase` filters were downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
 
 The two remaining slow local-compute cases are intentionally broad substring searches. Their current GIN trigram plans find matches quickly but still fetch and sort tens of thousands of candidate rows. They need a search-specific optimization rather than another raw btree index over unbounded ENS labels.
 

@@ -30,14 +30,14 @@ sequenceDiagram
 - `BACKFILL_SOURCE`: strict enum `rpc|hypersync|raw`.
 - `LIVE_INDEXING_SOURCE`: strict enum `rpc|wss`.
 - `ARCHIVE_BACKFILLS`: write fetched historical ranges into the raw archive.
-- `RAW_ARCHIVE_DIR`: archive root containing `manifest.json`, `resolvers.json`, and `ranges/*.bin`.
+- `RAW_ARCHIVE_DIR`: archive root containing `manifest.json` and `ranges/*.bin`.
 - `CHAIN_ID`: expected chain id, default `1`.
 - `BIND_ADDRESS`: HTTP bind address.
 - `INDEXER_CONFIRMATION_DEPTH`: live indexing confirmation buffer.
 - `BACKFILL_BATCH_BLOCKS`: historical range size.
 - `LIVE_POLL_SECONDS`: HTTP polling interval for live indexing.
 
-There are no `BACKFILL_FROM` or `BACKFILL_TO` variables. Historical backfill resumes from database checkpoints, raw replay resumes from archive/database state, and archive-only resumes from the last archived range.
+There are no `BACKFILL_FROM` or `BACKFILL_TO` variables. Historical backfill resumes from database checkpoints, and raw replay resumes from archive/database state.
 
 ## Projection Awareness
 

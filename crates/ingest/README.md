@@ -14,11 +14,11 @@ sequenceDiagram
     participant Storage as storage
     participant Archive as binary archive
 
-    CLI->>Ingest: backfill, archive, replay, or live
+    CLI->>Ingest: backfill, raw replay, or live
     Ingest->>Source: fetch canonical logs and blocks
     Source-->>Ingest: raw logs + block metadata
-    opt ARCHIVE_BACKFILLS or archive-only
-        Ingest->>Archive: write ranges/*.bin, manifest.json, resolvers.json
+    opt ARCHIVE_BACKFILLS
+        Ingest->>Archive: write ranges/*.bin and manifest.json
     end
     Ingest->>Contracts: decode logs by source
     Contracts-->>Ingest: typed ENS events
@@ -57,7 +57,6 @@ Range payloads are binary-only files under `RAW_ARCHIVE_DIR/ranges/{from}-{to}.b
 The archive root also contains:
 
 - `manifest.json`: range list, byte lengths, log counts, and SHA-256 checksums.
-- `resolvers.json`: discovered resolver address set through the last archived range, used to resume archive-only safely.
 
 JSON range payloads are no longer supported. Metadata files remain JSON because they are small, human-inspectable control files.
 
@@ -75,7 +74,7 @@ Ingestion writes:
 ## Main Files
 
 - `src/service.rs`: `IngestService` facade.
-- `src/service/backfill.rs`: RPC/HyperSync/raw source selection, resume logic, archive-only logic, and range orchestration.
+- `src/service/backfill.rs`: RPC/HyperSync source selection, checkpoint resume logic, optional archive writing, and range orchestration.
 - `src/service/apply.rs`: shared transactional buffered apply path.
 - `src/service/replay.rs`: binary archive replay, prefetch, and replay index maintenance.
 - `src/service/live.rs`: live indexing, confirmation depth, parent-hash checks, and reorg repair.
@@ -93,10 +92,10 @@ Ingestion writes:
 
 - Historical RPC backfill.
 - Historical HyperSync backfill.
-- Binary raw archive writing and archive-only mode.
+- Binary raw archive writing during RPC/HyperSync backfills.
 - Binary raw archive replay.
 - Manifest coverage inspection and checksum verification.
-- Resolver discovery cache for archive resume.
+- Resolver discovery from registry logs and existing resolver rows.
 - Shared batched projection apply path for RPC, HyperSync, and raw replay.
 - Live indexing through HTTP polling or WSS source selection.
 - Confirmation-depth handling and parent-hash reorg detection.
