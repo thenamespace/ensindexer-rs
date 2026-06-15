@@ -226,7 +226,7 @@ Benchmark notes:
 - [x] Document remaining intentional clippy suppressions around GraphQL-compatible resolver signatures and shared SQL helpers.
 - [x] Run full workspace tests after cleanup.
 - [x] Run unused-dependency audit with `cargo +nightly udeps --workspace --all-targets` and remove unused `storage` dependencies.
-- [ ] Continue dead-code cleanup across crates after the public CLI contraction.
+- [x] Completed the dead-code cleanup pass after the public CLI contraction with strict clippy, full tests, stale-reference scans, and `cargo +nightly udeps`.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.
 - [ ] Verify stored rows and GraphQL responses from that range against the official subgraph.
