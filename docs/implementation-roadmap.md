@@ -328,7 +328,7 @@ pub async fn apply_indexed_event(
         EnsEvent::BaseNameRegistered { .. } => registrar::handle_name_registered(tx, event).await,
         EnsEvent::NameWrapped { .. } => wrapper::handle_name_wrapped(tx, event).await,
         EnsEvent::ResolverTextChanged { .. } => resolver::handle_text_changed(tx, event).await,
-        _ => todo!(),
+        _ => return Err(ProjectionError::UnsupportedEvent),
     }
 }
 ```

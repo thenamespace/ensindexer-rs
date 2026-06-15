@@ -195,7 +195,7 @@ pub async fn apply_event(tx: &mut PgTransaction<'_>, event: IndexedEvent) -> Res
     match event.event {
         EnsEvent::RegistryNewOwner { .. } => registry::new_owner(tx, event).await,
         EnsEvent::NameWrapped { .. } => wrapper::name_wrapped(tx, event).await,
-        _ => todo!(),
+        _ => return Err(ProjectionError::UnsupportedEvent),
     }
 }
 ```

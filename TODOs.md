@@ -211,8 +211,8 @@ Benchmark notes:
 - [ ] Audit list-field edge cases against Graph Node behavior.
 - [ ] Add compatibility tests that execute the same representative GraphQL queries against the local API and the official hosted ENS subgraph.
 - [ ] Compare local and official JSON response shapes and values after real mainnet backfill ranges.
-- [ ] Import a full local ENSRainbow dictionary, run larger repair batches across remaining unknown labelhashes, and measure how many `[hash]` names remain after repair.
-- [ ] Add optional local dictionary lookup during live projection if production requires automatic `ens.nameByHash` parity during live indexing.
+- [ ] Decide whether ENSRainbow dictionary import/repair belongs in a separate supported maintenance binary, then document that tool separately if it is added.
+- [ ] Add optional local dictionary lookup during live projection only if production requires automatic `ens.nameByHash` parity during live indexing.
 
 ### Indexing Correctness And Production Hardening
 

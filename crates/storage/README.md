@@ -38,7 +38,7 @@ Operational tables:
 - `blocks(number, hash, parent_hash, timestamp)`.
 - `source_checkpoints(source, block_number, block_hash)`.
 - `entity_changes(entity_type, entity_id, block_number)`.
-- `label_preimages(labelhash, label_name)` for persisted `ens.nameByHash`-style label healing observed from registrar/controller and wrapper events or imported from ENSRainbow.
+- `label_preimages(labelhash, label_name)` for projection-observed labelhash preimages from registrar/controller and wrapper events.
 
 Snapshot tables:
 
@@ -135,7 +135,7 @@ The account, resolver, registration, and wrapped-domain repositories also expose
 - Official filter/order SQL generation for entities and events.
 - Derived relationship filters and event-interface filters.
 - Replay index drop/recreate maintenance.
-- Label-preimage persistence, local ENSRainbow imports, and cache-backed reads for projection-time label healing.
+- Label-preimage persistence and cache-backed reads for projection-time label decoding.
 - Hash-backed domain lookup indexes for exact `name` and `labelName` GraphQL filters.
 - ENSNode/Ponder-inspired trigram, relation, sort, and derived-event compound indexes.
 - Fast indexed address lookup for high-volume ENSJS names-for-address queries.
@@ -147,7 +147,7 @@ The account, resolver, registration, and wrapped-domain repositories also expose
 - Add query plan regression tests for expensive GraphQL filters.
 - Add query-plan regression tests for the ENSJS address fast path and other representative GraphQL workloads.
 - Add more indexes based on full mainnet workload profiling.
-- Add automated scheduling/metrics around local dictionary label repair for production deployments that need continuous dictionary parity.
+- Add an external, explicitly supported dictionary import/repair tool if production deployments need continuous ENSRainbow parity.
 - Add partitioning or hypertable-style strategies for very large event tables if Postgres plans degrade.
 - Add common-ancestor rollback primitives.
 - Add migration checks that compare DB schema against generated documentation.
