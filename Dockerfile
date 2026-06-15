@@ -10,7 +10,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY migrations ./migrations
 
-RUN cargo build --release -p cli
+RUN cargo build --release -p cli --bin ensindexer
 
 FROM debian:bookworm-slim AS runtime
 
@@ -20,11 +20,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/cli /usr/local/bin/ensindexer
+COPY --from=builder /app/target/release/ensindexer /usr/local/bin/ensindexer
 
 ENV BIND_ADDRESS=0.0.0.0:8080
 
 EXPOSE 8080
 
 ENTRYPOINT ["ensindexer"]
-CMD ["serve"]
+CMD ["start"]

@@ -1,15 +1,13 @@
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
-use clap::{Parser, Subcommand};
-use config::AppConfig;
-use ingest::IngestService;
+use clap::{Args, Parser, Subcommand};
+use config::{AppConfig, BackfillSource, IndexingSource};
 use storage::Storage;
 use tracing_subscriber::{EnvFilter, fmt};
-
-use crate::{benchmark, compare, label_heal, schema};
+use url::Url;
 
 #[derive(Debug, Parser)]
-#[command(name = "cli", about = "Custom Rust ENS indexer")]
+#[command(name = "ensindexer", about = "Production Rust ENS indexer")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -17,280 +15,151 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    Serve,
-    Migrate,
+    /// Start HTTP, GraphQL, Playground, and optional indexing workers.
+    Start(StartArgs),
+    /// Print latest indexed block and source checkpoints.
     Status,
-    Reset {
-        #[arg(long)]
-        yes: bool,
-    },
-    Backfill,
-    Archive {
-        #[arg(long)]
-        archive_dir: Option<PathBuf>,
-    },
-    Replay {
-        #[arg(long)]
-        archive_dir: Option<PathBuf>,
-    },
-    ArchiveStatus {
-        #[arg(long)]
-        archive_dir: Option<PathBuf>,
-        #[arg(long)]
-        verify: bool,
-    },
-    LabelsHeal {
-        #[arg(long)]
-        labelhash: Vec<String>,
-        #[arg(long, default_value_t = 1_000)]
-        limit: i64,
-        #[arg(long, default_value_t = 16)]
-        repair_passes: usize,
-    },
-    LabelsImport {
-        #[arg(long)]
-        input: PathBuf,
-        #[arg(long, default_value_t = 10_000)]
-        chunk_size: usize,
-    },
-    Index,
-    Compare {
-        #[arg(long, default_value = "http://127.0.0.1:8080/subgraph")]
-        local_url: String,
-        #[arg(long, env = "SUBGRAPH_URL")]
-        subgraph_url: String,
-        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
-        auth_token: Option<String>,
-        #[arg(long)]
-        query_file: PathBuf,
-        #[arg(long)]
-        variables_file: Option<PathBuf>,
-        #[arg(long)]
-        operation_name: Option<String>,
-        #[arg(long)]
-        show_json: bool,
-    },
-    Benchmark {
-        #[arg(long, default_value = "benchmarks/queries")]
-        query_dir: PathBuf,
-        #[arg(long, default_value_t = 20)]
-        iterations: usize,
-        #[arg(long, default_value_t = 3)]
-        warmup: usize,
-        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
-        local_compute: bool,
-        #[arg(long)]
-        local_url: Option<String>,
-        #[arg(long, env = "SUBGRAPH_URL")]
-        official_url: Option<String>,
-        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
-        official_auth_token: Option<String>,
-        #[arg(long, env = "ENSNODE_SUBGRAPH_URL")]
-        ensnode_url: Option<String>,
-        #[arg(long, env = "ENSNODE_SUBGRAPH_AUTH_TOKEN")]
-        ensnode_auth_token: Option<String>,
-        #[arg(long)]
-        output: Option<PathBuf>,
-    },
-    SchemaLocal {
-        #[arg(long)]
-        output: Option<PathBuf>,
-    },
-    SchemaDiff {
-        #[arg(long, env = "SUBGRAPH_URL")]
-        subgraph_url: String,
-        #[arg(long, env = "SUBGRAPH_AUTH_TOKEN")]
-        auth_token: Option<String>,
-        #[arg(long)]
-        output: Option<PathBuf>,
-    },
+}
+
+#[derive(Debug, Args, Default)]
+struct StartArgs {
+    #[arg(long)]
+    database_url: Option<String>,
+    #[arg(long)]
+    eth_rpc_url: Option<Url>,
+    #[arg(long)]
+    eth_ws_url: Option<Url>,
+    #[arg(long)]
+    envio_api_key: Option<String>,
+    #[arg(long)]
+    hypersync_url: Option<Url>,
+    #[arg(long)]
+    raw_archive_dir: Option<PathBuf>,
+    #[arg(long)]
+    chain_id: Option<u64>,
+    #[arg(long)]
+    bind_address: Option<SocketAddr>,
+
+    #[arg(long)]
+    enable_backfill: Option<bool>,
+    #[arg(long)]
+    backfill_source: Option<BackfillSource>,
+    #[arg(long)]
+    enable_live_indexing: Option<bool>,
+    #[arg(long)]
+    live_indexing_source: Option<IndexingSource>,
+    #[arg(long)]
+    archive_backfills: Option<bool>,
+
+    #[arg(long)]
+    indexer_confirmation_depth: Option<u64>,
+    #[arg(long)]
+    backfill_batch_blocks: Option<u64>,
+    #[arg(long)]
+    live_poll_seconds: Option<u64>,
 }
 
 pub async fn run() -> anyhow::Result<()> {
     init_tracing();
     dotenvy::dotenv().ok();
 
-    let cli = Cli::parse();
-    match cli.command {
-        Command::Serve => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            server::serve(config, storage).await?;
-        }
-        Command::Migrate => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            tracing::info!("migrations complete");
-        }
-        Command::Status => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            print_status(&storage).await?;
-        }
-        Command::Reset { yes } => {
-            if !yes {
-                anyhow::bail!("reset deletes all indexed data; rerun with --yes to confirm");
-            }
-
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            storage.maintenance().reset_indexed_data().await?;
-            tracing::warn!("indexed data reset complete");
-        }
-        Command::Backfill => {
-            let config = AppConfig::from_env()?;
-            let storage = replay_storage(&config).await?;
-            storage.run_migrations().await?;
-            IngestService::new(config, storage)
-                .run_configured_backfill()
-                .await?;
-        }
-        Command::Archive { archive_dir } => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            IngestService::new(config, storage)
-                .run_configured_archive(archive_dir)
-                .await?;
-        }
-        Command::Replay { archive_dir } => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect_with_max_connections(&config.database_url, 1).await?;
-            storage.run_migrations().await?;
-            IngestService::new(config, storage)
-                .replay_configured_archive(archive_dir)
-                .await?;
-        }
-        Command::ArchiveStatus {
-            archive_dir,
-            verify,
-        } => {
-            let config = AppConfig::from_env()?;
-            let archive_dir = archive_dir
-                .or(config.raw_archive_dir)
-                .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required"))?;
-            let status =
-                ingest::inspect_archive(&archive_dir, config.chain_id, None, None, verify)?;
-            print_archive_status(status);
-        }
-        Command::LabelsHeal {
-            labelhash,
-            limit,
-            repair_passes,
-        } => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            label_heal::run(
-                storage,
-                label_heal::HealOptions {
-                    labelhashes: labelhash,
-                    limit,
-                    repair_passes,
-                },
-            )
-            .await?;
-        }
-        Command::LabelsImport { input, chunk_size } => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            label_heal::import(storage, label_heal::ImportOptions { input, chunk_size }).await?;
-        }
-        Command::Index => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            storage.run_migrations().await?;
-            IngestService::new(config, storage).run_live().await?;
-        }
-        Command::Compare {
-            local_url,
-            subgraph_url,
-            auth_token,
-            query_file,
-            variables_file,
-            operation_name,
-            show_json,
-        } => {
-            compare::run(
-                local_url,
-                subgraph_url,
-                auth_token,
-                query_file,
-                variables_file,
-                operation_name,
-                show_json,
-            )
-            .await?;
-        }
-        Command::Benchmark {
-            query_dir,
-            iterations,
-            warmup,
-            local_compute,
-            local_url,
-            official_url,
-            official_auth_token,
-            ensnode_url,
-            ensnode_auth_token,
-            output,
-        } => {
-            let config = AppConfig::from_env()?;
-            let storage = Storage::connect(&config.database_url).await?;
-            benchmark::run(
-                storage,
-                benchmark::BenchmarkOptions {
-                    query_dir,
-                    iterations,
-                    warmup,
-                    local_compute,
-                    local_url,
-                    official_url,
-                    official_auth_token,
-                    ensnode_url,
-                    ensnode_auth_token,
-                    output,
-                },
-            )
-            .await?;
-        }
-        Command::SchemaLocal { output } => {
-            schema::print_local_sdl(output).await?;
-        }
-        Command::SchemaDiff {
-            subgraph_url,
-            auth_token,
-            output,
-        } => {
-            schema::diff_official(subgraph_url, auth_token, output).await?;
-        }
+    match Cli::parse().command {
+        Command::Start(args) => start(args).await,
+        Command::Status => status().await,
     }
+}
 
+async fn start(args: StartArgs) -> anyhow::Result<()> {
+    let mut config = AppConfig::from_env()?;
+    args.apply(&mut config);
+    validate_start_config(&config)?;
+
+    let storage = if config.backfill_source.is_raw() {
+        Storage::connect_with_max_connections(&config.database_url, 1).await?
+    } else {
+        Storage::connect(&config.database_url).await?
+    };
+    storage.run_migrations().await?;
+    server::serve(config, storage).await
+}
+
+async fn status() -> anyhow::Result<()> {
+    let config = AppConfig::from_env()?;
+    let storage = Storage::connect(&config.database_url).await?;
+    print_status(&storage).await
+}
+
+fn validate_start_config(config: &AppConfig) -> anyhow::Result<()> {
+    if config.enable_backfill && config.backfill_source.is_raw() {
+        anyhow::ensure!(
+            config.raw_archive_dir.is_some(),
+            "BACKFILL_SOURCE=raw requires RAW_ARCHIVE_DIR"
+        );
+    }
+    if config.archive_backfills {
+        anyhow::ensure!(
+            !config.backfill_source.is_raw(),
+            "ARCHIVE_BACKFILLS=true is only valid with BACKFILL_SOURCE=rpc or hypersync"
+        );
+        anyhow::ensure!(
+            config.raw_archive_dir.is_some(),
+            "ARCHIVE_BACKFILLS=true requires RAW_ARCHIVE_DIR"
+        );
+    }
+    if config.enable_live_indexing && config.live_indexing_source == IndexingSource::Wss {
+        anyhow::ensure!(
+            config.eth_ws_url.is_some(),
+            "LIVE_INDEXING_SOURCE=wss requires ETH_WS_URL"
+        );
+    }
+    if config.backfill_source == BackfillSource::Hypersync {
+        anyhow::ensure!(
+            config
+                .envio_api_key
+                .as_deref()
+                .is_some_and(|key| !key.trim().is_empty()),
+            "BACKFILL_SOURCE=hypersync requires ENVIO_API_KEY"
+        );
+    }
     Ok(())
 }
 
-fn print_archive_status(status: ingest::ArchiveStatus) {
-    println!("archive chain_id: {}", status.chain_id);
-    println!("archive ranges: {}", status.ranges.len());
-    if let (Some(first), Some(last)) = (status.ranges.first(), status.ranges.last()) {
-        println!("archive coverage: {}..{}", first.from_block, last.to_block);
+impl StartArgs {
+    fn apply(self, config: &mut AppConfig) {
+        override_if_some(&mut config.database_url, self.database_url);
+        override_if_some(&mut config.eth_rpc_url, self.eth_rpc_url);
+        set_option_if_some(&mut config.eth_ws_url, self.eth_ws_url);
+        set_option_if_some(&mut config.envio_api_key, self.envio_api_key);
+        override_if_some(&mut config.hypersync_url, self.hypersync_url);
+        set_option_if_some(&mut config.raw_archive_dir, self.raw_archive_dir);
+        override_if_some(&mut config.chain_id, self.chain_id);
+        override_if_some(&mut config.bind_address, self.bind_address);
+        override_if_some(&mut config.enable_backfill, self.enable_backfill);
+        override_if_some(&mut config.backfill_source, self.backfill_source);
+        override_if_some(&mut config.enable_live_indexing, self.enable_live_indexing);
+        override_if_some(&mut config.live_indexing_source, self.live_indexing_source);
+        override_if_some(&mut config.archive_backfills, self.archive_backfills);
+        override_if_some(
+            &mut config.indexer_confirmation_depth,
+            self.indexer_confirmation_depth,
+        );
+        override_if_some(
+            &mut config.backfill_batch_blocks,
+            self.backfill_batch_blocks,
+        );
+        override_if_some(&mut config.live_poll_seconds, self.live_poll_seconds);
     }
-    let total_bytes: u64 = status.ranges.iter().map(|range| range.bytes).sum();
-    let total_logs: usize = status.ranges.iter().map(|range| range.logs).sum();
-    println!("archive bytes: {total_bytes}");
-    println!("archive logs: {total_logs}");
-    println!("archive verified: {}", status.verified);
+}
 
-    if status.is_contiguous() {
-        println!("archive gaps: none");
-    } else {
-        println!("archive gaps:");
-        for gap in status.gaps {
-            println!("  {}..{}", gap.from_block, gap.to_block);
-        }
+fn override_if_some<T>(target: &mut T, value: Option<T>) {
+    if let Some(value) = value {
+        *target = value;
+    }
+}
+
+fn set_option_if_some<T>(target: &mut Option<T>, value: Option<T>) {
+    if let Some(value) = value {
+        *target = Some(value);
     }
 }
 
@@ -325,12 +194,4 @@ async fn print_status(storage: &Storage) -> anyhow::Result<()> {
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     fmt().with_env_filter(filter).init();
-}
-
-async fn replay_storage(config: &AppConfig) -> anyhow::Result<Storage> {
-    if config.backfill_source.is_raw() {
-        Ok(Storage::connect_with_max_connections(&config.database_url, 1).await?)
-    } else {
-        Ok(Storage::connect(&config.database_url).await?)
-    }
 }

@@ -50,7 +50,7 @@ Benchmark notes:
 - [x] Cargo workspace uses unprefixed crate names: `types`, `contracts`, `config`, `storage`, `projection`, `ingest`, `api`, `server`, and `cli`.
 - [x] `.env.example` exists and runtime configuration is read from `.env`.
 - [x] Docker Compose includes Postgres 17.
-- [x] Makefile provides common commands for setup, serving, schema checks, tests, and linting.
+- [x] `cargo-make` provides common commands for setup, serving, status, Docker, tests, and checks.
 - [x] Apollo Sandbox is used for the GraphQL UI instead of GraphiQL and is always served on `GET /graphql`.
 - [x] Each crate has a README describing its purpose, architecture, and responsibilities.
 - [x] Root docs describe the official ENS subgraph schema, projection logic, and Rust implementation plan.
@@ -95,11 +95,11 @@ Benchmark notes:
 - [x] Historical fill batch sizes are capped below Postgres' bind-parameter limit for wide current-state and snapshot inserts.
 - [x] Current-state domain cache flushes dirty domains in parent-first order to satisfy the self-referential `domains.parent_id` foreign key during range-level batch writes.
 - [x] Backfill transport is selected explicitly with strict `BACKFILL_SOURCE=rpc|hypersync|raw`; there is no auto mode.
-- [x] Live indexing transport is selected explicitly with strict `INDEXING_SOURCE=http_rpc|wss`.
+- [x] Live indexing transport is selected explicitly with strict `LIVE_INDEXING_SOURCE=rpc|wss`.
 - [x] Serve-time startup backfill and live indexing use separate `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` toggles.
 - [x] Backfill ranges can omit `from` and `to`; defaults resolve to the earliest ENS source block and latest available target.
 - [x] Backfill archive writes are explicit through `ARCHIVE_BACKFILLS=true` and `RAW_ARCHIVE_DIR`.
-- [x] Makefile includes archive and raw replay helpers for repeatable projection testing.
+- [x] `cargo-make` includes production start helpers for raw replay, HyperSync archive backfill, and WSS live indexing.
 - [x] Raw archive replay was validated against a fresh dev Postgres database for a small ENS deployment range.
 - [x] Raw archives include manifest entries with SHA-256 checksums and can be inspected for coverage gaps.
 - [x] Archive status uses manifest coverage by default for large archives, with explicit checksum verification available through `--verify`.
@@ -200,8 +200,10 @@ Benchmark notes:
 
 - [x] Axum server exposes GraphQL and health/status routes.
 - [x] `/subgraph` POST aliases the GraphQL endpoint for official-subgraph and ENSJS-style clients.
-- [x] `serve` always starts API, GraphQL, health checks, and Apollo Sandbox, with optional backfill/live indexing controlled by strict env toggles.
-- [x] CLI includes `migrate`, `backfill`, `replay`, `index`, `serve`, `status`, `reset --yes`, `compare`, `schema-local`, and `schema-diff`.
+- [x] `ensindexer start` always starts API, GraphQL, health checks, and Apollo Sandbox, with optional backfill/live indexing controlled by strict env toggles.
+- [x] Public production CLI is reduced to `ensindexer start` and `ensindexer status`.
+- [x] `ensindexer start` exposes strict env/arg controls for backfill, live indexing, archive writes, RPC/WSS, HyperSync, raw archive path, chain ID, bind address, batch size, confirmation depth, and polling interval.
+- [x] Docker image builds and runs the `ensindexer` binary with `start` as the default command.
 
 ## Pending
 
@@ -221,6 +223,10 @@ Benchmark notes:
 ### Indexing Correctness And Production Hardening
 
 - [x] Run a real 1,000 block mainnet fill with configured HyperSync credentials.
+- [ ] Consolidate all migrations into one final initial migration for external project setup.
+- [ ] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate or move them to internal tooling.
+- [ ] Continue dead-code cleanup across crates after the public CLI contraction.
+- [ ] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.
 - [ ] Verify stored rows and GraphQL responses from that range against the official subgraph.
 - [ ] Add differential validation reports for domains, registrations, resolvers, wrapped domains, and events.

@@ -1,0 +1,72 @@
+[config]
+default_to_workspace = false
+
+[env]
+RAW_ARCHIVE_DIR = { value = ".raw-archive", condition = { env_not_set = ["RAW_ARCHIVE_DIR"] } }
+
+[tasks.db-up]
+description = "Start local Postgres through Docker Compose."
+command = "docker"
+args = ["compose", "up", "-d", "postgres"]
+
+[tasks.db-down]
+description = "Stop local Docker Compose services."
+command = "docker"
+args = ["compose", "down"]
+
+[tasks.db-reset]
+description = "Delete the local Docker Compose Postgres volume."
+command = "docker"
+args = ["compose", "down", "-v"]
+
+[tasks.start]
+description = "Start API, GraphQL Playground, and optional indexing workers."
+command = "cargo"
+args = ["run", "-p", "cli", "--bin", "ensindexer", "--", "start"]
+
+[tasks.status]
+description = "Print latest indexed block and source checkpoints."
+command = "cargo"
+args = ["run", "-p", "cli", "--bin", "ensindexer", "--", "status"]
+
+[tasks.start-raw-backfill]
+description = "Start the service with raw archive replay enabled."
+env = { ENABLE_BACKFILL = "true", BACKFILL_SOURCE = "raw" }
+run_task = "start"
+
+[tasks.start-hypersync-archive]
+description = "Start the service with HyperSync backfill and binary raw archiving enabled."
+env = { ENABLE_BACKFILL = "true", BACKFILL_SOURCE = "hypersync", ARCHIVE_BACKFILLS = "true" }
+run_task = "start"
+
+[tasks.start-live-wss]
+description = "Start the service with WSS live indexing enabled."
+env = { ENABLE_LIVE_INDEXING = "true", LIVE_INDEXING_SOURCE = "wss" }
+run_task = "start"
+
+[tasks.docker-build]
+description = "Build the production Docker image."
+command = "docker"
+args = ["build", "-t", "ensindexer:local", "."]
+
+[tasks.docker-run]
+description = "Run the production Docker image with .env loaded."
+command = "docker"
+args = ["run", "--rm", "--env-file", ".env", "-p", "8080:8080", "ensindexer:local"]
+
+[tasks.test]
+description = "Run the Rust test suite."
+command = "cargo"
+args = ["test", "--workspace"]
+
+[tasks.check]
+description = "Run formatting and compiler checks."
+dependencies = ["fmt-check", "cargo-check"]
+
+[tasks.fmt-check]
+command = "cargo"
+args = ["fmt", "--all", "--check"]
+
+[tasks.cargo-check]
+command = "cargo"
+args = ["check", "--workspace", "--all-targets"]

@@ -1,95 +1,74 @@
 # cli
 
-The `cli` crate is the operator entrypoint for the indexer. It wires configuration, migrations, server startup, backfills, archive replay, live indexing, schema checks, and reference-subgraph comparisons into explicit commands.
+The `cli` crate builds the `ensindexer` production binary. It is intentionally small: operators start the unified service with one command and inspect checkpoint state with one status command.
 
 ## Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as cli command
+    participant CLI as ensindexer
     participant Config as config crate
     participant Storage as storage crate
-    participant Ingest as ingest crate
     participant Server as server crate
+    participant Ingest as ingest crate
 
-    User->>CLI: cargo run -p cli -- serve
-    CLI->>Config: load .env and strict enums
+    User->>CLI: ensindexer start
+    CLI->>Config: load .env and apply CLI overrides
+    CLI->>CLI: validate strict source/toggle combinations
     CLI->>Storage: connect and run migrations
-    CLI->>Server: start HTTP API and playground
-    Server->>Ingest: optional backfill/live tasks from env toggles
+    CLI->>Server: start API, GraphQL, and playground
+    Server->>Ingest: optional backfill/live workers
 ```
 
 ## Commands
 
-- `serve`: always starts health routes, GraphQL API, and Apollo Sandbox. Optional backfill/live indexing are controlled by env toggles.
-- `migrate`: runs SQLx migrations.
-- `status`: prints source checkpoints and indexed block state.
-- `reset --yes`: deletes indexed tables for dev rebuilds.
-- `backfill`: runs the configured historical source: `BACKFILL_SOURCE=rpc|hypersync|raw`.
-- `archive [--archive-dir <dir>]`: archive-only mode. It fetches raw logs/blocks to `.bin` range files without projecting to Postgres.
-- `replay [--archive-dir <dir>]`: replays binary archive ranges into Postgres.
-- `archive-status [--archive-dir <dir>] [--verify]`: reports binary archive coverage and optionally verifies checksums.
-- `labels-import --input <file>`: imports a local ENSRainbow streamed protobuf `.ensrainbow` file or TSV `labelhash<TAB>label` file into the local label dictionary.
-- `labels-heal [--limit <n>] [--labelhash <hash>]`: repairs unknown labels from the local dictionary in the already-indexed database.
-- `index`: runs live indexing only.
-- `compare`: runs one GraphQL query against local and official subgraph endpoints and diffs JSON responses.
-- `benchmark`: runs all query fixtures from `benchmarks/queries` and reports local in-process compute timing plus optional endpoint timing.
-- `schema-local`: prints local GraphQL SDL.
-- `schema-diff`: introspects the official subgraph and checks root fields, args, inputs, and enums.
+- `ensindexer start`: starts health routes, GraphQL API, Apollo Sandbox, and optional indexing workers.
+- `ensindexer status`: prints the latest indexed block and per-source checkpoints.
+
+`start` accepts env variables and equivalent `--kebab-case` flags for the operational config: database URL, RPC URL, WSS URL, HyperSync URL/API key, raw archive directory, chain ID, bind address, backfill/live toggles, source selectors, archive writes, batch size, confirmation depth, and polling interval.
 
 ## Projection Awareness
 
-The CLI does not project events itself. It chooses which runtime path to invoke:
+The CLI does not project events itself. It validates configuration, opens storage, runs migrations, and delegates all indexing behavior to `server` and `ingest`.
 
-- `backfill` uses `ingest` to fetch, decode, project, batch-flush, and checkpoint.
-- `archive` uses `ingest` to fetch raw data and write binary archive ranges plus metadata.
-- `replay` uses `ingest` to read binary archive ranges and run the same projection apply path without RPC or HyperSync credits.
-- `labels-import` and `labels-heal` use local files and storage tables to fill `label_preimages` and recompute affected domain names without runtime external API calls, resetting, or replaying. Operator scripts may download the local dictionary before import.
-- `serve` delegates the always-on API to `server` and optional indexing to `server::runtime`.
+Backfill behavior is controlled by:
+
+- `ENABLE_BACKFILL=true`
+- `BACKFILL_SOURCE=rpc|hypersync|raw`
+- `ARCHIVE_BACKFILLS=true`
+- `RAW_ARCHIVE_DIR=<path>`
+
+Live behavior is controlled by:
+
+- `ENABLE_LIVE_INDEXING=true`
+- `LIVE_INDEXING_SOURCE=rpc|wss`
+
+There is no automatic source selection and no `BACKFILL_FROM` or `BACKFILL_TO` setting. RPC and HyperSync resume from database checkpoints; raw replay resumes from archive coverage and database checkpoints.
 
 ## Storage Shape Used
 
-The CLI opens Postgres through `storage`, runs migrations, and then delegates table reads/writes to the selected subsystem. It directly prints checkpoint and archive status but does not own SQL table definitions.
+The CLI owns no SQL table definitions. It connects through `storage`, runs the workspace migrations, and reads checkpoint/block status for the `status` command.
 
 ## Main Files
 
-- `src/app.rs`: Clap command definitions and command dispatch.
-- `src/compare.rs`: local-vs-official GraphQL comparison helper.
-- `src/benchmark.rs`: file-based GraphQL benchmark runner for local compute and endpoint comparisons.
-- `src/label_heal.rs`: local ENSRainbow file import and label repair command.
-- `src/schema.rs` and `src/schema/*`: local SDL generation, official introspection, and schema compatibility diffing.
-- `src/main.rs`: Tokio entrypoint.
+- `src/app.rs`: Clap definitions, startup validation, storage connection, and command dispatch.
+- `src/main.rs`: Tokio runtime entrypoint with a larger worker stack for GraphQL/indexing workloads.
 
 ## Summary
 
-`cli` is the operational shell around the workspace. It keeps source selection explicit, makes destructive actions opt-in, and provides compatibility tooling for subgraph parity work.
-
-## Local Label Healing
-
-Use `scripts/ens-heal.sh` from the workspace root to download and verify ENSRainbow data into `healed-names/ens_names.sql.gz`, then extract `healed-names/ens_names.tsv`. Import that TSV with:
-
-```bash
-LABELS_FILE=healed-names/ens_names.tsv make labels-import
-LABEL_HEAL_LIMIT=100000 make labels-heal
-```
-
-Importing before a fresh backfill gives projection a local dictionary during indexing. For an already-filled database, run import and heal after backfill. Large heal batches should not run at the same time as dense backfill ranges because the repair updates domain rows and rebuilds decoded names.
+`cli` is the stable production shell around the indexer. Development-only tools such as schema diffing, benchmarks, label healing, and comparison runners should live outside this public binary surface.
 
 ## Implemented
 
-- Unified `serve` command with fixed API/playground and optional indexing toggles.
-- Strict historical source selection: `rpc`, `hypersync`, or `raw`.
-- Strict live source selection: `http_rpc` or `wss`.
-- Binary archive-only, archive replay, and archive inspection commands.
-- Schema diff and data compare commands for official subgraph compatibility.
-- GraphQL benchmark command for ENSJS/ENSNode/official-subgraph query workloads.
-- Local ENSRainbow dictionary import and label healing for post-backfill database repair.
-- Dev helpers for migrations, status, reset, and live indexing.
+- `ensindexer start`.
+- `ensindexer status`.
+- Env and flag override support for startup config.
+- Strict validation for raw replay, archive writes, HyperSync credentials, and WSS live indexing.
+- Automatic migration execution on startup.
 
 ## Future Improvements
 
-- Add structured progress output formats for automation.
-- Add richer status output for lag, ranges, archive coverage, and source health.
-- Add safety prompts for reset in interactive terminals while keeping `--yes` for scripts.
-- Add replay-throughput benchmarks alongside the current GraphQL benchmark suite.
+- Add machine-readable `status --json`.
+- Add richer status output for indexing lag, active workers, and archive coverage.
+- Move internal benchmark/schema/label-heal tooling into separate dev binaries or scripts.

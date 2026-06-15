@@ -6,7 +6,7 @@ license.workspace = true
 authors.workspace = true
 
 [[bin]]
-name = "cli"
+name = "ensindexer"
 path = "src/main.rs"
 
 [dependencies]
@@ -26,3 +26,4 @@ tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 types.workspace = true
+url.workspace = true

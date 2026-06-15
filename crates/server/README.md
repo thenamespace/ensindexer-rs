@@ -6,7 +6,7 @@ The `server` crate runs the HTTP service and optional indexing tasks in one proc
 
 ```mermaid
 sequenceDiagram
-    participant CLI as cli serve
+    participant CLI as ensindexer start
     participant Server as server crate
     participant API as api schema
     participant Ingest as ingest tasks
@@ -32,7 +32,7 @@ sequenceDiagram
 - GraphQL API endpoint.
 - Apollo Sandbox playground in both dev and production.
 
-Backfill and live indexing are optional and controlled only by `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING`. The transport choices come from `BACKFILL_SOURCE` and `INDEXING_SOURCE`; there is no automatic source selection.
+Backfill and live indexing are optional and controlled only by `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING`. The transport choices come from `BACKFILL_SOURCE` and `LIVE_INDEXING_SOURCE`; there is no automatic source selection.
 
 ## Projection Awareness
 

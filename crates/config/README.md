@@ -22,13 +22,13 @@ sequenceDiagram
 
 - `DATABASE_URL`: Postgres connection string.
 - `ETH_RPC_URL`: HTTP JSON-RPC endpoint.
-- `ETH_WS_URL`: WebSocket endpoint for `INDEXING_SOURCE=wss`.
+- `ETH_WS_URL`: WebSocket endpoint for `LIVE_INDEXING_SOURCE=wss`.
 - `ENVIO_API_KEY`: HyperSync API key for `BACKFILL_SOURCE=hypersync`.
 - `HYPERSYNC_URL`: HyperSync endpoint, defaulting to Ethereum mainnet HyperSync.
 - `ENABLE_BACKFILL`: serve-time historical indexing toggle.
 - `ENABLE_LIVE_INDEXING`: serve-time live indexing toggle.
 - `BACKFILL_SOURCE`: strict enum `rpc|hypersync|raw`.
-- `INDEXING_SOURCE`: strict enum `http_rpc|wss`.
+- `LIVE_INDEXING_SOURCE`: strict enum `rpc|wss`.
 - `ARCHIVE_BACKFILLS`: write fetched historical ranges into the raw archive.
 - `RAW_ARCHIVE_DIR`: archive root containing `manifest.json`, `resolvers.json`, and `ranges/*.bin`.
 - `CHAIN_ID`: expected chain id, default `1`.
@@ -41,7 +41,7 @@ There are no `BACKFILL_FROM` or `BACKFILL_TO` variables. Historical backfill res
 
 ## Projection Awareness
 
-Configuration controls how projection is reached but does not project data. `BACKFILL_SOURCE` selects the historical transport, `ARCHIVE_BACKFILLS` decides whether fetched data is persisted as raw binary ranges, and `ENABLE_*` toggles decide which services `serve` starts.
+Configuration controls how projection is reached but does not project data. `BACKFILL_SOURCE` selects the historical transport, `ARCHIVE_BACKFILLS` decides whether fetched data is persisted as raw binary ranges, and `ENABLE_*` toggles decide which workers `ensindexer start` enables.
 
 ## Storage Shape Used
 
@@ -66,7 +66,7 @@ This crate does not access storage. It supplies the database URL and operational
 
 ## Future Improvements
 
-- Add config validation for incompatible combinations, such as `BACKFILL_SOURCE=raw` without `RAW_ARCHIVE_DIR`.
+- Move startup combination validation from the CLI into this crate if other binaries need the same checks.
 - Add redacted config diagnostics for startup logs.
 - Add per-source timeout/retry settings.
 - Add environment profiles for dev, staging, and production.

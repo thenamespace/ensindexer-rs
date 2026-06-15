@@ -14,7 +14,7 @@ pub struct AppConfig {
     pub enable_backfill: bool,
     pub enable_live_indexing: bool,
     pub backfill_source: BackfillSource,
-    pub indexing_source: IndexingSource,
+    pub live_indexing_source: IndexingSource,
     pub archive_backfills: bool,
     pub raw_archive_dir: Option<PathBuf>,
     pub chain_id: u64,
@@ -42,7 +42,7 @@ impl AppConfig {
             enable_backfill: optional("ENABLE_BACKFILL", false)?,
             enable_live_indexing: optional("ENABLE_LIVE_INDEXING", false)?,
             backfill_source: optional("BACKFILL_SOURCE", BackfillSource::Rpc)?,
-            indexing_source: optional("INDEXING_SOURCE", IndexingSource::HttpRpc)?,
+            live_indexing_source: optional("LIVE_INDEXING_SOURCE", IndexingSource::HttpRpc)?,
             archive_backfills: optional("ARCHIVE_BACKFILLS", false)?,
             raw_archive_dir: optional_path("RAW_ARCHIVE_DIR"),
             chain_id: optional("CHAIN_ID", 1)?,
@@ -139,10 +139,10 @@ impl std::str::FromStr for IndexingSource {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value.trim().to_ascii_lowercase().as_str() {
-            "http_rpc" => Ok(Self::HttpRpc),
+            "rpc" | "http_rpc" | "http-rpc" => Ok(Self::HttpRpc),
             "wss" => Ok(Self::Wss),
             _ => Err(ConfigError::Invalid(
-                "INDEXING_SOURCE: expected http_rpc or wss".to_owned(),
+                "LIVE_INDEXING_SOURCE: expected rpc or wss".to_owned(),
             )),
         }
     }

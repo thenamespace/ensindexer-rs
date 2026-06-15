@@ -18,7 +18,7 @@ impl IngestService {
             chain_id = self.config.chain_id,
             confirmation_depth = self.config.indexer_confirmation_depth,
             poll_seconds = self.config.live_poll_seconds,
-            indexing_source = ?self.config.indexing_source,
+            live_indexing_source = ?self.config.live_indexing_source,
             "live indexer requested"
         );
 
@@ -99,14 +99,14 @@ impl IngestService {
     }
 
     fn live_provider_url(&self) -> anyhow::Result<&str> {
-        match self.config.indexing_source {
+        match self.config.live_indexing_source {
             IndexingSource::HttpRpc => Ok(self.config.eth_rpc_url.as_str()),
             IndexingSource::Wss => self
                 .config
                 .eth_ws_url
                 .as_ref()
                 .map(|url| url.as_str())
-                .ok_or_else(|| anyhow::anyhow!("INDEXING_SOURCE=wss requires ETH_WS_URL")),
+                .ok_or_else(|| anyhow::anyhow!("LIVE_INDEXING_SOURCE=wss requires ETH_WS_URL")),
         }
     }
 
