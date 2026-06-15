@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -113,11 +111,11 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn set_addr(&self, id: &str, addr_id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.addr_id = Some(addr_id.to_owned());
-                return self.put_cached_resolver(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.addr_id = Some(addr_id.to_owned());
+            return self.put_cached_resolver(row);
         }
         sqlx::query("update resolvers set addr_id = $2 where id = $1")
             .bind(id)
@@ -128,13 +126,13 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn add_coin_type(&self, id: &str, coin_type: BigDecimal) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                if !row.coin_types.contains(&coin_type) {
-                    row.coin_types.push(coin_type);
-                }
-                return self.put_cached_resolver(row);
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            if !row.coin_types.contains(&coin_type) {
+                row.coin_types.push(coin_type);
             }
+            return self.put_cached_resolver(row);
         }
         sqlx::query(
             r#"
@@ -154,13 +152,13 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn add_text(&self, id: &str, key: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                if !row.texts.iter().any(|text| text == key) {
-                    row.texts.push(key.to_owned());
-                }
-                return self.put_cached_resolver(row);
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            if !row.texts.iter().any(|text| text == key) {
+                row.texts.push(key.to_owned());
             }
+            return self.put_cached_resolver(row);
         }
         sqlx::query(
             r#"
@@ -180,11 +178,11 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn set_content_hash(&self, id: &str, content_hash: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.content_hash = Some(content_hash.to_owned());
-                return self.put_cached_resolver(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.content_hash = Some(content_hash.to_owned());
+            return self.put_cached_resolver(row);
         }
         sqlx::query("update resolvers set content_hash = $2 where id = $1")
             .bind(id)
@@ -195,14 +193,14 @@ impl ResolversRepo<'_> {
     }
 
     pub async fn reset_records(&self, id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.addr_id = None;
-                row.content_hash = None;
-                row.texts.clear();
-                row.coin_types.clear();
-                return self.put_cached_resolver(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.addr_id = None;
+            row.content_hash = None;
+            row.texts.clear();
+            row.coin_types.clear();
+            return self.put_cached_resolver(row);
         }
         sqlx::query(
             r#"

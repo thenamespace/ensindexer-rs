@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use bigdecimal::BigDecimal;
 
 use super::DomainsRepo;
@@ -57,11 +55,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn set_owner(&self, id: &str, owner_id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.owner_id = owner_id.to_owned();
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.owner_id = owner_id.to_owned();
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set owner_id = $2 where id = $1")
             .bind(id)
@@ -78,13 +76,13 @@ impl DomainsRepo<'_> {
         labelhash: &str,
         is_migrated: bool,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.parent_id = Some(parent_id.to_owned());
-                row.labelhash = Some(labelhash.to_owned());
-                row.is_migrated = is_migrated;
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.parent_id = Some(parent_id.to_owned());
+            row.labelhash = Some(labelhash.to_owned());
+            row.is_migrated = is_migrated;
+            return self.put_cached_domain(row);
         }
         sqlx::query(
             r#"
@@ -110,16 +108,16 @@ impl DomainsRepo<'_> {
         label_name: Option<&str>,
         name: Option<&str>,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                if row.label_name.is_none() {
-                    row.label_name = label_name.map(str::to_owned);
-                }
-                if row.name.is_none() {
-                    row.name = name.map(str::to_owned);
-                }
-                return self.put_cached_domain(row);
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            if row.label_name.is_none() {
+                row.label_name = label_name.map(str::to_owned);
             }
+            if row.name.is_none() {
+                row.name = name.map(str::to_owned);
+            }
+            return self.put_cached_domain(row);
         }
         sqlx::query(
             r#"
@@ -143,12 +141,12 @@ impl DomainsRepo<'_> {
         label_name: Option<&str>,
         name: Option<&str>,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.label_name = label_name.map(str::to_owned);
-                row.name = name.map(str::to_owned);
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.label_name = label_name.map(str::to_owned);
+            row.name = name.map(str::to_owned);
+            return self.put_cached_domain(row);
         }
         sqlx::query(
             r#"
@@ -167,11 +165,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn increment_subdomain_count(&self, id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.subdomain_count += 1;
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.subdomain_count += 1;
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set subdomain_count = subdomain_count + 1 where id = $1")
             .bind(id)
@@ -186,12 +184,12 @@ impl DomainsRepo<'_> {
         resolver_id: Option<&str>,
         resolved_address_id: Option<&str>,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.resolver_id = resolver_id.map(str::to_owned);
-                row.resolved_address_id = resolved_address_id.map(str::to_owned);
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.resolver_id = resolver_id.map(str::to_owned);
+            row.resolved_address_id = resolved_address_id.map(str::to_owned);
+            return self.put_cached_domain(row);
         }
         sqlx::query(
             r#"
@@ -210,11 +208,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn set_ttl(&self, id: &str, ttl: BigDecimal) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.ttl = Some(ttl);
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.ttl = Some(ttl);
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set ttl = $2 where id = $1")
             .bind(id)
@@ -230,12 +228,12 @@ impl DomainsRepo<'_> {
         registrant_id: &str,
         expiry_date: BigDecimal,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.registrant_id = Some(registrant_id.to_owned());
-                row.expiry_date = Some(expiry_date);
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.registrant_id = Some(registrant_id.to_owned());
+            row.expiry_date = Some(expiry_date);
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set registrant_id = $2, expiry_date = $3 where id = $1")
             .bind(id)
@@ -247,11 +245,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn set_registrant(&self, id: &str, registrant_id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.registrant_id = Some(registrant_id.to_owned());
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.registrant_id = Some(registrant_id.to_owned());
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set registrant_id = $2 where id = $1")
             .bind(id)
@@ -262,11 +260,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn set_wrapped_owner(&self, id: &str, wrapped_owner_id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.wrapped_owner_id = Some(wrapped_owner_id.to_owned());
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.wrapped_owner_id = Some(wrapped_owner_id.to_owned());
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set wrapped_owner_id = $2 where id = $1")
             .bind(id)
@@ -277,11 +275,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn clear_wrapped_owner(&self, id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.wrapped_owner_id = None;
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.wrapped_owner_id = None;
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set wrapped_owner_id = null where id = $1")
             .bind(id)
@@ -291,11 +289,11 @@ impl DomainsRepo<'_> {
     }
 
     pub async fn clear_expiry(&self, id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.expiry_date = None;
-                return self.put_cached_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.expiry_date = None;
+            return self.put_cached_domain(row);
         }
         sqlx::query("update domains set expiry_date = null where id = $1")
             .bind(id)
@@ -309,18 +307,18 @@ impl DomainsRepo<'_> {
         id: &str,
         expiry_date: BigDecimal,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                if row
-                    .expiry_date
-                    .as_ref()
-                    .is_none_or(|current| current < &expiry_date)
-                {
-                    row.expiry_date = Some(expiry_date);
-                    return self.put_cached_domain(row);
-                }
-                return Ok(());
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            if row
+                .expiry_date
+                .as_ref()
+                .is_none_or(|current| current < &expiry_date)
+            {
+                row.expiry_date = Some(expiry_date);
+                return self.put_cached_domain(row);
             }
+            return Ok(());
         }
         sqlx::query(
             r#"

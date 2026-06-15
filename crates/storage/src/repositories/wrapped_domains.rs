@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -284,11 +282,11 @@ impl WrappedDomainsRepo<'_> {
     }
 
     pub async fn set_fuses(&self, id: &str, fuses: i32) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.fuses = fuses;
-                return self.put_cached_wrapped_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.fuses = fuses;
+            return self.put_cached_wrapped_domain(row);
         }
         sqlx::query("update wrapped_domains set fuses = $2 where id = $1")
             .bind(id)
@@ -299,11 +297,11 @@ impl WrappedDomainsRepo<'_> {
     }
 
     pub async fn set_expiry(&self, id: &str, expiry_date: BigDecimal) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.expiry_date = expiry_date;
-                return self.put_cached_wrapped_domain(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.expiry_date = expiry_date;
+            return self.put_cached_wrapped_domain(row);
         }
         sqlx::query("update wrapped_domains set expiry_date = $2 where id = $1")
             .bind(id)

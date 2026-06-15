@@ -220,6 +220,7 @@ Benchmark notes:
 - [x] Consolidate all migrations into one final initial migration for external project setup.
 - [x] Remove old CLI support modules for benchmark, schema diff, compare, and label-heal commands from the production binary crate.
 - [x] Run strict workspace clippy and fix production cleanup warnings in storage and CLI.
+- [x] Remove broad storage `clippy::collapsible_if` suppressions by simplifying cache-update control flow.
 - [ ] Continue dead-code cleanup across crates after the public CLI contraction.
 - [x] Replace remaining README and docs references to removed `make` targets and old CLI commands.
 - [ ] Validate the 1,000-block range projections against official subgraph responses for representative domains, resolvers, registrations, and events.

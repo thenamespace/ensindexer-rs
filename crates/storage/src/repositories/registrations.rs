@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -255,11 +253,11 @@ impl RegistrationsRepo<'_> {
     }
 
     pub async fn set_expiry(&self, id: &str, expiry_date: BigDecimal) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.expiry_date = expiry_date;
-                return self.put_cached_registration(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.expiry_date = expiry_date;
+            return self.put_cached_registration(row);
         }
         sqlx::query("update registrations set expiry_date = $2 where id = $1")
             .bind(id)
@@ -270,11 +268,11 @@ impl RegistrationsRepo<'_> {
     }
 
     pub async fn set_registrant(&self, id: &str, registrant_id: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.registrant_id = registrant_id.to_owned();
-                return self.put_cached_registration(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.registrant_id = registrant_id.to_owned();
+            return self.put_cached_registration(row);
         }
         sqlx::query("update registrations set registrant_id = $2 where id = $1")
             .bind(id)
@@ -290,12 +288,12 @@ impl RegistrationsRepo<'_> {
         label_name: &str,
         cost: BigDecimal,
     ) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.label_name = Some(label_name.to_owned());
-                row.cost = Some(cost);
-                return self.put_cached_registration(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.label_name = Some(label_name.to_owned());
+            row.cost = Some(cost);
+            return self.put_cached_registration(row);
         }
         sqlx::query("update registrations set label_name = $2, cost = $3 where id = $1")
             .bind(id)
@@ -307,11 +305,11 @@ impl RegistrationsRepo<'_> {
     }
 
     pub async fn set_label_name(&self, id: &str, label_name: &str) -> StorageResult<()> {
-        if let Some(mut row) = self.find_by_id(id).await? {
-            if self.cache_active()? {
-                row.label_name = Some(label_name.to_owned());
-                return self.put_cached_registration(row);
-            }
+        if let Some(mut row) = self.find_by_id(id).await?
+            && self.cache_active()?
+        {
+            row.label_name = Some(label_name.to_owned());
+            return self.put_cached_registration(row);
         }
         sqlx::query("update registrations set label_name = $2 where id = $1")
             .bind(id)
