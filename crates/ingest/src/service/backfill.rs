@@ -145,7 +145,7 @@ impl IngestService {
                 tracing::info!(path = %path.display(), "wrote raw archive range");
             }
 
-            self.apply_raw_range_transactional(
+            self.apply_raw_range_buffered_with_cleanup(
                 range_end,
                 batch.raw_logs,
                 block_meta,

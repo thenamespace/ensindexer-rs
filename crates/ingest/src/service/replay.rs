@@ -104,7 +104,7 @@ impl IngestService {
                 let checkpoint_sources = range.checkpoint_sources.clone();
                 let (raw_logs, block_meta) = range.into_parts();
 
-                self.apply_raw_range_transactional(
+                self.apply_raw_range_buffered_with_cleanup(
                     range_end,
                     raw_logs,
                     block_meta,

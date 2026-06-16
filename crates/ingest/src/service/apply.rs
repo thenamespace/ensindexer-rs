@@ -7,31 +7,19 @@ use super::{IngestService, preload::collect_touched_entities};
 use crate::{decode::decode_log, rpc::BlockMeta, sources::LogSource};
 
 impl IngestService {
-    pub(super) async fn apply_raw_range_transactional(
+    pub(super) async fn apply_raw_range_buffered_with_cleanup(
         &self,
         range_end: u64,
         raw_logs: Vec<(LogSource, Log)>,
         block_meta: BTreeMap<u64, BlockMeta>,
         checkpoint_sources: Vec<String>,
     ) -> anyhow::Result<()> {
-        sqlx::query("begin").execute(self.storage.pool()).await?;
-        sqlx::query("set local synchronous_commit = off")
-            .execute(self.storage.pool())
-            .await?;
         if let Err(error) = self.storage.begin_change_buffer() {
-            if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await
-            {
-                tracing::error!(%rollback_error, "failed to roll back raw replay range");
-            }
             return Err(error.into());
         }
         if let Err(error) = self.storage.begin_event_buffer() {
             if let Err(clear_error) = self.storage.clear_change_buffer() {
                 tracing::error!(%clear_error, "failed to clear replay change buffer");
-            }
-            if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await
-            {
-                tracing::error!(%rollback_error, "failed to roll back raw replay range");
             }
             return Err(error.into());
         }
@@ -43,11 +31,6 @@ impl IngestService {
                 }
                 if let Err(clear_error) = self.storage.clear_event_buffer() {
                     tracing::error!(%clear_error, "failed to clear replay event buffer");
-                }
-                if let Err(rollback_error) =
-                    sqlx::query("rollback").execute(self.storage.pool()).await
-                {
-                    tracing::error!(%rollback_error, "failed to roll back raw replay range");
                 }
                 return Err(error.into());
             }
@@ -63,12 +46,7 @@ impl IngestService {
                 if clear_entity_cache_on_success {
                     self.storage.clear_entity_cache()?;
                 }
-                let started = Instant::now();
-                sqlx::query("commit").execute(self.storage.pool()).await?;
-                tracing::debug!(
-                    elapsed_ms = started.elapsed().as_millis(),
-                    "committed raw replay transaction"
-                );
+                tracing::debug!("cleared raw replay buffers after successful range apply");
                 Ok(())
             }
             Err(error) => {
@@ -80,11 +58,6 @@ impl IngestService {
                 }
                 if let Err(clear_error) = self.storage.clear_entity_cache() {
                     tracing::error!(%clear_error, "failed to clear replay entity cache");
-                }
-                if let Err(rollback_error) =
-                    sqlx::query("rollback").execute(self.storage.pool()).await
-                {
-                    tracing::error!(%rollback_error, "failed to roll back raw replay range");
                 }
                 Err(error)
             }
