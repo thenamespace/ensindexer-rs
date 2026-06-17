@@ -135,16 +135,24 @@ impl Storage {
         id: &str,
         block_number: i32,
     ) -> StorageResult<bool> {
-        let has_buffer = {
+        let change = EntityChange {
+            kind,
+            id: id.to_owned(),
+            block_number,
+        };
+
+        {
             let buffer = self
                 .change_buffer
                 .lock()
                 .map_err(|_| StorageError::ChangeBufferPoisoned)?;
-            buffer.is_some()
-        };
-        if !has_buffer {
-            return Ok(false);
-        };
+            let Some(active) = buffer.as_ref() else {
+                return Ok(false);
+            };
+            if active.contains_change(&change) {
+                return Ok(true);
+            }
+        }
 
         let snapshot = self.capture_entity_snapshot(kind, id)?;
         let mut buffer = self
@@ -154,12 +162,9 @@ impl Storage {
         let Some(active) = buffer.as_mut() else {
             return Ok(false);
         };
-        active.insert(EntityChange {
-            kind,
-            id: id.to_owned(),
-            block_number,
-        });
-        active.snapshots.insert(block_number, id, snapshot);
+        if active.insert(change) {
+            active.snapshots.insert(block_number, id, snapshot);
+        }
         Ok(true)
     }
 
@@ -273,8 +278,12 @@ impl Storage {
 }
 
 impl ChangeBuffer {
-    fn insert(&mut self, change: EntityChange) {
-        self.changes.insert(change);
+    fn contains_change(&self, change: &EntityChange) -> bool {
+        self.changes.contains(change)
+    }
+
+    fn insert(&mut self, change: EntityChange) -> bool {
+        self.changes.insert(change)
     }
 }
 

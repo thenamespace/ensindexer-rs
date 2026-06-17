@@ -14,13 +14,23 @@ impl IngestService {
         block_meta: BTreeMap<u64, BlockMeta>,
         checkpoint_sources: Vec<String>,
     ) -> anyhow::Result<()> {
+        let use_range_transaction = self.config.backfill_source.is_raw();
+        if use_range_transaction {
+            sqlx::query("begin").execute(self.storage.pool()).await?;
+            sqlx::query("set local synchronous_commit = off")
+                .execute(self.storage.pool())
+                .await?;
+        }
+
         if let Err(error) = self.storage.begin_change_buffer() {
+            self.rollback_range_transaction(use_range_transaction).await;
             return Err(error.into());
         }
         if let Err(error) = self.storage.begin_event_buffer() {
             if let Err(clear_error) = self.storage.clear_change_buffer() {
                 tracing::error!(%clear_error, "failed to clear replay change buffer");
             }
+            self.rollback_range_transaction(use_range_transaction).await;
             return Err(error.into());
         }
         let clear_entity_cache_on_success = match self.storage.ensure_entity_cache() {
@@ -32,6 +42,7 @@ impl IngestService {
                 if let Err(clear_error) = self.storage.clear_event_buffer() {
                     tracing::error!(%clear_error, "failed to clear replay event buffer");
                 }
+                self.rollback_range_transaction(use_range_transaction).await;
                 return Err(error.into());
             }
         };
@@ -46,6 +57,14 @@ impl IngestService {
                 if clear_entity_cache_on_success {
                     self.storage.clear_entity_cache()?;
                 }
+                if use_range_transaction {
+                    let started = Instant::now();
+                    sqlx::query("commit").execute(self.storage.pool()).await?;
+                    tracing::debug!(
+                        elapsed_ms = started.elapsed().as_millis(),
+                        "committed raw replay range transaction"
+                    );
+                }
                 tracing::debug!("cleared raw replay buffers after successful range apply");
                 Ok(())
             }
@@ -59,8 +78,18 @@ impl IngestService {
                 if let Err(clear_error) = self.storage.clear_entity_cache() {
                     tracing::error!(%clear_error, "failed to clear replay entity cache");
                 }
+                self.rollback_range_transaction(use_range_transaction).await;
                 Err(error)
             }
+        }
+    }
+
+    async fn rollback_range_transaction(&self, enabled: bool) {
+        if !enabled {
+            return;
+        }
+        if let Err(rollback_error) = sqlx::query("rollback").execute(self.storage.pool()).await {
+            tracing::error!(%rollback_error, "failed to roll back raw replay range");
         }
     }
 
