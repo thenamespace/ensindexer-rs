@@ -266,7 +266,7 @@ Benchmark notes:
 ### Documentation Maintenance
 
 - [ ] Update this file after every compatibility or indexing slice.
-- [ ] Keep `docs/README.md`, `docs/implementation-roadmap.md`, and `docs/schema-and-graphql-shape.md` in sync with this checklist.
+- [ ] Keep `docs/README.md`, `docs/architecture.md`, `docs/operations.md`, `docs/ingestion-and-archives.md`, `docs/projection-and-storage.md`, `docs/graphql-compatibility.md`, `docs/performance-and-benchmarks.md`, and `docs/future-work.md` in sync with this checklist.
 - [ ] Record every verified mainnet range fill and official-subgraph comparison result.
 
 ## Verified Mainnet Ranges

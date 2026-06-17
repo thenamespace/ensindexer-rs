@@ -19,7 +19,7 @@ args = ["compose", "down", "-v"]
 [tasks.start]
 description = "Start API, GraphQL Playground, and optional indexing workers."
 command = "cargo"
-args = ["run", "-p", "cli", "--bin", "ensindexer", "--", "start"]
+args = ["run", "-p", "cli", "--release", "--", "start"]
 
 [tasks.status]
 description = "Print latest indexed block and source checkpoints."
@@ -49,7 +49,15 @@ args = ["build", "-t", "ensindexer:local", "."]
 [tasks.docker-run]
 description = "Run the production Docker image with .env loaded."
 command = "docker"
-args = ["run", "--rm", "--env-file", ".env", "-p", "8080:8080", "ensindexer:local"]
+args = [
+    "run",
+    "--rm",
+    "--env-file",
+    ".env",
+    "-p",
+    "8080:8080",
+    "ensindexer:local",
+]
 
 [tasks.test]
 description = "Run the Rust test suite."

@@ -76,6 +76,10 @@ impl MaintenanceRepo<'_> {
     }
 
     pub async fn recreate_bulk_replay_indexes(&self) -> StorageResult<()> {
+        sqlx::query("create extension if not exists btree_gin")
+            .execute(self.pool)
+            .await?;
+
         for index in bulk_replay_indexes() {
             sqlx::query(index.create_sql).execute(self.pool).await?;
         }

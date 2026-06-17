@@ -33,6 +33,14 @@ mod tests {
         assert!(index_sql("domains_label_name_md5_id_idx").contains("md5(label_name), id"));
         assert!(index_sql("domains_name_lower_trgm_idx").contains("lower(name) gin_trgm_ops"));
         assert!(index_sql("domains_label_name_lower_trgm_idx").contains("gin_trgm_ops"));
+        assert!(
+            index_sql("domains_parent_name_lower_trgm_idx")
+                .contains("parent_id, lower(name) gin_trgm_ops")
+        );
+        assert!(
+            index_sql("domains_parent_label_name_lower_trgm_idx")
+                .contains("parent_id, lower(label_name) gin_trgm_ops")
+        );
         assert!(index_sql("domains_parent_label_name_sort_idx").contains("left(label_name, 256)"));
         assert!(index_sql("domains_parent_name_sort_idx").contains("left(name, 256)"));
         index_sql("domains_registrant_idx");

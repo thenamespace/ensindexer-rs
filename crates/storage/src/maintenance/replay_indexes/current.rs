@@ -151,6 +151,22 @@ pub(super) const CURRENT_STATE_INDEXES: &[ReplayIndex] = &[
         "domains",
         "lower(label_name) gin_trgm_ops"
     ),
+    ReplayIndex {
+        name: "domains_parent_name_trgm_idx",
+        create_sql: "create index if not exists domains_parent_name_trgm_idx on domains using gin (parent_id, name gin_trgm_ops)",
+    },
+    ReplayIndex {
+        name: "domains_parent_name_lower_trgm_idx",
+        create_sql: "create index if not exists domains_parent_name_lower_trgm_idx on domains using gin (parent_id, lower(name) gin_trgm_ops)",
+    },
+    ReplayIndex {
+        name: "domains_parent_label_name_trgm_idx",
+        create_sql: "create index if not exists domains_parent_label_name_trgm_idx on domains using gin (parent_id, label_name gin_trgm_ops)",
+    },
+    ReplayIndex {
+        name: "domains_parent_label_name_lower_trgm_idx",
+        create_sql: "create index if not exists domains_parent_label_name_lower_trgm_idx on domains using gin (parent_id, lower(label_name) gin_trgm_ops)",
+    },
     index!("registrations_domain_idx", "registrations", "domain_id"),
     index!(
         "registrations_registrant_idx",

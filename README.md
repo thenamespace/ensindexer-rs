@@ -1,22 +1,20 @@
 # ENS Indexer
 
-Custom Rust ENS indexer intended to be a drop-in replacement for the current ENS subgraph schema and GraphQL query shape.
+`ensindexer` is a custom Rust implementation of the ENS subgraph. It indexes ENS registry, registrar, name wrapper, and resolver activity into Postgres and exposes an `async-graphql` API shaped to match the official ENS subgraph as closely as possible.
 
-The implementation plan and official-subgraph research live in [docs/README.md](docs/README.md).
+The project is built as a Cargo workspace with small crates for contracts, ingestion, projection, storage, API, server, CLI, and shared types. The runtime is one production binary: it serves GraphQL, Apollo Sandbox, health routes, optional historical backfill, optional live indexing, and raw archive replay.
 
-## Workspace
+## Start Here
 
-- `crates/types`: shared IDs, constants, log context, scalar helpers.
-- `crates/contracts`: Alloy event bindings and decoded ENS event enum.
-- `crates/config`: `.env` based runtime configuration.
-- `crates/storage`: SQLx pool, migrations, repository/query foundations.
-- `crates/projection`: deterministic projection dispatcher and handler modules.
-- `crates/ingest`: backfill, archive, replay, and live indexing service.
-- `crates/api`: async-graphql schema and resolvers.
-- `crates/server`: Axum HTTP server.
-- `crates/cli`: operational CLI entrypoint.
+- [Docs Index](docs/README.md): the curated knowledge base for architecture, indexing flow, compatibility, operations, performance, and future work.
+- [Architecture](docs/architecture.md): how the crates work together.
+- [Operations](docs/operations.md): how to run the service, backfills, raw archives, Docker, and status checks.
+- [GraphQL Compatibility](docs/graphql-compatibility.md): official-subgraph schema surface, filters, relationships, and known gaps.
+- [Performance](docs/performance-and-benchmarks.md): raw replay optimizations, query indexes, DataLoader work, and benchmark results.
+- [Research Archive](research/README.md): older implementation research and official-subgraph notes kept for provenance.
+- [Crate READMEs](crates): crate-level implementation notes.
 
-## Setup
+## Quick Start
 
 ```bash
 cp .env.example .env
@@ -24,75 +22,164 @@ cargo make db-up
 cargo make start
 ```
 
-Configuration is loaded from `.env` via `config`.
-Open [http://127.0.0.1:8080/graphql](http://127.0.0.1:8080/graphql) in a browser for Apollo Sandbox. The Sandbox is always available in dev and prod.
-`cargo make start` runs `ensindexer start`, which starts the GraphQL API. Set `ENABLE_BACKFILL=true` or pass `--enable-backfill=true` to run a startup catchup backfill in the same process, and set `ENABLE_LIVE_INDEXING=true` or pass `--enable-live-indexing=true` to keep indexing confirmed live ranges after startup. If both toggles are enabled, startup backfill runs before live indexing.
+Open Apollo Sandbox at:
 
-`BACKFILL_SOURCE` is strict: `rpc`, `hypersync`, or `raw`. There is no automatic transport selection and there are no `BACKFILL_FROM` or `BACKFILL_TO` controls. RPC and HyperSync backfills resume from database checkpoints, and raw replay uses archive bounds plus database checkpoints.
-Set `ARCHIVE_BACKFILLS=true` or pass `--archive-backfill=true` with `RAW_ARCHIVE_DIR=.raw-archive` to persist fetched raw logs and block metadata as binary `.bin` range files. A first run can use `BACKFILL_SOURCE=hypersync` plus archiving; a later fresh database can use `BACKFILL_SOURCE=raw` to replay those archived files without RPC or HyperSync credits. `LIVE_INDEXING_SOURCE` controls live indexing and must be `rpc` or `wss`; `wss` requires `ETH_WS_URL`.
+```text
+http://127.0.0.1:8080/graphql
+```
 
-Production commands:
+The subgraph-compatible POST endpoint is:
+
+```text
+http://127.0.0.1:8080/subgraph
+```
+
+## Runtime Model
+
+```mermaid
+sequenceDiagram
+    participant Operator
+    participant CLI as ensindexer start
+    participant Server as Axum server
+    participant API as async-graphql schema
+    participant Ingest as optional ingest worker
+    participant Pg as Postgres
+
+    Operator->>CLI: cargo make start
+    CLI->>Pg: connect and run migrations
+    CLI->>Server: start HTTP, GraphQL, Sandbox
+    alt ENABLE_BACKFILL=true
+        Server->>Ingest: run configured historical source
+        Ingest->>Pg: project blocks, entities, events, snapshots, checkpoints
+    end
+    alt ENABLE_LIVE_INDEXING=true
+        Server->>Ingest: poll or stream confirmed live ranges
+        Ingest->>Pg: append canonical updates
+    end
+    Operator->>Server: GraphQL query
+    Server->>API: execute subgraph-compatible schema
+    API->>Pg: read current rows, snapshots, events, metadata
+    Pg-->>API: result rows
+    API-->>Server: GraphQL JSON
+    Server-->>Operator: response
+```
+
+## Workspace
+
+| Crate | Responsibility |
+| --- | --- |
+| `types` | Shared IDs, constants, log context, scalar helpers, and normalization helpers. |
+| `contracts` | Alloy ABI bindings and typed ENS event decoding. |
+| `config` | Strict `.env` and CLI flag configuration parsing. |
+| `storage` | Postgres schema, repositories, filters, query builders, write buffers, snapshots, and maintenance. |
+| `projection` | Official-subgraph-shaped state transitions from typed ENS events. |
+| `ingest` | RPC, HyperSync, raw archive, and live indexing orchestration. |
+| `api` | `async-graphql` schema, DTOs, filters, ordering, relationship resolvers, and `_meta`. |
+| `server` | Axum routes, Apollo Sandbox, health checks, and indexing task supervision. |
+| `cli` | Production binary with `start` and `status`. |
+
+## Main Commands
+
+```bash
+# Start the unified API/indexer process.
+cargo make start
+
+# Print latest indexed block and per-source checkpoints.
+cargo make status
+
+# Run checks used during development.
+cargo make check
+cargo make test
+```
+
+The production binary intentionally has only two user-facing commands:
 
 ```bash
 cargo run -p cli --bin ensindexer -- start
 cargo run -p cli --bin ensindexer -- status
-cargo make check
 ```
 
-`scripts/ens-heal.sh` can download a local ENSRainbow dataset for offline use. The production CLI no longer exposes label import/heal commands; keep the generated local file as source data for the upcoming internal healing job.
+## Backfill Sources
 
-Local label healing workflow:
+Historical indexing is explicit. There is no automatic source selection.
 
-```bash
-# Download and verify ENSRainbow locally, then extract healed-names/ens_names.tsv.
-./scripts/ens-heal.sh
-
-# Import and repair tooling is being moved out of the production CLI.
-# For now, keep this script output as an offline dataset for future healing jobs.
+```env
+ENABLE_BACKFILL=true
+BACKFILL_SOURCE=rpc        # rpc | hypersync | raw
+ENABLE_LIVE_INDEXING=false
+LIVE_INDEXING_SOURCE=rpc   # rpc | wss
 ```
 
-For the cleanest first full backfill, prepare labels through a future external healing tool before replay/backfill so projection can resolve known labelhashes as rows are created. Keep that tooling outside the production binary and storage API unless it becomes part of the supported runtime surface.
-
-GraphQL benchmark fixtures and historical reports live in [benchmarks](benchmarks). The benchmark runner is internal tooling and is no longer part of the production CLI surface.
-
-Archive workflow for repeatable projection testing:
+Raw archives let you fetch logs once, store them locally, and replay projection repeatedly without spending RPC or HyperSync credits:
 
 ```bash
-# Fetch once from BACKFILL_SOURCE=rpc or BACKFILL_SOURCE=hypersync and save binary archive ranges
-# while applying projection writes to Postgres.
-ENABLE_BACKFILL=true BACKFILL_SOURCE=hypersync ARCHIVE_BACKFILLS=true RAW_ARCHIVE_DIR=.raw-archive-full cargo make start
+# Fetch and archive.
+ENABLE_BACKFILL=true \
+BACKFILL_SOURCE=hypersync \
+ARCHIVE_BACKFILLS=true \
+RAW_ARCHIVE_DIR=.raw-archive-full \
+cargo make start
 
-# Rebuild a fresh dev database without spending RPC/HyperSync credits again.
+# Replay from local archive after a DB reset.
 cargo make db-reset
 cargo make db-up
-ENABLE_BACKFILL=true BACKFILL_SOURCE=raw RAW_ARCHIVE_DIR=.raw-archive-full cargo make start
+ENABLE_BACKFILL=true \
+BACKFILL_SOURCE=raw \
+RAW_ARCHIVE_DIR=.raw-archive-full \
+cargo make start
 ```
 
-`cargo make db-reset` deletes the local Postgres compose volume. Use it only for disposable development databases.
-For a complete raw replay source, start with an empty archive directory on the first backfill. The service writes `manifest.json` plus binary range files while applying the backfill. After the archive is complete, use `BACKFILL_SOURCE=raw` to project from those `.bin` files.
+Raw archive files are binary `.bin` range payloads under `RAW_ARCHIVE_DIR/ranges`, with metadata and checksums in `manifest.json`.
 
-Postgres runs through `compose.yml` using `postgres:17`. The default compose credentials match `.env.example`.
+## Compatibility Scope
+
+Implemented compatibility includes:
+
+- Official root query fields for current entities, events, event interfaces, and `_meta`.
+- Current and historical entity reads with `block` arguments.
+- Event clamping for historical event reads.
+- `Domain`, `Registration`, `WrappedDomain`, `Resolver`, and `Account` entities.
+- Registry, registrar, wrapper, and resolver event tables.
+- Relationship fields and generated-style trailing-underscore filters.
+- Scalar filters, boolean `and`/`or`, list operators, ordering, `_change_block`, and derived event collections.
+- `/subgraph` endpoint for clients expecting The Graph-style routing.
+
+See [GraphQL Compatibility](docs/graphql-compatibility.md) for details and known gaps.
+
+## Performance Highlights
+
+The indexer includes optimizations added from full-mainnet replay and query profiling:
+
+- HyperSync historical fetch support.
+- Binary raw archive replay with checksum manifest.
+- Range-level write buffering and raw replay transactions.
+- Replay-level current-state cache.
+- Batched current rows, blocks, entity changes, snapshots, and event inserts.
+- Temporary secondary-index drop/recreate around bulk raw replay.
+- Parent-first domain flushes for self-referential foreign keys.
+- Hash-backed exact text indexes for long ENS names and labels.
+- Trigram indexes for fuzzy name search.
+- ENSJS-style names-for-address fast path.
+- DataLoader batching for hot domain relationships.
+
+See [Performance And Benchmarks](docs/performance-and-benchmarks.md).
 
 ## Docker
 
-Build the unified service image:
-
 ```bash
 cargo make docker-build
-```
-
-Run the API from the image:
-
-```bash
 cargo make docker-run
 ```
 
-The container entrypoint runs `ensindexer start`. Use `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING` in `.env` to run startup backfill and live indexing inside the same process as the GraphQL API.
+The container entrypoint runs `ensindexer start`. Configure backfill/live workers through `.env`.
 
-## Code Layout
+## Documentation Map
 
-Crates use small entrypoint files and implementation modules instead of keeping all logic in one `lib.rs`:
+The project documentation is split by audience:
 
-- library crates expose `src/lib.rs` plus focused domain modules such as `src/schema.rs`, `src/service.rs`, or `src/repositories/*.rs`;
-- the CLI keeps `src/main.rs` as the binary entrypoint and `src/app.rs` for command execution;
-- larger modules should be split further by ENS domain area as functionality grows.
+- Root README: orientation and quick start.
+- `docs/`: current implementation knowledge base.
+- `research/`: archived research notes from official subgraph and ENSNode investigations.
+- `crates/*/README.md`: crate-level implementation details.
+- `benchmarks/README.md`: benchmark fixtures and current benchmark table.
+- `TODOs.md`: implementation checklist and remaining production gaps.

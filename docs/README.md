@@ -1,44 +1,63 @@
-# ENS Indexer Knowledgebase
+# ENS Indexer Docs
 
-This directory is the source-grounded implementation guide for building a custom ENS indexer in Rust without rindexer or The Graph runtime.
+This directory is the maintained knowledge base for the Rust ENS indexer. It describes the current system, not the historical research trail. Older exploratory notes were moved to [`../research`](../research).
 
-The source of truth for this research is the official ENS subgraph checked into:
+## Reading Order
 
-- `.repos/ens-subgraph/subgraph.yaml`
-- `.repos/ens-subgraph/schema.graphql`
-- `.repos/ens-subgraph/src/ensRegistry.ts`
-- `.repos/ens-subgraph/src/ethRegistrar.ts`
-- `.repos/ens-subgraph/src/nameWrapper.ts`
-- `.repos/ens-subgraph/src/resolver.ts`
-- `.repos/ens-subgraph/src/utils.ts`
+If you are new to ENS indexing, read in this order. The early pages explain the moving parts before the later pages get into compatibility and performance details.
 
-## Documents
+1. [Architecture](architecture.md): crate boundaries and end-to-end flow.
+2. [Operations](operations.md): how to run the service, backfill, replay raw archives, and deploy with Docker.
+3. [Ingestion And Archives](ingestion-and-archives.md): how logs enter the system and how raw archives work.
+4. [Projection And Storage](projection-and-storage.md): how ENS events become current rows, snapshots, and event history.
+5. [GraphQL Compatibility](graphql-compatibility.md): official ENS subgraph schema shape, filters, relationships, and gaps.
+6. [Performance And Benchmarks](performance-and-benchmarks.md): optimizations and benchmark comparisons.
+7. [Future Work](future-work.md): production-hardening and compatibility backlog.
 
-- [Official Subgraph Overview](official-subgraph-overview.md)
-  - indexed contracts, addresses, start blocks, event signatures, and runtime assumptions.
-- [Schema and GraphQL Shape](schema-and-graphql-shape.md)
-  - entity definitions, interfaces, IDs, relationships, GraphQL DTO shapes, and SQL-oriented table notes.
-- [Projection Logic](projection-logic.md)
-  - exact handler behavior for registry, registrar/controllers, name wrapper, resolver, event IDs, name construction, and edge cases.
-- [Rust Implementation Notes](rust-implementation-notes.md)
-  - suggested crate boundaries, alloy/sqlx DTOs, ingestion model, ordering concerns, and compatibility checklist.
-- [Rust Implementation Roadmap](implementation-roadmap.md)
-  - step-by-step workspace structure, crate responsibilities, database/API plan, filter implementation, testing strategy, and suggested delivery order.
+The docs intentionally repeat a few important concepts, such as projection cache, batched writes, and query indexes. That repetition is deliberate: these are the concepts that explain most correctness and performance behavior in the project.
 
-## Current Implementation Scaffold
+## System Overview
 
-The workspace uses unprefixed crate names: `types`, `contracts`, `config`, `storage`, `projection`, `ingest`, `api`, `server`, and `cli`. The `config` crate owns `.env` loading and typed runtime configuration so the CLI, server, and ingest jobs share one configuration path.
+```mermaid
+flowchart LR
+    Source["RPC / HyperSync / raw archive / live RPC-WSS"]
+    Ingest["ingest"]
+    Contracts["contracts"]
+    Projection["projection"]
+    Storage["storage + Postgres"]
+    API["api"]
+    Server["server"]
+    Client["GraphQL client"]
 
-The implementation currently has typed storage repositories and GraphQL DTOs for mutable entities, concrete event entities, GraphQL event interfaces with derived entity event relationships, `_meta`, historical `block`/`subgraphError` compatibility arguments on entity and event roots, generated-style scalar filters for the main stored entity fields, relationship ordering, `and/or` composition for `AccountFilter`, account relationship filters, scalar-compatible `DomainFilter`, `RegistrationFilter`, `ResolverFilter`, `WrappedDomainFilter`, and event filter predicates, concrete and event-interface-specific filters, event and mutable-entity `_change_block` predicates, projection-maintained `entity_changes` records, event parent/owner/addr scalar operators, event-specific relation scalar operators for `parentDomain`, new-resolver `resolver`, `registrant`, and `newOwner` columns, event relation predicates for domain/account/resolver/registration-backed columns, shallow trailing-underscore relationship filters, recursive `DomainFilter` relationship predicates, `Domain_filter.subdomains_` derived child-domain collection predicates, `Domain_filter.registration_` and `Domain_filter.wrappedDomain_` derived one-to-one relation predicates, entity `events_` derived collection predicates, relation-aware `RegistrationFilter`, `WrappedDomainFilter`, and `ResolverFilter` composition, a reduced production CLI with `start` and `status`, and a confirmation-depth live indexing loop with parent-hash reorg detection. Reorg repair currently performs a coarse full indexed-state reset and canonical rebuild. The remaining API parity work is audit-driven filter and nested historical context edge cases; the remaining indexing hardening work is efficient common-ancestor rollback, raw replay batching, and differential validation.
+    Source --> Ingest
+    Ingest --> Contracts
+    Contracts --> Ingest
+    Ingest --> Projection
+    Projection --> Storage
+    Client --> Server
+    Server --> API
+    API --> Storage
+```
 
-## Compatibility Goal
+The write side is deterministic: every source mode feeds the same decode and projection path. The read side is compatibility-focused: GraphQL resolvers map official ENS subgraph query shapes to SQL over current tables, snapshot tables, and event tables.
 
-The official subgraph exposes an entity graph, not just raw logs. A drop-in Rust replacement must reproduce:
+## What Is Current
 
-- the same top-level entities and event entities;
-- the same entity IDs;
-- the same derived relationships;
-- the same historical event projection behavior;
-- the same edge cases around old registry migration, resolver IDs, `.eth` registration expiry, wrapped-domain fuses, and invalid labels.
+- Production CLI: `ensindexer start` and `ensindexer status`.
+- Runtime: one process for HTTP, GraphQL, Apollo Sandbox, optional backfill, and optional live indexing.
+- Historical sources: RPC, HyperSync, and local raw archive replay.
+- Archive format: binary `.bin` range files plus `manifest.json`.
+- Storage: Postgres with current tables, event tables, snapshot tables, indexed blocks, source checkpoints, and query indexes.
+- API: `async-graphql` schema shaped for official ENS subgraph compatibility.
 
-The Graph has derived fields and interfaces built into its query layer. In Rust, those must be modeled explicitly in the database schema and GraphQL resolvers.
+## What Is Research
+
+The moved [`../research`](../research) directory contains:
+
+- official ENS subgraph implementation notes;
+- early Rust implementation planning;
+- schema and GraphQL shape research;
+- projection research;
+- historical implementation roadmap notes.
+
+Use those files when you need provenance or want to compare the current implementation against the original official subgraph research. Use this `docs/` directory for operating and extending the current Rust codebase.
