@@ -1,9 +1,6 @@
 [config]
 default_to_workspace = false
 
-[env]
-RAW_ARCHIVE_DIR = { value = ".raw-archive", condition = { env_not_set = ["RAW_ARCHIVE_DIR"] } }
-
 [tasks.db-up]
 description = "Start local Postgres through Docker Compose."
 command = "docker"

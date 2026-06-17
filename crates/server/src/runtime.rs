@@ -19,6 +19,8 @@ async fn serve_with_indexing(config: AppConfig, storage: Storage) -> anyhow::Res
         "starting unified HTTP and optional indexer service"
     );
 
+    let listener = http::bind_listener(config.bind_address).await?;
+    let app = http::build_router(storage.clone());
     let indexer_config = config.clone();
     let indexer_storage = storage.clone();
     let mut indexer = tokio::spawn(async move {
@@ -27,7 +29,7 @@ async fn serve_with_indexing(config: AppConfig, storage: Storage) -> anyhow::Res
     });
 
     tokio::select! {
-        http_result = http::serve_http(config, storage) => {
+        http_result = http::serve_http_listener(listener, app) => {
             indexer.abort();
             http_result
         }

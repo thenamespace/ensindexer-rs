@@ -94,7 +94,7 @@ pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Re
 
     match (from, to) {
         (Some(from), Some(to)) => Ok((from, to)),
-        _ => anyhow::bail!("raw archive contains no range files"),
+        _ => anyhow::bail!("raw archive {} contains no range files", dir.display()),
     }
 }
 
