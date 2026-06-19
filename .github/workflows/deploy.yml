@@ -13,8 +13,7 @@ jobs:
         with:
             project_id: prod-9427
             region: europe-west3
-        secrets:
-            workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+            workload_identity_provider: projects/397196751430/locations/global/workloadIdentityPools/github-pool/providers/github-provider
     update-prod:
         needs: build-and-push
         uses: ./.github/workflows/dispatch.yml
