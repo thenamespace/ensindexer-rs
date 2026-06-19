@@ -174,7 +174,7 @@ cargo make db-up
 ## Operational Notes
 
 - Raw replay and HyperSync startup backfill intentionally drop secondary query indexes only when the requested backfill spans more than 500,000 blocks, then recreate them afterward.
-- Startup checks for missing secondary replay/search indexes after migrations and recreates them before serving. This repairs the common case where a process was killed after index drop and before index recreation.
+- Startup checks for missing secondary replay/search indexes after migrations and recreates them before serving only when the database is near caught up. If `ENABLE_BACKFILL=true` and the minimum source checkpoint is still more than 500,000 blocks behind the current backfill target, startup skips migration/index repair for that run so crash restarts can resume large backfills without repeatedly recreating indexes that the backfill will drop again.
 - If you interrupt a large backfill after indexes were dropped, restart the service before doing query benchmarks so startup can repair missing indexes.
 - The server binds HTTP before spawning indexing workers, so a port collision will fail before raw replay can mutate the database.
 - Use release builds for meaningful throughput tests.

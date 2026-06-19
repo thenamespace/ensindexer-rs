@@ -57,6 +57,15 @@ impl Storage {
         Ok(())
     }
 
+    pub async fn schema_is_initialized(&self) -> StorageResult<bool> {
+        let exists = sqlx::query_scalar::<_, bool>(
+            "select to_regclass('public.source_checkpoints') is not null",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(exists)
+    }
+
     pub fn accounts(&self) -> AccountsRepo<'_> {
         AccountsRepo {
             pool: &self.pool,
