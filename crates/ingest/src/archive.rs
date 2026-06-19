@@ -98,6 +98,26 @@ pub(crate) fn available_bounds(dir: &Path, expected_chain_id: u64) -> anyhow::Re
     }
 }
 
+pub(crate) fn available_end_at_or_before(
+    dir: &Path,
+    expected_chain_id: u64,
+    target_block: u64,
+) -> anyhow::Result<Option<u64>> {
+    let manifest = load_manifest(dir)?;
+    anyhow::ensure!(
+        manifest.chain_id == 0 || manifest.chain_id == expected_chain_id,
+        "archive manifest chain_id {} does not match configured chain_id {}",
+        manifest.chain_id,
+        expected_chain_id
+    );
+    Ok(manifest
+        .ranges
+        .iter()
+        .filter(|range| range.to_block <= target_block)
+        .map(|range| range.to_block)
+        .max())
+}
+
 pub(crate) fn range_path(dir: &Path, from_block: u64, to_block: u64) -> PathBuf {
     dir.join("ranges")
         .join(format!("{from_block:020}-{to_block:020}.bin"))

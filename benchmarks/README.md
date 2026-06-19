@@ -116,6 +116,26 @@ After expanding the same DataLoader layer to `Domain.registration` and `Domain.w
 
 The largest wins are relationship-heavy domain result sets that request registration or wrapped-domain fields for many rows.
 
+## Latest Local Server Rerun
+
+On June 18, 2026, the fixtures were rerun against a release server on local `/subgraph` with the database indexed to block `25337644`. This run used 5 warmups and 25 measured iterations per query. These numbers are local HTTP timings, so they include Axum/JSON/loopback overhead and are not the same measurement type as the older in-process `local-compute` column. They are still useful as a current end-to-end local sanity check.
+
+| operation | local `/subgraph` median | p95 |
+| --- | ---: | ---: |
+| `01-domain-batch` | 4.839ms | 6.020ms |
+| `02-names-for-address` | 5.457ms | 6.053ms |
+| `03-eth-subnames` | 6.631ms | 7.351ms |
+| `04-subnames-search` | 149.506ms | 275.025ms |
+| `05-decoded-label` | 0.659ms | 1.402ms |
+| `06-resolver-records` | 13.489ms | 14.515ms |
+| `07-registrations` | 9.544ms | 10.946ms |
+| `08-name-history` | 4.903ms | 5.982ms |
+| `09-event-scan` | 27.300ms | 28.932ms |
+| `10-relationship-filter` | 4.846ms | 5.649ms |
+| `11-text-search` | 154.185ms | 162.622ms |
+
+Compared with the previous local slices, the structured relationship-heavy queries stayed comparable or improved. `06-resolver-records` and `07-registrations` are slightly slower than the older in-process medians, which is expected because this rerun includes the local HTTP server path. Broad subname/text search remains the main outlier.
+
 ## Adding Queries
 
 Add a new pair:

@@ -15,16 +15,25 @@ cargo make start
 ## Required Configuration
 
 ```env
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/ensindexer
+POSTGRES_DB=ensindexer
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
 ETH_RPC_URL=https://...
 CHAIN_ID=1
 BIND_ADDRESS=127.0.0.1:8080
 ```
 
+For Docker, Cloud Run, or any container deployment with a mapped port, use:
+
+```env
+BIND_ADDRESS=0.0.0.0:8080
+```
+
 Optional but commonly used:
 
 ```env
-ETH_WS_URL=wss://...
 ENVIO_API_KEY=...
 HYPERSYNC_URL=https://eth.hypersync.xyz
 RAW_ARCHIVE_DIR=.raw-archive-full
@@ -38,11 +47,19 @@ Indexing is explicit. There is no automatic source mode.
 ENABLE_BACKFILL=true
 BACKFILL_SOURCE=hypersync    # rpc | hypersync | raw
 ENABLE_LIVE_INDEXING=false
-LIVE_INDEXING_SOURCE=rpc     # rpc | wss
 ARCHIVE_BACKFILLS=false
 ```
 
 `BACKFILL_FROM` and `BACKFILL_TO` do not exist. The indexer resumes from database source checkpoints. Raw replay also uses archive coverage from `manifest.json`.
+
+When backfill and live indexing are enabled together, backfill stops before live indexing's confirmed head:
+
+```env
+INDEXER_CONFIRMATION_DEPTH=12
+BACKFILL_LIVE_GAP_BLOCKS=10
+```
+
+The startup backfill target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`; the live worker owns newer confirmed blocks.
 
 ## Command Surface
 
@@ -58,7 +75,7 @@ ensindexer status
 - `/healthz`;
 - `/readyz`.
 
-Backfill/live workers are optional and controlled by env or flags.
+Backfill/live workers are optional and controlled by env.
 
 ## Archive Once, Replay Many Times
 
@@ -102,13 +119,12 @@ Live indexing uses confirmed ranges:
 
 ```env
 ENABLE_LIVE_INDEXING=true
-LIVE_INDEXING_SOURCE=wss
-ETH_WS_URL=wss://...
 INDEXER_CONFIRMATION_DEPTH=12
+BACKFILL_LIVE_GAP_BLOCKS=10
 LIVE_POLL_SECONDS=12
 ```
 
-The live loop checks parent hashes before applying the next range. The current repair strategy is coarse: reset indexed state and rebuild from source starts. Efficient common-ancestor rollback is future work.
+The live loop polls `ETH_RPC_URL`, waits for confirmed blocks, and checks parent hashes before applying the next range. The current repair strategy is coarse: reset indexed state and rebuild from source starts. Efficient common-ancestor rollback is future work.
 
 ## Status
 
@@ -157,8 +173,9 @@ cargo make db-up
 
 ## Operational Notes
 
-- Raw replay intentionally drops secondary query indexes during bulk replay and recreates them afterward.
-- If you interrupt raw replay, recreate indexes before doing query benchmarks.
+- Raw replay and HyperSync startup backfill intentionally drop secondary query indexes only when the requested backfill spans more than 500,000 blocks, then recreate them afterward.
+- Startup checks for missing secondary replay/search indexes after migrations and recreates them before serving. This repairs the common case where a process was killed after index drop and before index recreation.
+- If you interrupt a large backfill after indexes were dropped, restart the service before doing query benchmarks so startup can repair missing indexes.
 - The server binds HTTP before spawning indexing workers, so a port collision will fail before raw replay can mutate the database.
 - Use release builds for meaningful throughput tests.
 - Keep benchmark tooling outside the production CLI.

@@ -8,7 +8,7 @@ The indexer is split into crates so each layer has one clear job. The important 
 | --- | --- | --- |
 | `types` | shared IDs, constants, block/log context helpers | ABI decoding, SQL, GraphQL |
 | `contracts` | Alloy ABI bindings and event decoding | projection rules, storage writes |
-| `config` | typed runtime config from env/flags | startup validation that needs storage |
+| `config` | typed runtime config from env | startup validation that needs storage |
 | `storage` | SQL schema, repositories, filters, buffers, snapshots, indexes | ABI decoding, HTTP, ENS event semantics |
 | `projection` | ENS event to subgraph entity/event rules | fetching logs, GraphQL response formatting |
 | `ingest` | backfill/live/archive orchestration and shared apply loop | HTTP serving, public GraphQL schema |
@@ -65,7 +65,7 @@ The server binds the HTTP listener before spawning indexing tasks. This prevents
 - Event rows flush after current rows so event foreign keys are valid.
 - Source checkpoints advance only after the range is applied.
 - Raw replay wraps each range in a transaction with `synchronous_commit=off`.
-- Raw replay can drop secondary query indexes before bulk replay and recreate them after.
+- Raw replay and HyperSync startup backfill can drop secondary query indexes before large backfills over 500,000 blocks and recreate them after.
 
 ## Read-Side Invariants
 

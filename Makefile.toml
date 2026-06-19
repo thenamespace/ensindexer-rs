@@ -36,9 +36,9 @@ description = "Start the service with HyperSync backfill and binary raw archivin
 env = { ENABLE_BACKFILL = "true", BACKFILL_SOURCE = "hypersync", ARCHIVE_BACKFILLS = "true" }
 run_task = "start"
 
-[tasks.start-live-wss]
-description = "Start the service with WSS live indexing enabled."
-env = { ENABLE_LIVE_INDEXING = "true", LIVE_INDEXING_SOURCE = "wss" }
+[tasks.start-live]
+description = "Start the service with HTTP RPC live indexing enabled."
+env = { ENABLE_LIVE_INDEXING = "true" }
 run_task = "start"
 
 [tasks.docker-build]
@@ -54,6 +54,8 @@ args = [
     "--rm",
     "--env-file",
     ".env",
+    "-e",
+    "BIND_ADDRESS=0.0.0.0:8080",
     "-p",
     "8080:8080",
     "ensindexer:local",

@@ -66,7 +66,7 @@ Storage receives projected writes from `projection` through an ingest transactio
 - block metadata through `BlocksRepo::upsert_many`
 - entity changes and snapshots through `ChangeBuffer`
 
-Dirty current rows are flushed before snapshots, with domains flushed parent-first to satisfy the `domains.parent_id` foreign key. Replay maintenance can drop and recreate secondary query indexes around bulk raw archive replay.
+Dirty current rows are flushed before snapshots, with domains flushed parent-first to satisfy the `domains.parent_id` foreign key. Replay maintenance can drop and recreate secondary query indexes around large raw archive and HyperSync backfills.
 
 Domain exact `name` and `label_name` filters use MD5 expression indexes plus exact text rechecks so lookups stay fast without unsafe btree indexes over arbitrarily large on-chain strings. `labelhash` has a normal btree index because it is fixed-size hex text.
 

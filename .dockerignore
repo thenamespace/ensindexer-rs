@@ -1,5 +1,7 @@
 .env
 .git
 .raw-archive
+.raw-archive*
+.repos
 target
 postgres_data

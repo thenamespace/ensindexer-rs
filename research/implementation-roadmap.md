@@ -583,19 +583,22 @@ Runtime config:
 
 | Variable                     | Purpose                                                     |
 | ---------------------------- | ----------------------------------------------------------- |
-| `DATABASE_URL`               | Postgres connection string                                  |
+| `POSTGRES_DB`                | Postgres database name                                      |
+| `POSTGRES_USER`              | Postgres user                                               |
+| `POSTGRES_PASSWORD`          | Postgres password                                           |
+| `POSTGRES_HOST`              | Postgres host                                               |
+| `POSTGRES_PORT`              | Postgres port, default `5432`                               |
 | `ETH_RPC_URL`                | Ethereum JSON-RPC endpoint                                  |
-| `ETH_WS_URL`                 | Ethereum websocket endpoint, required when `LIVE_INDEXING_SOURCE=wss` |
 | `ENVIO_API_KEY`              | Envio HyperSync API key for fast historical backfills       |
 | `HYPERSYNC_URL`              | HyperSync endpoint, default `https://eth.hypersync.xyz`     |
 | `ENABLE_BACKFILL`            | run configured startup backfill in `ensindexer start`       |
 | `ENABLE_LIVE_INDEXING`       | run live confirmed-block indexing in `ensindexer start`     |
 | `BACKFILL_SOURCE`            | strict historical source selector: `rpc`, `hypersync`, or `raw` |
-| `LIVE_INDEXING_SOURCE`       | strict live source selector: `rpc` or `wss`                 |
 | `ARCHIVE_BACKFILLS`          | write fetched backfill ranges to `RAW_ARCHIVE_DIR` when true |
 | `RAW_ARCHIVE_DIR`            | archive directory used for backfill writes and raw replay   |
 | `CHAIN_ID`                   | chain selector                                              |
 | `INDEXER_CONFIRMATION_DEPTH` | live indexing lag                                           |
+| `BACKFILL_LIVE_GAP_BLOCKS`   | extra gap between startup backfill and live indexing when both are enabled |
 | `BACKFILL_BATCH_BLOCKS`      | initial range size                                          |
 | `LIVE_POLL_SECONDS`          | live loop sleep interval when the safe head has no new work |
 | `SUBGRAPH_URL`               | official or reference GraphQL endpoint for diff checks      |
@@ -610,7 +613,7 @@ ensindexer start
 ensindexer status
 ```
 
-`ensindexer start` always runs HTTP, GraphQL, and Apollo Sandbox. Startup backfill, live indexing, historical source selection, live transport selection, and raw archive writes are controlled through strict env values and equivalent startup flags. `ensindexer status` prints the latest locally stored block and per-source checkpoints.
+`ensindexer start` always runs HTTP, GraphQL, and Apollo Sandbox. Startup backfill, live indexing, historical source selection, and raw archive writes are controlled through strict env values. `ensindexer status` prints the latest locally stored block and per-source checkpoints.
 
 Schema diffing, reference-subgraph comparisons, benchmark execution, label healing, archive inspection, and destructive reset helpers are internal tooling concerns. They should live in separate development binaries or scripts instead of the public production binary.
 

@@ -1,6 +1,6 @@
 # ingest
 
-The `ingest` crate moves chain data into the projection pipeline. It fetches logs and block metadata from RPC, HyperSync, WebSocket/live RPC, or binary raw archives; decodes events; applies projection handlers; writes storage batches; checkpoints progress; and maintains raw archive metadata for repeatable backfills.
+The `ingest` crate moves chain data into the projection pipeline. It fetches logs and block metadata from RPC, HyperSync, live RPC polling, or binary raw archives; decodes events; applies projection handlers; writes storage batches; checkpoints progress; and maintains raw archive metadata for repeatable backfills.
 
 ## Flow
 
@@ -8,7 +8,7 @@ The `ingest` crate moves chain data into the projection pipeline. It fetches log
 sequenceDiagram
     participant CLI as cli/server runtime
     participant Ingest as IngestService
-    participant Source as RPC/HyperSync/WSS/raw .bin
+    participant Source as RPC/HyperSync/live RPC/raw .bin
     participant Contracts as contracts
     participant Projection as projection
     participant Storage as storage
@@ -42,7 +42,9 @@ All historical fill modes share the same buffered apply path:
 8. Flush snapshots and event rows in chunks below Postgres bind limits.
 9. Commit the range transaction and write checkpoints.
 
-Raw replay reads one `.bin` file at a time, prefetches the next file, keeps a replay-level projection cache across files, and can temporarily drop secondary query indexes before bulk replay.
+Raw replay reads one `.bin` file at a time, prefetches the next file, keeps a replay-level projection cache across files, and can temporarily drop secondary query indexes before bulk replay. Secondary indexes are dropped only when the requested raw or HyperSync range spans more than 500,000 blocks; short catchups keep indexes online. Startup HyperSync backfill uses the same thresholded maintenance window so dense historical ranges keep the same write-throughput profile as raw replay.
+
+When live indexing is enabled together with backfill, historical backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing owns the newer confirmed range and always uses `ETH_RPC_URL`, so `BACKFILL_SOURCE=hypersync` does not cause live polling to fetch logs through HyperSync.
 
 ## Binary Archive Format
 
@@ -96,11 +98,13 @@ Ingestion writes:
 - Binary raw archive replay.
 - Manifest coverage inspection and checksum verification.
 - Resolver discovery from registry logs and existing resolver rows.
-- Shared batched projection apply path for RPC, HyperSync, and raw replay.
-- Live indexing through HTTP polling or WSS source selection.
+- Shared batched projection apply path for RPC, HyperSync, raw replay, and live ranges.
+- HyperSync bulk backfill index maintenance matching raw replay.
+- Backfill/live range separation to prevent duplicate fresh-block fetching.
+- Live indexing through confirmed HTTP RPC polling.
 - Confirmation-depth handling and parent-hash reorg detection.
 - Coarse reorg repair by reset and rebuild.
-- Replay performance features: prefetch, replay-level cache, batched current/entity/event writes, block batch writes, and temporary secondary-index drop/recreate.
+- Replay performance features: prefetch, replay-level cache, batched current/entity/event writes, block batch writes, and thresholded temporary secondary-index drop/recreate.
 
 ## Future Improvements
 

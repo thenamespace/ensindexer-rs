@@ -6,7 +6,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
 };
 use alloy_network_primitives::HeaderResponse;
-use config::IndexingSource;
 use tokio::time::sleep;
 
 use super::IngestService;
@@ -18,12 +17,12 @@ impl IngestService {
             chain_id = self.config.chain_id,
             confirmation_depth = self.config.indexer_confirmation_depth,
             poll_seconds = self.config.live_poll_seconds,
-            live_indexing_source = ?self.config.live_indexing_source,
-            "live indexer requested"
+            "live indexer requested with HTTP RPC polling"
         );
 
-        let provider_url = self.live_provider_url()?;
-        let provider = ProviderBuilder::new().connect(provider_url).await?;
+        let provider = ProviderBuilder::new()
+            .connect(self.config.eth_rpc_url.as_str())
+            .await?;
 
         loop {
             let latest = provider.get_block_number().await?;
@@ -62,7 +61,7 @@ impl IngestService {
                 to_block = range_end,
                 "indexing live confirmed range"
             );
-            self.backfill_range(next_block, range_end).await?;
+            self.live_range(next_block, range_end).await?;
         }
     }
 
@@ -96,18 +95,6 @@ impl IngestService {
 
         anyhow::ensure!(next_block != u64::MAX, "no ingest sources configured");
         Ok(next_block)
-    }
-
-    fn live_provider_url(&self) -> anyhow::Result<&str> {
-        match self.config.live_indexing_source {
-            IndexingSource::HttpRpc => Ok(self.config.eth_rpc_url.as_str()),
-            IndexingSource::Wss => self
-                .config
-                .eth_ws_url
-                .as_ref()
-                .map(|url| url.as_str())
-                .ok_or_else(|| anyhow::anyhow!("LIVE_INDEXING_SOURCE=wss requires ETH_WS_URL")),
-        }
     }
 
     async fn verify_parent_hash<P, N>(&self, provider: &P, next_block: u64) -> anyhow::Result<bool>

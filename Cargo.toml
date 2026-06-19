@@ -20,6 +20,7 @@ axum = "0.8.9"
 bigdecimal = { version = "0.4.10", features = ["serde"] }
 clap = { version = "4.6.1", features = ["derive", "env"] }
 dotenvy = "0.15.7"
+figment = { version = "0.10.19", features = ["env"] }
 hypersync-client = "1"
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
 rmp-serde = "1.3.0"

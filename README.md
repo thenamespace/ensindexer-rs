@@ -104,11 +104,19 @@ cargo run -p cli --bin ensindexer -- status
 Historical indexing is explicit. There is no automatic source selection.
 
 ```env
+POSTGRES_DB=ensindexer
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
 ENABLE_BACKFILL=true
 BACKFILL_SOURCE=rpc        # rpc | hypersync | raw
 ENABLE_LIVE_INDEXING=false
-LIVE_INDEXING_SOURCE=rpc   # rpc | wss
+INDEXER_CONFIRMATION_DEPTH=12
+BACKFILL_LIVE_GAP_BLOCKS=10
 ```
+
+When `ENABLE_BACKFILL=true` and `ENABLE_LIVE_INDEXING=true`, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing owns newer confirmed blocks, so the two workers do not fetch the same fresh block.
 
 Raw archives let you fetch logs once, store them locally, and replay projection repeatedly without spending RPC or HyperSync credits:
 
@@ -155,7 +163,7 @@ The indexer includes optimizations added from full-mainnet replay and query prof
 - Range-level write buffering and raw replay transactions.
 - Replay-level current-state cache.
 - Batched current rows, blocks, entity changes, snapshots, and event inserts.
-- Temporary secondary-index drop/recreate around bulk raw replay.
+- Temporary secondary-index drop/recreate for raw or HyperSync backfills spanning more than 500,000 blocks.
 - Parent-first domain flushes for self-referential foreign keys.
 - Hash-backed exact text indexes for long ENS names and labels.
 - Trigram indexes for fuzzy name search.

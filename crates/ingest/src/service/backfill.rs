@@ -16,14 +16,31 @@ use crate::{
 
 impl IngestService {
     pub async fn backfill_range(&self, from_block: u64, to_block: u64) -> anyhow::Result<()> {
+        self.ingest_range(from_block, to_block, RangeIngestMode::Backfill)
+            .await
+    }
+
+    pub(super) async fn live_range(&self, from_block: u64, to_block: u64) -> anyhow::Result<()> {
+        self.ingest_range(from_block, to_block, RangeIngestMode::Live)
+            .await
+    }
+
+    async fn ingest_range(
+        &self,
+        from_block: u64,
+        to_block: u64,
+        mode: RangeIngestMode,
+    ) -> anyhow::Result<()> {
         anyhow::ensure!(
             from_block <= to_block,
             "from block must be less than or equal to to block"
         );
-        anyhow::ensure!(
-            !self.config.backfill_source.is_raw(),
-            "BACKFILL_SOURCE=raw is only valid for archive replay"
-        );
+        if mode.is_backfill() {
+            anyhow::ensure!(
+                !self.config.backfill_source.is_raw(),
+                "BACKFILL_SOURCE=raw is only valid for archive replay"
+            );
+        }
 
         tracing::info!(
             chain_id = self.config.chain_id,
@@ -31,13 +48,14 @@ impl IngestService {
             to_block,
             batch_blocks = self.config.backfill_batch_blocks,
             backfill_source = ?self.config.backfill_source,
-            "starting fixed-source backfill"
+            mode = ?mode,
+            "starting fixed-source range ingest"
         );
 
         let provider = ProviderBuilder::new()
             .connect(self.config.eth_rpc_url.as_str())
             .await?;
-        let hypersync = self.hypersync_backfill_client()?;
+        let hypersync = mode.hypersync_backfill_client(self)?;
         let sources = fixed_sources()?;
         let mut range_start = from_block;
 
@@ -129,7 +147,7 @@ impl IngestService {
                 block_meta.insert(range_end, meta);
             }
 
-            if self.config.archive_backfills {
+            if mode.is_backfill() && self.config.archive_backfills {
                 let dir = self.config.raw_archive_dir.as_ref().ok_or_else(|| {
                     anyhow::anyhow!("RAW_ARCHIVE_DIR is required when ARCHIVE_BACKFILLS=true")
                 })?;
@@ -156,7 +174,8 @@ impl IngestService {
             tracing::info!(
                 from_block = range_start,
                 to_block = range_end,
-                "applied fixed-source backfill range"
+                mode = ?mode,
+                "applied fixed-source range"
             );
 
             if range_end == u64::MAX {
@@ -206,6 +225,28 @@ impl IngestService {
         add_discovered_resolvers(&mut addresses, raw_logs)?;
 
         Ok(addresses.into_iter().collect())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RangeIngestMode {
+    Backfill,
+    Live,
+}
+
+impl RangeIngestMode {
+    fn is_backfill(self) -> bool {
+        matches!(self, Self::Backfill)
+    }
+
+    fn hypersync_backfill_client(
+        self,
+        service: &IngestService,
+    ) -> anyhow::Result<Option<HypersyncBackfillClient>> {
+        match self {
+            Self::Backfill => service.hypersync_backfill_client(),
+            Self::Live => Ok(None),
+        }
     }
 }
 

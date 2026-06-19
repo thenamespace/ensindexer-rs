@@ -26,7 +26,7 @@ sequenceDiagram
 - `ensindexer start`: starts health routes, GraphQL API, Apollo Sandbox, and optional indexing workers.
 - `ensindexer status`: prints the latest indexed block and per-source checkpoints.
 
-`start` accepts env variables and equivalent `--kebab-case` flags for the operational config: database URL, RPC URL, WSS URL, HyperSync URL/API key, raw archive directory, chain ID, bind address, backfill/live toggles, source selectors, archive writes, batch size, confirmation depth, and polling interval. The archive-write flag is `--archive-backfill`; `--archive-backfills` remains accepted as a compatibility alias.
+`start` does not accept runtime config flags. Environment variables are the source of truth for Postgres components, RPC URL, HyperSync URL/API key, raw archive directory, chain ID, bind address, backfill/live toggles, the backfill source selector, archive writes, batch size, confirmation depth, backfill/live gap, and polling interval.
 
 ## Projection Awareness
 
@@ -42,9 +42,10 @@ Backfill behavior is controlled by:
 Live behavior is controlled by:
 
 - `ENABLE_LIVE_INDEXING=true`
-- `LIVE_INDEXING_SOURCE=rpc|wss`
 
 There is no automatic source selection and no `BACKFILL_FROM` or `BACKFILL_TO` setting. RPC and HyperSync resume from database checkpoints; raw replay resumes from archive coverage and database checkpoints.
+
+When backfill and live indexing are enabled together, startup backfill intentionally stops before the live safe head. The target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`, and the live worker processes newer confirmed blocks from there. This prevents historical and live workers from fetching the same new block.
 
 ## Storage Shape Used
 
@@ -64,7 +65,7 @@ The CLI owns no SQL table definitions. It connects through `storage`, runs the w
 - `ensindexer start`.
 - `ensindexer status`.
 - Env and flag override support for startup config.
-- Strict validation for raw replay, archive writes, HyperSync credentials, and WSS live indexing.
+- Strict validation for raw replay, archive writes, and HyperSync credentials.
 - Automatic migration execution on startup.
 
 ## Future Improvements

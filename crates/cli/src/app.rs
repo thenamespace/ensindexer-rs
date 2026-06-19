@@ -1,10 +1,7 @@
-use std::{net::SocketAddr, path::PathBuf, str::FromStr};
-
-use clap::{Args, Parser, Subcommand};
-use config::{AppConfig, BackfillSource, IndexingSource};
+use clap::{Parser, Subcommand};
+use config::{AppConfig, BackfillSource};
 use storage::Storage;
 use tracing_subscriber::{EnvFilter, fmt};
-use url::Url;
 
 #[derive(Debug, Parser)]
 #[command(name = "ensindexer", about = "Production Rust ENS indexer")]
@@ -16,47 +13,9 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Start HTTP, GraphQL, Playground, and optional indexing workers.
-    Start(Box<StartArgs>),
+    Start,
     /// Print latest indexed block and source checkpoints.
     Status,
-}
-
-#[derive(Debug, Args, Default)]
-struct StartArgs {
-    #[arg(long)]
-    database_url: Option<String>,
-    #[arg(long)]
-    eth_rpc_url: Option<Url>,
-    #[arg(long)]
-    eth_ws_url: Option<Url>,
-    #[arg(long)]
-    envio_api_key: Option<String>,
-    #[arg(long)]
-    hypersync_url: Option<Url>,
-    #[arg(long)]
-    raw_archive_dir: Option<PathBuf>,
-    #[arg(long)]
-    chain_id: Option<u64>,
-    #[arg(long)]
-    bind_address: Option<SocketAddr>,
-
-    #[arg(long)]
-    enable_backfill: Option<bool>,
-    #[arg(long, value_name = "rpc|hypersync|raw", value_parser = parse_backfill_source)]
-    backfill_source: Option<BackfillSource>,
-    #[arg(long)]
-    enable_live_indexing: Option<bool>,
-    #[arg(long, value_name = "rpc|wss", value_parser = parse_indexing_source)]
-    live_indexing_source: Option<IndexingSource>,
-    #[arg(long = "archive-backfill", visible_alias = "archive-backfills")]
-    archive_backfills: Option<bool>,
-
-    #[arg(long)]
-    indexer_confirmation_depth: Option<u64>,
-    #[arg(long)]
-    backfill_batch_blocks: Option<u64>,
-    #[arg(long)]
-    live_poll_seconds: Option<u64>,
 }
 
 pub async fn run() -> anyhow::Result<()> {
@@ -64,14 +23,13 @@ pub async fn run() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     match Cli::parse().command {
-        Command::Start(args) => start(*args).await,
+        Command::Start => start().await,
         Command::Status => status().await,
     }
 }
 
-async fn start(args: StartArgs) -> anyhow::Result<()> {
-    let mut config = AppConfig::from_env()?;
-    args.apply(&mut config);
+async fn start() -> anyhow::Result<()> {
+    let config = AppConfig::from_env()?;
     validate_start_config(&config)?;
 
     let storage = if config.backfill_source.is_raw() {
@@ -80,6 +38,7 @@ async fn start(args: StartArgs) -> anyhow::Result<()> {
         Storage::connect(&config.database_url).await?
     };
     storage.run_migrations().await?;
+    storage.maintenance().ensure_bulk_replay_indexes().await?;
     server::serve(config, storage).await
 }
 
@@ -106,13 +65,7 @@ fn validate_start_config(config: &AppConfig) -> anyhow::Result<()> {
             "ARCHIVE_BACKFILLS=true requires RAW_ARCHIVE_DIR"
         );
     }
-    if config.enable_live_indexing && config.live_indexing_source == IndexingSource::Wss {
-        anyhow::ensure!(
-            config.eth_ws_url.is_some(),
-            "LIVE_INDEXING_SOURCE=wss requires ETH_WS_URL"
-        );
-    }
-    if config.backfill_source == BackfillSource::Hypersync {
+    if config.enable_backfill && config.backfill_source == BackfillSource::Hypersync {
         anyhow::ensure!(
             config
                 .envio_api_key
@@ -122,53 +75,6 @@ fn validate_start_config(config: &AppConfig) -> anyhow::Result<()> {
         );
     }
     Ok(())
-}
-
-impl StartArgs {
-    fn apply(self, config: &mut AppConfig) {
-        override_if_some(&mut config.database_url, self.database_url);
-        override_if_some(&mut config.eth_rpc_url, self.eth_rpc_url);
-        set_option_if_some(&mut config.eth_ws_url, self.eth_ws_url);
-        set_option_if_some(&mut config.envio_api_key, self.envio_api_key);
-        override_if_some(&mut config.hypersync_url, self.hypersync_url);
-        set_option_if_some(&mut config.raw_archive_dir, self.raw_archive_dir);
-        override_if_some(&mut config.chain_id, self.chain_id);
-        override_if_some(&mut config.bind_address, self.bind_address);
-        override_if_some(&mut config.enable_backfill, self.enable_backfill);
-        override_if_some(&mut config.backfill_source, self.backfill_source);
-        override_if_some(&mut config.enable_live_indexing, self.enable_live_indexing);
-        override_if_some(&mut config.live_indexing_source, self.live_indexing_source);
-        override_if_some(&mut config.archive_backfills, self.archive_backfills);
-        override_if_some(
-            &mut config.indexer_confirmation_depth,
-            self.indexer_confirmation_depth,
-        );
-        override_if_some(
-            &mut config.backfill_batch_blocks,
-            self.backfill_batch_blocks,
-        );
-        override_if_some(&mut config.live_poll_seconds, self.live_poll_seconds);
-    }
-}
-
-fn override_if_some<T>(target: &mut T, value: Option<T>) {
-    if let Some(value) = value {
-        *target = value;
-    }
-}
-
-fn set_option_if_some<T>(target: &mut Option<T>, value: Option<T>) {
-    if let Some(value) = value {
-        *target = Some(value);
-    }
-}
-
-fn parse_backfill_source(value: &str) -> Result<BackfillSource, String> {
-    BackfillSource::from_str(value).map_err(|error| error.to_string())
-}
-
-fn parse_indexing_source(value: &str) -> Result<IndexingSource, String> {
-    IndexingSource::from_str(value).map_err(|error| error.to_string())
 }
 
 async fn print_status(storage: &Storage) -> anyhow::Result<()> {

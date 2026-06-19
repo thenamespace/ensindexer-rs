@@ -150,11 +150,11 @@ A single entity can change multiple times inside one range. The change buffer de
 
 Read indexes are expensive during bulk replay. Every insert/update must also update the indexes. For tens of millions of rows, this can dominate runtime.
 
-Raw replay can drop secondary query indexes before replay and recreate them after replay:
+Raw replay and HyperSync startup backfill can drop secondary query indexes before replay and recreate them after replay, but only when the requested range spans more than 500,000 blocks. Short catchups keep indexes online because the drop/recreate cost is not worth it.
 
 ```mermaid
 sequenceDiagram
-    participant Replay as raw replay
+    participant Replay as raw or HyperSync backfill
     participant Pg as Postgres
 
     Replay->>Pg: drop secondary query indexes

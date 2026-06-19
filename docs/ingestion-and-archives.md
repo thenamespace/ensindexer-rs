@@ -9,7 +9,7 @@ The `ingest` crate is the write-side runtime. It fetches or reads logs, decodes 
 | RPC | Simple historical backfill. | Slower and credit-heavy for full history. |
 | HyperSync | Fast historical backfill. | Requires `ENVIO_API_KEY`; useful for first full archive creation. |
 | Raw archive | Repeat projection without network fetches. | Reads local binary `.bin` ranges. |
-| Live RPC/WSS | Confirmed live indexing. | Uses confirmation depth and parent-hash checks. |
+| Live RPC | Confirmed live indexing. | Uses confirmation depth and parent-hash checks. |
 
 ## Historical Flow
 
@@ -96,7 +96,7 @@ RPC and HyperSync backfills start from the minimum next checkpoint across active
 Raw replay is the fastest path for projection iteration because it avoids network fetches and can optimize storage writes:
 
 1. Inspect archive bounds and source checkpoints.
-2. Drop secondary query indexes before bulk replay.
+2. Drop secondary query indexes before bulk replay only when the requested range spans more than 500,000 blocks.
 3. Keep a replay-level entity cache across range files.
 4. Prefetch the next `.bin` range while applying the current range.
 5. Wrap each raw range in one Postgres transaction.
@@ -136,7 +136,7 @@ The main production tricks are:
 | Touched-entity preload | Batch-load rows that this range will probably touch. | Replaces many tiny point queries with fewer set queries. |
 | Range transaction | Commit one archive range at a time. | Reduces commit overhead and keeps checkpointing atomic per range. |
 | `synchronous_commit=off` | Let raw replay avoid waiting for every commit flush. | Improves replay throughput in a rebuildable local/archive-backed workflow. |
-| Temporary index drop | Remove read indexes before huge replay, rebuild after. | Bulk index creation is cheaper than maintaining indexes row by row. |
+| Temporary index drop | Remove read indexes before huge replays over 500,000 blocks, rebuild after. | Bulk index creation is cheaper than maintaining indexes row by row for large backfills; short catchups keep indexes available. |
 
 These are replay optimizations, not shortcuts in projection semantics. The same ordered logs still pass through the same projection handlers.
 
@@ -147,7 +147,7 @@ These are replay optimizations, not shortcuts in projection semantics. The same 
 - Raw replay verifies ranges before applying them.
 - Checkpoints update after the range flushes.
 - If a replay is interrupted mid-range, the next run resumes from checkpoints and can re-apply the partially attempted range idempotently.
-- If raw replay is interrupted after secondary indexes were dropped, recreate indexes before benchmarking query latency.
+- If a large raw replay is interrupted after secondary indexes were dropped, recreate indexes before benchmarking query latency.
 
 ## Current Limitations
 

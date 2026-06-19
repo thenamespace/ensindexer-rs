@@ -20,7 +20,7 @@ The docs intentionally repeat a few important concepts, such as projection cache
 
 ```mermaid
 flowchart LR
-    Source["RPC / HyperSync / raw archive / live RPC-WSS"]
+    Source["RPC / HyperSync / raw archive / live RPC"]
     Ingest["ingest"]
     Contracts["contracts"]
     Projection["projection"]

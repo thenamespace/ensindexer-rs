@@ -1,6 +1,8 @@
 use std::{path::PathBuf, time::Instant};
 
-use super::IngestService;
+use super::{
+    BULK_INDEX_DROP_BLOCK_THRESHOLD, IngestService, backfill_block_span, should_drop_bulk_indexes,
+};
 use crate::archive::{ArchiveManifestRange, ArchivedRange, range_entries, read_range_entry};
 
 impl IngestService {
@@ -10,12 +12,14 @@ impl IngestService {
     ) -> anyhow::Result<()> {
         let archive_dir = archive_dir
             .or_else(|| self.config.raw_archive_dir.clone())
-            .ok_or_else(|| {
-                anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required for replay")
-            })?;
-        let (from_block, to_block) = self.resolve_archive_replay_range(&archive_dir).await?;
-        self.replay_archive_range(from_block, to_block, Some(archive_dir))
-            .await
+            .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR is required for replay"))?;
+        match self.resolve_archive_replay_range(&archive_dir).await? {
+            Some((from_block, to_block)) => {
+                self.replay_archive_range(from_block, to_block, Some(archive_dir))
+                    .await
+            }
+            None => Ok(()),
+        }
     }
 
     pub async fn replay_archive_range(
@@ -26,9 +30,7 @@ impl IngestService {
     ) -> anyhow::Result<()> {
         let archive_dir = archive_dir
             .or_else(|| self.config.raw_archive_dir.clone())
-            .ok_or_else(|| {
-                anyhow::anyhow!("RAW_ARCHIVE_DIR or --archive-dir is required for replay")
-            })?;
+            .ok_or_else(|| anyhow::anyhow!("RAW_ARCHIVE_DIR is required for replay"))?;
 
         tracing::info!(
             chain_id = self.config.chain_id,
@@ -37,6 +39,19 @@ impl IngestService {
             archive_dir = %archive_dir.display(),
             "starting raw archive replay"
         );
+
+        if !should_drop_bulk_indexes(from_block, to_block) {
+            tracing::info!(
+                from_block,
+                to_block,
+                block_span = backfill_block_span(from_block, to_block),
+                threshold = BULK_INDEX_DROP_BLOCK_THRESHOLD,
+                "keeping secondary indexes for small raw archive replay"
+            );
+            return self
+                .replay_archive_range_without_indexes(&archive_dir, from_block, to_block)
+                .await;
+        }
 
         tracing::info!("dropping secondary indexes for bulk raw replay");
         self.storage
