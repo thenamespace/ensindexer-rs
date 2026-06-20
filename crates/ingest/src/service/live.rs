@@ -41,12 +41,10 @@ impl IngestService {
             }
 
             if !self.verify_parent_hash(&provider, next_block).await? {
-                tracing::warn!(
-                    next_block,
-                    "reorg detected; clearing indexed state for canonical rebuild"
+                anyhow::bail!(
+                    "parent hash mismatch before live block {}; refusing to continue without deleting indexed data",
+                    next_block
                 );
-                self.storage.maintenance().reset_indexed_data().await?;
-                continue;
             }
 
             let range_end = cmp::min(

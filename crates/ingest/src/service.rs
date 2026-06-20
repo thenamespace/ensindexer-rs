@@ -58,6 +58,21 @@ impl IngestService {
             );
             return Ok(None);
         }
+        if should_handoff_backfill_to_live(
+            self.config.enable_live_indexing,
+            self.config.backfill_live_gap_blocks,
+            from_block,
+            to_block,
+        ) {
+            tracing::info!(
+                from_block,
+                to_block,
+                block_span = backfill_block_span(from_block, to_block),
+                live_gap_blocks = self.config.backfill_live_gap_blocks,
+                "skipping startup backfill because live indexing can process the remaining confirmed range"
+            );
+            return Ok(None);
+        }
         Ok(Some((from_block, to_block)))
     }
 
@@ -83,6 +98,22 @@ impl IngestService {
                 to_block,
                 archived_to,
                 "raw archive replay has no range to process"
+            );
+            return Ok(None);
+        }
+        if should_handoff_backfill_to_live(
+            self.config.enable_live_indexing,
+            self.config.backfill_live_gap_blocks,
+            from_block,
+            to_block,
+        ) {
+            tracing::info!(
+                from_block,
+                to_block,
+                archived_to,
+                block_span = backfill_block_span(from_block, to_block),
+                live_gap_blocks = self.config.backfill_live_gap_blocks,
+                "skipping raw archive replay because live indexing can process the remaining confirmed range"
             );
             return Ok(None);
         }
@@ -189,9 +220,20 @@ pub(crate) fn backfill_block_span(from_block: u64, to_block: u64) -> u64 {
     to_block.saturating_sub(from_block).saturating_add(1)
 }
 
+pub(crate) fn should_handoff_backfill_to_live(
+    enable_live_indexing: bool,
+    live_gap_blocks: u64,
+    from_block: u64,
+    to_block: u64,
+) -> bool {
+    enable_live_indexing && backfill_block_span(from_block, to_block) <= live_gap_blocks
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{BULK_INDEX_DROP_BLOCK_THRESHOLD, should_drop_bulk_indexes};
+    use super::{
+        BULK_INDEX_DROP_BLOCK_THRESHOLD, should_drop_bulk_indexes, should_handoff_backfill_to_live,
+    };
 
     #[test]
     fn bulk_index_drop_requires_more_than_threshold_blocks() {
@@ -203,5 +245,12 @@ mod tests {
             1,
             BULK_INDEX_DROP_BLOCK_THRESHOLD + 1
         ));
+    }
+
+    #[test]
+    fn live_handoff_skips_only_small_ranges_when_live_is_enabled() {
+        assert!(should_handoff_backfill_to_live(true, 10, 100, 109));
+        assert!(!should_handoff_backfill_to_live(true, 10, 100, 110));
+        assert!(!should_handoff_backfill_to_live(false, 10, 100, 109));
     }
 }

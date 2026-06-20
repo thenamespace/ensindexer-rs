@@ -53,12 +53,12 @@ const ENTRIES: &[BenchmarkEntry] = &[
         auth_bearer_env: None,
         overrides: &[],
     },
-    // BenchmarkEntry {
-    //     name: "ensindexer-rs (Hosted)",
-    //     url: "https://ensindexer-rs.namespace.ninja/subgraph",
-    //     auth_bearer_env: None,
-    //     overrides: &[],
-    // },
+    BenchmarkEntry {
+        name: "ensindexer-rs (Hosted)",
+        url: "https://ensindexer-rs.namespace.ninja/subgraph",
+        auth_bearer_env: None,
+        overrides: &[],
+    },
     BenchmarkEntry {
         name: "ensnode",
         url: "https://api.alpha.ensnode.io/subgraph",

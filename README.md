@@ -116,7 +116,7 @@ INDEXER_CONFIRMATION_DEPTH=12
 BACKFILL_LIVE_GAP_BLOCKS=10
 ```
 
-When `ENABLE_BACKFILL=true` and `ENABLE_LIVE_INDEXING=true`, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing starts after backfill completes and resumes from database checkpoint + 1, so it catches up contiguously without skipping blocks.
+When `ENABLE_BACKFILL=true` and `ENABLE_LIVE_INDEXING=true`, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. If the remaining startup backfill span is already within `BACKFILL_LIVE_GAP_BLOCKS`, startup backfill is skipped and live indexing takes over from database checkpoint + 1.
 
 Raw archives let you fetch logs once, store them locally, and replay projection repeatedly without spending RPC or HyperSync credits:
 

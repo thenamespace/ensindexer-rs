@@ -45,7 +45,7 @@ Live behavior is controlled by:
 
 There is no automatic source selection and no `BACKFILL_FROM` or `BACKFILL_TO` setting. RPC and HyperSync resume from database checkpoints; raw replay resumes from archive coverage and database checkpoints.
 
-When backfill and live indexing are enabled together, startup backfill intentionally stops before the live safe head. The target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`, and the live worker starts afterward from checkpoint + 1. This prevents skipped blocks while keeping the live worker behind the current chain tip.
+When backfill and live indexing are enabled together, startup backfill intentionally stops before the live safe head. The target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. If the remaining startup backfill span is already within `BACKFILL_LIVE_GAP_BLOCKS`, the CLI skips startup backfill and lets the live worker continue from checkpoint + 1.
 
 ## Storage Shape Used
 
