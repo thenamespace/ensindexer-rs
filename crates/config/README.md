@@ -44,7 +44,7 @@ There are no `BACKFILL_FROM` or `BACKFILL_TO` variables. Historical backfill res
 
 ## Projection Awareness
 
-Configuration controls how projection is reached but does not project data. `BACKFILL_SOURCE` selects the historical transport, `ARCHIVE_BACKFILLS` decides whether fetched data is persisted as raw binary ranges, and `ENABLE_*` toggles decide which workers `ensindexer start` enables. When backfill and live indexing are both enabled, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`; live indexing owns the newer confirmed blocks.
+Configuration controls how projection is reached but does not project data. `BACKFILL_SOURCE` selects the historical transport, `ARCHIVE_BACKFILLS` decides whether fetched data is persisted as raw binary ranges, and `ENABLE_*` toggles decide which workers `ensindexer start` enables. When backfill and live indexing are both enabled, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`; live starts afterward from checkpoint + 1.
 
 ## Storage Shape Used
 

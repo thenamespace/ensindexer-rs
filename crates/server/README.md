@@ -34,7 +34,7 @@ sequenceDiagram
 
 Backfill and live indexing are optional and controlled only by `ENABLE_BACKFILL` and `ENABLE_LIVE_INDEXING`. Historical transport comes from `BACKFILL_SOURCE`; live indexing always polls `ETH_RPC_URL`.
 
-When both workers are enabled, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing then processes the newer confirmed range. This avoids duplicate historical/live log fetches for the same fresh blocks.
+When both workers are enabled, startup backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing starts afterward from checkpoint + 1 and processes the newer confirmed range. This avoids skipped blocks while keeping live indexing behind the chain tip.
 
 ## Projection Awareness
 

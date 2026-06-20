@@ -59,7 +59,7 @@ INDEXER_CONFIRMATION_DEPTH=12
 BACKFILL_LIVE_GAP_BLOCKS=10
 ```
 
-The startup backfill target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`; the live worker owns newer confirmed blocks.
+The startup backfill target is `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live starts only after startup backfill finishes, then resumes from checkpoint + 1 and covers the remaining confirmed blocks contiguously.
 
 ## Command Surface
 
@@ -124,7 +124,7 @@ BACKFILL_LIVE_GAP_BLOCKS=10
 LIVE_POLL_SECONDS=12
 ```
 
-The live loop polls `ETH_RPC_URL`, waits for confirmed blocks, and checks parent hashes before applying the next range. The current repair strategy is coarse: reset indexed state and rebuild from source starts. Efficient common-ancestor rollback is future work.
+The live loop polls `ETH_RPC_URL`, waits until blocks are behind the configured confirmation depth, and indexes from the minimum source checkpoint + 1. It checks parent hashes before applying the next range. The current repair strategy is coarse: reset indexed state and rebuild from source starts. Efficient common-ancestor rollback is future work.
 
 ## Status
 

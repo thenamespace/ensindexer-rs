@@ -44,7 +44,7 @@ All historical fill modes share the same buffered apply path:
 
 Raw replay reads one `.bin` file at a time, prefetches the next file, keeps a replay-level projection cache across files, and can temporarily drop secondary query indexes before bulk replay. Secondary indexes are dropped only when the requested raw or HyperSync range spans more than 500,000 blocks; short catchups keep indexes online. Startup HyperSync backfill uses the same thresholded maintenance window so dense historical ranges keep the same write-throughput profile as raw replay.
 
-When live indexing is enabled together with backfill, historical backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing owns the newer confirmed range and always uses `ETH_RPC_URL`, so `BACKFILL_SOURCE=hypersync` does not cause live polling to fetch logs through HyperSync.
+When live indexing is enabled together with backfill, historical backfill stops at `latest - INDEXER_CONFIRMATION_DEPTH - BACKFILL_LIVE_GAP_BLOCKS`. Live indexing starts after backfill completes, resumes from the minimum source checkpoint + 1, and always uses `ETH_RPC_URL`, so `BACKFILL_SOURCE=hypersync` does not cause live polling to fetch logs through HyperSync.
 
 ## Binary Archive Format
 
