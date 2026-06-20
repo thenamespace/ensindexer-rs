@@ -383,15 +383,14 @@ This keeps ordering compatible with the subgraph while avoiding unsafe dynamic S
 
 ## Benchmark Model
 
-Benchmark fixtures live in [`../benchmarks/queries`](../benchmarks/queries), with the report in [`../benchmarks/README.md`](../benchmarks/README.md).
+Benchmark fixtures live in [`../benchmarks/queries`](../benchmarks/queries). Running `cargo make benchmark` writes the latest generated report to [`../BENCHMARK.md`](../BENCHMARK.md).
 
-Timing columns:
+Timing modes are configured in the Rust benchmark example:
 
-- `ensindexer-rs`: local in-process compute time through `async-graphql` and Postgres.
-- `ensnode`: hosted ENSNode public endpoint, baseline-adjusted when provider timing is absent.
-- `the graph indexer`: hosted The Graph gateway, baseline-adjusted when provider timing is absent.
+- `TimingMode::Raw`: raw request time including server compute, gateway work, TLS, network latency, and response transfer.
+- `TimingMode::ComputeOnly`: raw request time minus that endpoint's lightweight `_meta` request median, floored at zero.
 
-Hosted endpoints include internet and provider routing noise. The report subtracts a lightweight `_meta` baseline when provider execution timing is not exposed.
+Hosted endpoints include internet and provider routing noise. `ComputeOnly` is a practical approximation that removes the measured network/request floor, not a true database-only measurement for hosted providers.
 
 ## Current Benchmark Summary
 
@@ -414,13 +413,13 @@ The broad substring searches are the remaining local query outliers. Parent-scop
 
 ## Benchmark Comparison Table
 
-The full table with relative speedups is maintained in [`../benchmarks/README.md`](../benchmarks/README.md). The table uses:
+The full table with relative speedups is written to [`../BENCHMARK.md`](../BENCHMARK.md). The table uses:
 
 ```text
 operation | ensindexer-rs | ensnode | the graph indexer
 ```
 
-Each numeric cell includes relative speed against the slowest supported result in that row.
+Each numeric cell includes simple relative speed against the slowest supported result in that row, for example `(slowest)`, `(2.3x)`, or `(1.4x)`.
 
 ## How To Add A Benchmark
 

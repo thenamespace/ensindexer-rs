@@ -10,20 +10,12 @@ The query files live in [queries](queries). Each `*.graphql` file may have a sib
 
 ## Timing Model
 
-Use compute time where it is actually observable.
+The Rust example supports two simple timing modes.
 
-- `local-compute.compute_ms`: in-process execution through the Rust `async-graphql` schema with a real Postgres connection. This avoids HTTP, loopback, and external network latency.
-- `local-http.wall_ms`: optional localhost HTTP timing through `/subgraph`. This includes local Axum, JSON, and loopback overhead.
-- `official.wall_ms` and `ensnode.wall_ms`: endpoint wall-clock timing. This includes internet latency unless the endpoint is local.
-- `baseline_wall_ms`: a lightweight `_meta` GraphQL request to the same endpoint. This is the measured provider/network floor for that run.
-- `baseline_adjusted_ms`: endpoint wall time minus the endpoint's baseline median, floored at zero. Use this for hosted ENSNode and The Graph when provider execution timing is not available.
-- `provider_ms`: only populated when an endpoint exposes execution timing in GraphQL `extensions`. If it is absent, client-side benchmarking cannot remove network latency from hosted providers.
+- `TimingMode::Raw`: raw request wall time. This includes local/server compute, gateway work, TLS, network latency, and response transfer.
+- `TimingMode::ComputeOnly`: raw request wall time minus the endpoint's lightweight `_meta` request median, floored at zero. This approximates compute/server-side time by subtracting the measured request/network floor.
 
-For strict compute-only comparisons between all three systems, run each implementation locally or in the same network environment and compare their provider-reported or in-process execution timings. Hosted The Graph and hosted ENSNode wall time is useful operational data, but it is not pure server compute time. For the comparison table below, use this precedence:
-
-1. `local-compute.compute_ms` for `ensindexer-rs`.
-2. `provider_ms` for `ensnode` or `the graph indexer` when the endpoint returns it.
-3. `baseline_adjusted_ms` for hosted endpoints when provider timing is absent.
+`ComputeOnly` is still an approximation for hosted providers because the `_meta` request may not follow exactly the same backend path as every query. It is enough for practical comparison when the goal is to remove the obvious network roundtrip floor from Cloudflare/GCP-hosted endpoints.
 
 ## Running The Fixtures
 
@@ -33,7 +25,70 @@ The production `ensindexer` binary intentionally does not include a benchmark co
 cargo make start
 ```
 
-The production service exposes `/subgraph`, so a benchmark runner can load each `benchmarks/queries/*.graphql` file, pair it with the sibling `*.variables.json` file when present, and POST it to `http://127.0.0.1:8080/subgraph`. Use the same files against hosted The Graph and ENSNode endpoints when the schema supports the query. Mark endpoint-specific schema gaps as `unsupported` rather than changing the canonical local fixture.
+The production service exposes `/subgraph`. The Rust benchmark example loads each `benchmarks/queries/*.graphql` file, pairs it with the sibling `*.variables.json` file when present, and POSTs it to every configured endpoint. Providers for the same operation run concurrently, so local, ENSNode, and The Graph requests do not wait on each other. Use the same files against hosted The Graph and ENSNode endpoints when the schema supports the query. Mark endpoint-specific schema gaps as `unsupported` rather than changing the canonical local fixture.
+
+Endpoint and run configuration is intentionally simple Rust code in [`../crates/cli/examples/benchmark.rs`](../crates/cli/examples/benchmark.rs). Edit these constants before a run:
+
+```rust
+const WARMUPS: usize = 5;
+const ITERATIONS: usize = 25;
+const TIMEOUT_MS: u64 = 30_000;
+const USE_COMPUTE_ONLY_TIMING: bool = true;
+
+const ENTRIES: &[BenchmarkEntry] = &[
+    BenchmarkEntry {
+        name: "ensindexer-rs",
+        url: "http://127.0.0.1:8080/subgraph",
+        auth_bearer_env: None,
+        overrides: &[],
+    },
+    BenchmarkEntry {
+        name: "ensnode",
+        url: "https://api.alpha.ensnode.io/subgraph",
+        auth_bearer_env: None,
+        overrides: ENSNODE_OVERRIDES,
+    },
+    BenchmarkEntry {
+        name: "the graph indexer",
+        url: "https://gateway.thegraph.com/api/subgraphs/id/5XqPmWe6gjyrJtFn9cLy237i4cWw2j9HcUJEXsP5qGtH",
+        auth_bearer_env: Some("SUBGRAPH_AUTH_TOKEN"),
+        overrides: &[],
+    },
+];
+```
+
+Timing modes:
+
+| mode                      | meaning                                                                                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TimingMode::Raw`         | Raw request time, including local/server compute, network, TLS, gateway, and response transfer.                                                                                                                          |
+| `TimingMode::ComputeOnly` | Raw request time minus that endpoint's lightweight `_meta` request median. This removes the measured request/network floor as a practical approximation, but it is not a true database-only timing for hosted providers. |
+
+```bash
+cargo make benchmark
+```
+
+The example loads `.env` before reading environment values, so `SUBGRAPH_AUTH_TOKEN` can live in the normal project `.env`. Every completed run writes a fresh root-level `BENCHMARK.md` report.
+
+For endpoint-specific schema differences, add simple query rewrite rules to the entry. ENSNode currently rewrites common nocase string filters:
+
+```rust
+const ENSNODE_OVERRIDES: &[QueryOverride] = &[
+    QueryOverride { from: "$expiry: String!", to: "$expiry: BigInt!" },
+    QueryOverride { from: "$ethNode: ID!", to: "$ethNode: String!" },
+    QueryOverride { from: "_contains_nocase", to: "_contains" },
+    QueryOverride { from: "_starts_with_nocase", to: "_starts_with" },
+    QueryOverride { from: "_ends_with_nocase", to: "_ends_with" },
+];
+```
+
+To debug one provider without running the full matrix:
+
+```bash
+cargo run -p cli --release --example benchmark -- --only ensnode
+```
+
+Detailed query errors are printed to stderr during the run. The generated `BENCHMARK.md` keeps result cells short: `unsupported`, `error`, or `timeout`.
 
 ## Query Coverage
 
@@ -51,91 +106,6 @@ The production service exposes `/subgraph`, so a benchmark runner can load each 
 | `10-relationship-filter` | Trailing-underscore relationship filters over owner and resolver.                                          | Graph Node compatibility and generated filters                 |
 | `11-text-search`         | Fuzzy/nocase name search.                                                                                  | ENSNode trigram-index workload                                 |
 
-## Why These Queries
-
-ENSJS primarily stresses:
-
-- `domains(where: { and: [{ or: owner/registrant/wrappedOwner/resolvedAddress }, expiry filters] })`;
-- `domain(id).subdomains(...)`;
-- `domains(where: { labelhash, labelName_not: null })`;
-- `domain.events` with interface fragments;
-- resolver/registration hydration from domain results.
-
-ENSNode's changelog and schema work highlight the same production risks:
-
-- exact and fuzzy name lookup cannot use unsafe plain btree indexes on arbitrary-length on-chain strings;
-- `Domain.subdomains` needs parent traversal indexes;
-- generated subgraph-style relationship filters and derived event lists need compound parent/sort indexes.
-
-The Rust indexer should beat hosted endpoints by a clear margin on local compute. Hosted endpoint wall-clock numbers are included only as operational context unless provider execution timing is available.
-
-## Current Production Benchmark
-
-Release run on the full local mainnet database at block `25270169`, plus hosted The Graph and ENSNode comparisons with baseline-adjusted timings. The source queries for the run are the files in `benchmarks/queries`.
-
-| operation                | ensindexer-rs |     ensnode | the graph indexer |
-| ------------------------ | ------------: | ----------: | ----------------: |
-| `01-domain-batch`        | 5.985ms (13.5x faster than slowest, 92.6% lower) | 12.836ms (6.3x faster than slowest, 84.1% lower) | 80.771ms (slowest) |
-| `02-names-for-address`   | 18.722ms (10.8x faster than slowest, 90.7% lower) | 13.398ms (15.0x faster than slowest, 93.4% lower) | 201.511ms (slowest) |
-| `03-eth-subnames`        | 31.281ms (60.9x faster than slowest, 98.4% lower) | 1903.604ms (slowest) | 234.277ms (8.1x faster than slowest, 87.7% lower) |
-| `04-subnames-search`     | 161.328ms (10.7x faster than slowest, 90.6% lower) | 1724.506ms (slowest) | 504 timeout |
-| `05-decoded-label`       | 1.843ms (54.0x faster than slowest, 98.1% lower) | 64.406ms (1.5x faster than slowest, 35.3% lower) | 99.493ms (slowest) |
-| `06-resolver-records`    | 10.922ms (19.9x faster than slowest, 95.0% lower) | 94.708ms (2.3x faster than slowest, 56.3% lower) | 216.811ms (slowest) |
-| `07-registrations`       | 9.260ms (116.6x faster than slowest, 99.1% lower) | 1079.505ms (slowest) | 233.749ms (4.6x faster than slowest, 78.3% lower) |
-| `08-name-history`        | 5.777ms (16.5x faster than slowest, 93.9% lower) | 11.905ms (near-baseline/noisy; 8.0x faster than slowest, 87.5% lower) | 95.292ms (slowest) |
-| `09-event-scan`          | 28.043ms (232.0x faster than slowest, 99.6% lower) | unsupported | 6506.291ms (slowest) |
-| `10-relationship-filter` | 6.828ms (34.1x faster than slowest, 97.1% lower) | unsupported | 233.165ms (slowest) |
-| `11-text-search`         | 172.538ms (3.7x faster than slowest, 73.2% lower) | 642.963ms (slowest) | 144.134ms (4.5x faster than slowest, 77.6% lower) |
-
-Relative speed is calculated against the slowest supported numeric result in each row. Timeout and unsupported cells are excluded from the numeric baseline.
-
-The hosted The Graph column uses `baseline_adjusted_ms.median` because the gateway response did not expose provider execution timing. Raw hosted `wall_ms.median` was about 381ms higher per query in this release run, matching the measured `_meta` baseline median. The hosted ENSNode column also uses `baseline_adjusted_ms.median`; its measured `_meta` baseline median was about 361ms in the full run. `07-registrations` is from an immediate single-query ENSNode retry after the full hosted run hit a transient send failure for that one operation. `08-name-history` was rerun again with 25 baseline samples and 25 query samples after a suspicious near-1ms adjusted result; the rerun measured a raw wall median of 656.481ms, baseline median of 644.576ms, and adjusted median of 11.905ms. That value is still close enough to the hosted timing floor that it should be read as baseline-subtraction noise, not precise provider compute.
-
-ENSNode is not treated as the schema source of truth here. The historical benchmark run applied ENSNode-only compatibility rewrites for its public alpha endpoint: `expiry: String!` was sent as `BigInt!`, `ID!` was sent as `String!`, and `*_contains_nocase` filters were downgraded to case-sensitive `*_contains`. ENSNode still does not support the top-level event collections in `09-event-scan` or the generated trailing-underscore relationship filters in `10-relationship-filter`, so those cells are marked `unsupported`.
-
-The two remaining slow local-compute cases are intentionally broad substring searches. Their current GIN trigram plans find matches quickly but still fetch and sort tens of thousands of candidate rows. They need a search-specific optimization rather than another raw btree index over unbounded ENS labels.
-
-After adding API DataLoader batching for hot `Domain` account/resolver relationships, local release slices improved:
-
-| operation | before | after |
-| --- | ---: | ---: |
-| `04-subnames-search` | 161.328ms | 137.814ms |
-| `11-text-search` | 172.538ms | 165.903ms |
-
-This optimization reduces nested relationship roundtrips. It does not remove the main broad-search cost, which is still matching and sorting tens of thousands of domain rows for common substrings such as `art`.
-
-After expanding the same DataLoader layer to `Domain.registration` and `Domain.wrappedDomain`, local release slices measured:
-
-| operation | production baseline | latest slice |
-| --- | ---: | ---: |
-| `01-domain-batch` | 5.985ms | 5.143ms |
-| `02-names-for-address` | 18.722ms | 5.366ms |
-| `03-eth-subnames` | 31.281ms | 7.258ms |
-| `04-subnames-search` | 161.328ms | 158.942ms |
-| `11-text-search` | 172.538ms | 168.660ms |
-
-The largest wins are relationship-heavy domain result sets that request registration or wrapped-domain fields for many rows.
-
-## Latest Local Server Rerun
-
-On June 18, 2026, the fixtures were rerun against a release server on local `/subgraph` with the database indexed to block `25337644`. This run used 5 warmups and 25 measured iterations per query. These numbers are local HTTP timings, so they include Axum/JSON/loopback overhead and are not the same measurement type as the older in-process `local-compute` column. They are still useful as a current end-to-end local sanity check.
-
-| operation | local `/subgraph` median | p95 |
-| --- | ---: | ---: |
-| `01-domain-batch` | 4.839ms | 6.020ms |
-| `02-names-for-address` | 5.457ms | 6.053ms |
-| `03-eth-subnames` | 6.631ms | 7.351ms |
-| `04-subnames-search` | 149.506ms | 275.025ms |
-| `05-decoded-label` | 0.659ms | 1.402ms |
-| `06-resolver-records` | 13.489ms | 14.515ms |
-| `07-registrations` | 9.544ms | 10.946ms |
-| `08-name-history` | 4.903ms | 5.982ms |
-| `09-event-scan` | 27.300ms | 28.932ms |
-| `10-relationship-filter` | 4.846ms | 5.649ms |
-| `11-text-search` | 154.185ms | 162.622ms |
-
-Compared with the previous local slices, the structured relationship-heavy queries stayed comparable or improved. `06-resolver-records` and `07-registrations` are slightly slower than the older in-process medians, which is expected because this rerun includes the local HTTP server path. Broad subname/text search remains the main outlier.
-
 ## Adding Queries
 
 Add a new pair:
@@ -145,4 +115,4 @@ benchmarks/queries/12-some-workload.graphql
 benchmarks/queries/12-some-workload.variables.json
 ```
 
-Run them with an external benchmark runner. Query files should be discovered in lexical order, and each run should record warmup count, iteration count, raw wall time, provider-reported execution time when available, and baseline-adjusted timing for hosted endpoints.
+Run them with `cargo make benchmark`. Query files are discovered in lexical order, and each run records warmup count, iteration count, raw wall time, and compute-only timing when that mode is selected. The generated report is written to root `BENCHMARK.md`.

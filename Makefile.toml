@@ -70,6 +70,11 @@ args = ["test", "--workspace"]
 description = "Run formatting and compiler checks."
 dependencies = ["fmt-check", "cargo-check"]
 
+[tasks.benchmark]
+description = "Run GraphQL benchmark fixtures using crates/cli/examples/benchmark.rs."
+command = "cargo"
+args = ["run", "-p", "cli", "--release", "--example", "benchmark"]
+
 [tasks.fmt-check]
 command = "cargo"
 args = ["fmt", "--all", "--check"]
