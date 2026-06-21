@@ -13,8 +13,8 @@ use reqwest::{
 };
 use serde_json::{Value, json};
 
-const WARMUPS: usize = 5;
-const ITERATIONS: usize = 25;
+const WARMUPS: usize = 3;
+const ITERATIONS: usize = 5;
 const TIMEOUT_MS: u64 = 100_000;
 const QUERY_DIR: &str = "benchmarks/queries";
 const OUTPUT_PATH: &str = "BENCHMARK.md";
@@ -47,12 +47,6 @@ const ENSNODE_OVERRIDES: &[QueryOverride] = &[
 ];
 
 const ENTRIES: &[BenchmarkEntry] = &[
-    BenchmarkEntry {
-        name: "ensindexer-rs (Local)",
-        url: "http://127.0.0.1:8080/subgraph",
-        auth_bearer_env: None,
-        overrides: &[],
-    },
     BenchmarkEntry {
         name: "ensindexer-rs (Hosted)",
         url: "https://ensindexer-rs.namespace.ninja/subgraph",

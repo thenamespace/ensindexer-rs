@@ -1,0 +1,19 @@
+{
+  "id": "0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae",
+  "orderBy": "labelName",
+  "orderDirection": "asc",
+  "whereFilter": {
+    "and": [
+      { "or": [{ "expiryDate_gt": "1780000000" }, { "expiryDate": null }] },
+      {
+        "or": [
+          { "owner_not": "0x0000000000000000000000000000000000000000" },
+          { "resolver_not": null },
+          { "registrant_not": "0x0000000000000000000000000000000000000000" }
+        ]
+      },
+      { "labelName_contains": "vit" }
+    ]
+  },
+  "first": 50
+}

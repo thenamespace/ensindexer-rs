@@ -30,8 +30,8 @@ The production service exposes `/subgraph`. The Rust benchmark example loads eac
 Endpoint and run configuration is intentionally simple Rust code in [`../crates/cli/examples/benchmark.rs`](../crates/cli/examples/benchmark.rs). Edit these constants before a run:
 
 ```rust
-const WARMUPS: usize = 5;
-const ITERATIONS: usize = 25;
+const WARMUPS: usize = 3;
+const ITERATIONS: usize = 5;
 const TIMEOUT_MS: u64 = 30_000;
 const USE_COMPUTE_ONLY_TIMING: bool = true;
 
@@ -97,10 +97,13 @@ Detailed query errors are printed to stderr during the run. The generated `BENCH
 | `01-domain-batch`        | Batch exact domain reads with owner, registrant, resolver, registration, and wrapped-domain relationships. | Common app profile/detail pages                                |
 | `02-names-for-address`   | ENSJS `getNamesForAddress`-style owner/registrant/wrapped/resolved address lookup with expiry filtering.   | ENSJS subgraph API                                             |
 | `03-eth-subnames`        | High-cardinality `eth` subdomain traversal.                                                                | ENSJS `getSubnames` and ENSNode `Domain.subdomains` index work |
-| `04-subnames-search`     | Subdomain traversal with label search.                                                                     | ENSJS search-string behavior                                   |
+| `04c-subnames-search-3-letter` | Subdomain traversal with `labelName_contains: "vit"`.                                                 | ENSJS `getSubnames` search-string behavior                     |
+| `04d-subnames-search-4-letter` | Subdomain traversal with `labelName_contains: "vita"`.                                                | ENSJS `getSubnames` search-string behavior                     |
+| `04e-subnames-search-5-letter` | Subdomain traversal with `labelName_contains: "vital"`.                                               | ENSJS `getSubnames` search-string behavior                     |
 | `05-decoded-label`       | `labelhash -> labelName` decoded-name lookup.                                                              | ENSJS `getDecodedName`                                         |
 | `06-resolver-records`    | Resolver relationship and recent resolver event hydration.                                                 | ENSJS `getSubgraphRecords`-adjacent workload                   |
 | `07-registrations`       | Registration lookup by label and expiry with nested domain/events.                                         | Registrar dashboards and expiry tools                          |
+| `07a-subgraph-registrant` | Direct registration registrant lookup by labelhash.                                                       | ENSJS `getSubgraphRegistrant`                                  |
 | `08-name-history`        | Domain event history with interface fragments.                                                             | ENSJS `getNameHistory`                                         |
 | `09-event-scan`          | Recent domain, registration, and resolver event-interface scans.                                           | Indexer explorer/admin workloads                               |
 | `10-relationship-filter` | Trailing-underscore relationship filters over owner and resolver.                                          | Graph Node compatibility and generated filters                 |

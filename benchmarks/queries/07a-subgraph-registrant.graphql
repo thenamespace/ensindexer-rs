@@ -1,0 +1,13 @@
+query SubgraphRegistrant($id: String!) {
+  registration(id: $id) {
+    id
+    labelName
+    registrant {
+      id
+    }
+    domain {
+      id
+      name
+    }
+  }
+}

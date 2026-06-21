@@ -1,0 +1,45 @@
+query SubnamesSearchFourLetters(
+  $id: String!
+  $orderBy: Domain_orderBy
+  $orderDirection: OrderDirection
+  $whereFilter: Domain_filter
+  $first: Int
+) {
+  domain(id: $id) {
+    id
+    name
+    subdomains(
+      first: $first
+      orderBy: $orderBy
+      orderDirection: $orderDirection
+      where: $whereFilter
+    ) {
+      id
+      name
+      labelName
+      labelhash
+      isMigrated
+      createdAt
+      resolvedAddress {
+        id
+      }
+      owner {
+        id
+      }
+      registrant {
+        id
+      }
+      wrappedOwner {
+        id
+      }
+      registration {
+        registrationDate
+        expiryDate
+      }
+      wrappedDomain {
+        expiryDate
+        fuses
+      }
+    }
+  }
+}
