@@ -28,6 +28,12 @@ Open Apollo Sandbox at:
 http://127.0.0.1:8080/graphql
 ```
 
+Hosted experiment:
+
+```text
+https://ensindexer-rs.namespace.ninja/graphql
+```
+
 The subgraph-compatible POST endpoint is:
 
 ```text
